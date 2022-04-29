@@ -33,5 +33,5 @@ Personal Bash scripts to run at first-time setup for Debian Linux.
 * Crontab
   * WIP
 
-## uid 1000 script
+## user script
 WIP
