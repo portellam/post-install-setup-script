@@ -6,12 +6,13 @@ function 00_Prompt {
 
     echo "Prompt: Start."
     
+    # PARAMETERS
     bool_isManual=true
     declare -i int_count=0
     
     # MANUAL PROMPT
     while true; do
-        echo "Prompt: Do you wish to execute this script manually? (Y)es or (N)o:"
+        echo "Prompt: Do you wish to execute this script manually? [Y/n]"
         read str_input
         
         # STRING TO UPPER
@@ -43,6 +44,7 @@ function 00_Prompt {
             ;;
         esac
         
+        # COUNTER
         ((int_count++))
         
         # AFTER THREE TRIES, EXIT
@@ -135,7 +137,7 @@ $'\n'
         # INPUT PROMPT
         case $str_input in
         
-            # STABLE
+            # STABLE AND NON-FREE
             "stable")
 
                 echo "Dependencies: Selected \"$str_input\"."
@@ -149,7 +151,7 @@ $'\n'
                 
                 break;;
             
-            # TESTING
+            # TESTING AND NON-FREE
             "testing")
                 
                 echo "Dependencies: Selected \"$str_input\"."
@@ -209,7 +211,7 @@ $'\n'
         # AFTER THREE TRIES, EXIT
         if [[ $int_count -ge 3 ]]; then
         
-            echo "Dependencies: Exceeded max attempts! Selected \"$str_releaseName\"."
+            echo "Dependencies: Exceeded max attempts! Selected none."
             break
             
         fi
@@ -250,6 +252,7 @@ function 01B_Dependencies {
     # VIDEO DRIVERS
     str_aptAdd2="xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware "
     
+    # MANUAL PROMPT
     if $bool_isManual; then
         apt remove $str_aptRem
         apt install $str_aptAdd
@@ -260,11 +263,13 @@ function 01B_Dependencies {
         #apt install -y $str_aptAdd2
     fi
     
+    # ADD FLATPAK REPO
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
     
     # NOTE: update here!
     str_flatpakAdd="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv "
     
+    # MANUAL PROMPT
     if $bool_isManual; then
         flatpak install flathub $str_flatpakAdd
     else
@@ -459,19 +464,22 @@ function 06_GitScripts {
 
 ## METHODS end ##
 
+## NOTES ##
+
+# TODO: either allow user to select each function to run, or have function check for existing changes and skip?
+
 ## MAIN start ##
 
 echo "Script: Start."
 
-# TODO: either allow user to select each function to run, or have function check for existing changes and skip?
 00_Prompt           # works
-01A_Dependencies    # works
-#01B_Dependencies   
-#02_Systemctl       # works
-#03_SSH             # works
-#04_UFW             # works
-#05_Git             # works
-#06_GitScripts      # works
+#01A_Dependencies    # works
+01B_Dependencies    # works
+#02_Systemctl        # works
+#03_SSH              # works
+#04_UFW              # works
+#05_Git              # works
+#06_GitScripts       # works
 #07_input_vfio   # user input here will affect relevant info later on...
 #08_GRUB
 #09_Xorg
