@@ -12,7 +12,7 @@ function 00_Prompt {
     
     # MANUAL PROMPT
     while true; do
-        echo "Prompt: Do you wish to execute this script manually? [Y/n]"
+        echo "Prompt: Continue with prompts for user input? [Y/n]"
         read str_input
         
         # STRING TO UPPER
@@ -25,14 +25,14 @@ function 00_Prompt {
         case $str_input in
             "Y")
             
-                echo "Prompt: Executing script manually."
+                echo "Prompt: Executing script with prompts."
                 bool_isManual=true
                 break
                 
             ;;
             "N")
             
-                echo "Prompt: Executing script automatically."
+                echo "Prompt: Executing script with less prompts."
                 bool_isManual=false
                 break
                 
@@ -50,7 +50,7 @@ function 00_Prompt {
         # AFTER THREE TRIES, EXIT
         if [[ $int_count -ge 3 ]]; then
         
-            echo "Prompt: Exceeded max attempts! Executing script manually..."
+            echo "Prompt: Exceeded max attempts! Executing script with less prompts."
             bool_isManual=true
             break
             
@@ -80,7 +80,7 @@ function 01A_Dependencies {
     str_file="/etc/apt/sources.list"
     
     # CREATE BACKUP OR RESTORE FROM BACKUP
-    if [ -d $str_file ]; then
+    if [ ! -d $str_file ]; then
         cp $str_file $str_file'_old'
     else
         cp $str_file'_old' $str_file
@@ -256,11 +256,11 @@ function 01B_Dependencies {
     if $bool_isManual; then
         apt remove $str_aptRem
         apt install $str_aptAdd
-        #apt install $str_aptAdd2
+        #apt install $str_aptAdd2   # NOTE: test
     else
         apt remove -y $str_aptRem
         apt install -y $str_aptAdd
-        #apt install -y $str_aptAdd2
+        #apt install -y $str_aptAdd2    # NOTE: test
     fi
     
     # ADD FLATPAK REPO
@@ -281,90 +281,138 @@ function 01B_Dependencies {
 }
 
 function 02_Systemctl {
+
     echo "Systemctl: Start."
-    declare -a arr_service=("apcupsd" "cockpit" "zramswap")     # NOTE: changes go here.
+    
+    # NOTE: any changes made, see DEPENDENCIES.
+    # NOTE: update here!
+    declare -a arr_service=("apcupsd" "cockpit" "zramswap")
+    
     int_service=${#arr_service[@]}
+    
+    # MANUAL PROMPT
     if $bool_isManual; then
+    
         for (( int_index=0; int_index<$int_service; int_index++ )); do
+        
             str_service=${arr_service[$int_index]}
             declare -i int_count=0
+            
             while [[ "$int_count" -le 2 ]]; do
+            
                 if [[ $int_count > 2 ]]; then
-                    echo "Exceeded max attempts! Skipping '$str_service'..."
+                
+                    echo "Systemctl: Exceeded max attempts! Ignoring '$str_service'..."
                     int_count=3
+                    
                 fi
-                echo "Do you wish to use $str_service service? (Y)es or (N)o:"
+                
+                echo "Systemctl: Disable $str_service service? [Y/n]"
                 read str_input
                 str_input=$(echo $str_input | tr '[:lower:]' '[:upper:]')
+                
                 if [[ $str_input="YES" || $str_input="NO" ]]; then
                     str_input=${str_input:0:1}
                 fi
+                
                 case $str_input in
                     "Y")
-                        echo "Skipping '$str_service'..."
-                        int_count=3
-                    ;;
-                    "N")
-                        echo "Service '$str_service' to be disabled."
+                    
+                        echo "Systemctl: Disabling $str_service service."
                         systemctl stop $str_service
                         systemctl disable $str_service
-                        int_count=3
-                    ;;
+                        break;;
+                        
+                        
+                    "N")
+                    
+                        echo "Systemctl: Ignoring '$str_service'..."
+                        break;;
+                        
                     *)
-                        echo "Invalid input!"
-                        ((int_count++))
-                    ;;
+                    
+                        echo "Systemctl: Invalid input!"
+                        
                 esac
+                
+                ((int_count++))
+                
             done
         done
     else
         for (( int_index=0; int_index<$int_service; int_index++ )); do
+        
             str_service=${arr_service[$int_index]}
-            echo "Service '$str_service' to be disabled."
+            echo "Systemctl: Disabled $str_service service."
             systemctl stop $str_service
             systemctl disable $str_service
+            
         done
     fi
+    
     echo "Systemctl: End."
 }
 
 function 03_SSH {
+
     echo "SSH: Start."
     int_count=0
+    
     while true; do
         if [ $int_count -gt 2 ]; then
+        
             str_sshAlt=22
             echo "SSH: Exceeded max attempts! Value is set to default."
             break
+            
         fi
+        
         echo "SSH: Enter a new IP Port number for SSH:"
         read str_sshAlt
+        
         if [ "$str_sshAlt" -eq "$str_sshAlt" ] 2> /dev/null; then
+        
             if [ "$str_sshAlt" -eq 22 ]; then
+            
                 echo "SSH: Value is set to default."
                 break
+                
             fi
             if [ "$str_sshAlt" -gt 0 ]; then
+            
                 break
+                
             fi
         else
-            echo "SSH: Invalid input. First parameter must be an integer."            
+        
+            echo "SSH: Invalid input. First parameter must be an integer."     
+            
         fi
+        
         ((int_count++))
+        
     done
+    
     str_file="/etc/ssh/ssh_config"
-    if [ -d $str_file'_old' ]; then
+    
+    # CHECK IF BACKUP EXISTS
+    if [ ! -d $str_file'_old' ]; then
         cp $str_file $str_file'_old' 
     else
         cp $str_file'_old' $str_file
     fi
+    
+    # WRITE TO FILE
     echo $'\n#\nPort '$str_sshAlt >> $str_file
     str_file="/etc/ssh/sshd_config"
-    if [ -d $str_file'_old' ]; then
+    
+    if [ ! -d $str_file'_old' ]; then
         cp $str_file $str_file'_old' 
     else
         cp $str_file'_old' $str_file
     fi
+    
+    # WRITE TO FILE
     echo $'\n#\nPort '$str_sshAlt >> $str_file
     cat << 'EOF' >> $str_file
 LoginGraceTime 1m
@@ -372,18 +420,28 @@ PermitRootLogin prohibit-password
 MaxAuthTries 6
 MaxSessions 2
 EOF
+
+    # RESTART SERVICES
     systemctl restart ssh sshd
+    
     echo "SSH: End."
 }
 
 function 04_UFW {
+
     echo "UFW: Start."
+    
     if [[ $str_sshAlt -eq 22 ]]; then
+    
         sudo ufw limit from 192.168.1.0/24 to any port 22 proto tcp
+        
     else
+    
         sudo ufw deny ssh
         sudo ufw limit from 192.168.1.0/24 to any port $str_sshAlt proto tcp
+        
     fi
+    
     # NOTE: update here!
     sudo ufw allow dns
     sudo ufw allow from 192.168.1.0/24 to any port 2049
@@ -393,15 +451,21 @@ function 04_UFW {
     sudo ufw allow from 192.168.1.0/24 to any port 139,445 proto tcp
     sudo ufw enable
     sudo ufw reload
+    
     echo "UFW: End."
+    
 }
 
 function 05_Git {
+
     echo "Updating GIT..."
+    
     str_dir="/root/git/"
+    
     if [ ! -d $str_dir ]; then
         mkdir -p $str_dir
     fi
+    
     # LIST OF GITHUB REPOS
     declare -a arr_repo=(
     # NOTE: update here!
@@ -410,17 +474,22 @@ function 05_Git {
     "pyllyukko/user.js"
     "StevenBlack/hosts"
     )
+    
     # LOOP THRU LIST
     int_repo=${#arr_repo[@]}
     for (( int_index=0; int_index<$int_repo; int_index++ )); do
+    
         # RESET WORKING DIRECTORY
-        cd ~/                                                   # reset working dir
+        cd ~/
+        
         str_repo=${arr_repo[$int_index]}
         str_user=$(echo $str_repo | cut -d "/" -f1)
+        
         # CREATE FOLDER
         if [ ! -d $str_dir$str_user ]; then
             mkdir -p $str_dir$str_user
         fi
+        
         # UPDATE LOCAL REPO
         if [ -e $str_dir$str_repo ]; then
             cd $str_dir$str_repo
@@ -429,22 +498,28 @@ function 05_Git {
             cd $str_dir$str_user
             git clone https://github.com/$str_repo
         fi
+        
     done
+    
     echo "Git: End."
+    
 }
 
 function 06_GitScripts {
+
     echo "GitScripts: Start."
-    # StevenBlack/hosts #
+    
+    # StevenBlack/hosts
     str_file="/etc/hosts"
     if [ -d $str_file'_old' ]; then
         sudo cp $str_file $str_file'_old' 
     else
         sudo cp $str_file'_old' $str_file
     fi
-    #echo $'\n#' >> $str_file
-    #cat /root/git/StevenBlack/hosts/hosts >> $str_file
+    echo $'\n#' >> $str_file
+    cat /root/git/StevenBlack/hosts/hosts >> $str_file
     #
+    
     # pyllyukko/user.js #
     cd /root/git/pyllyukko/user.js/
     make debian_locked.js
@@ -455,11 +530,14 @@ function 06_GitScripts {
     cp /root/git/pyllyukko/user.js/debian_locked.js $str_file
     #ln -s /root/git/pyllyukko/user.js/debian_locked.js /etc/firefox-esr/firefox-esr.js     # NOTE: unused
     #
+    
     # foundObjects/zram-swap #
     cd /root/git/foundObjects/zram-swap/
     sudo sh install.sh
     #
+    
     echo "GitScripts: End."
+    
 }
 
 ## METHODS end ##
@@ -474,12 +552,12 @@ echo "Script: Start."
 
 00_Prompt           # works
 #01A_Dependencies    # works
-01B_Dependencies    # works
+#01B_Dependencies    # works
 #02_Systemctl        # works
 #03_SSH              # works
 #04_UFW              # works
 #05_Git              # works
-#06_GitScripts       # works
+06_GitScripts       # TODO: fix user.js
 #07_input_vfio   # user input here will affect relevant info later on...
 #08_GRUB
 #09_Xorg
