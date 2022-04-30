@@ -3,147 +3,235 @@
 ## METHODS start ##
 
 function 00_Prompt {
+
     echo "Prompt: Start."
+    
     bool_isManual=true
     declare -i int_count=0
+    
+    # MANUAL PROMPT
     while true; do
         echo "Prompt: Do you wish to execute this script manually? (Y)es or (N)o:"
         read str_input
+        
+        # STRING TO UPPER
         str_input=$(echo $str_input | tr '[:lower:]' '[:upper:]')
         #if [[ $str_input -eq "YES" || $str_input -eq "NO" ]]; then
             #str_input=${str_input:0:1}
         #fi
         str_input=${str_input:0:1}
+        
         case $str_input in
             "Y")
-                echo "Prompt: Executing script automatically."
+            
+                echo "Prompt: Executing script manually."
                 bool_isManual=true
                 break
+                
             ;;
             "N")
-                echo "Prompt: Executing script manually."
+            
+                echo "Prompt: Executing script automatically."
                 bool_isManual=false
                 break
+                
             ;;
             *)
+            
                 echo "Prompt: Invalid input!"
+                
             ;;
         esac
+        
         ((int_count++))
+        
+        # AFTER THREE TRIES, EXIT
         if [[ $int_count -ge 3 ]]; then
+        
             echo "Prompt: Exceeded max attempts! Executing script manually..."
             bool_isManual=true
             break
+            
         fi
     done
+    
     echo "Prompt: End."
+    
 }
 
-function 01_Dependencies {
+function 01A_Dependencies {
+
     echo "Dependencies: Start."
+    
+    # FIND CURRENT RELEASE CODENAME
+    str_releaseName=$(lsb_release -a | grep Codename)
+    ((int_releaseName=${#str_releaseName}-10))
+    str_releaseName=(${str_releaseName:10:$int_releaseName})
+    
+    # FIND CURRENT RELEASE BRANCHNAME
+    str_releaseVer=$(lsb_release -a | grep Release)
+    ((int_releaseVer=${#str_releaseVer}-9))
+    str_releaseVer=(${str_releaseVer:9:$int_releaseVer})
+    echo $str_releaseVer
+
+    # SET WORKING FILE
     str_file="/etc/apt/sources.list"
+    
+    # CREATE BACKUP OR RESTORE FROM BACKUP
     if [ -d $str_file ]; then
         cp $str_file $str_file'_old'
-        cp $str_file $str_file'_temp'
     else
         cp $str_file'_old' $str_file
     fi
-    while [[ "$int_count" -le 2 ]]; do
-        echo "Dependencies: Enter valid release branch name or none for default."
-        echo "Valid branches:"
-        echo "  oldstable"
-        echo "  stable"
-        echo "  testing"
-        echo "  backports   (backports added to default release)"
-        echo "Enter:"
-        read str_input
-        str_input=$(echo $str_input | tr '[:upper:]' '[:lower:]')
+    
+    while true; do
+        
+        # MANUAL PROMPT
+        if $bool_isManual; then
+            echo "Dependencies: Enter one valid option or none for default (Current branch: $str_releaseName)."
+            echo "Release branches:"
+            echo "  stable      == $str_releaseName (with non-free)"
+            echo "  testing     (with non-free)"
+            echo "Others:"
+            echo "  backports   == $str_releaseName-backports (with non-free)"
+            echo "Enter option:"
+            read str_input        
+            # STRING TO LOWERCASE
+            str_input=$(echo $str_input | tr '[:upper:]' '[:lower:]')
+        else
+            str_input="backports"
+        fi
+
+        # APT SOURCES 
+        declare -a arr_sources=(
+"# debian $str_input"
+"# See https://wiki.debian.org/SourcesList for more information."
+"deb http://deb.debian.org/debian/ $str_input main non-free contrib"
+"deb-src http://deb.debian.org/debian/ $str_input main non-free contrib"
+$'\n'
+"deb http://deb.debian.org/debian/ $str_input-updates main non-free contrib"
+"deb-src http://deb.debian.org/debian/ $str_input-updates main non-free contrib"
+$'\n'
+"deb http://security.debian.org/debian-security/ $str_input-security main non-free contrib"
+"deb-src http://security.debian.org/debian-security/ $str_input-security main non-free contrib"
+"#"
+)
+
+        # COMMENT LINES FROM ORIGINAL TO TEMP FILE
+        touch $str_file'_temp'
         while read str_line; do
             echo '#'$str_line >> $str_file'_temp'
         done < $str_file
+        
+        # COPY TEMP FILE TO ORIGINAL
+        cat $str_file'_temp' > $str_file
+        
+        # DELETE OPTIONAL SOURCES FILE, IF IT EXISTS
+        if [ ! -d '/etc/apt/sources.list.d/'$str_input'.list' ]; then
+            rm '/etc/apt/sources.list.d/'$str_input'.list'
+        fi
+        
+        
+        # INPUT PROMPT
         case $str_input in
-        "oldstable")
-                cat << 'EOF' > /etc/apt/sources.list.d/oldstable.list
-# debian oldstable
-deb http://deb.debian.org/debian/ oldstable main non-free contrib   
-deb-src http://deb.debian.org/debian/ oldstable main non-free contrib    
+        
+            # STABLE
+            "stable")
 
-deb http://deb.debian.org/debian/ oldstable-updates main non-free contrib  
-deb-src http://deb.debian.org/debian/ oldstable-updates main non-free contrib   
+                echo "Dependencies: Selected \"$str_input\"."
 
-deb http://security.debian.org/debian-security/ stable-security main non-free contrib  
-deb-src http://security.debian.org/debian-security/ stable-security main non-free contrib  
-#
-EOF
-                echo "Dependencies: Selected \"oldstable\"."
-                rm $str_file
-                mv $str_file'_temp' $str_file
-                break
-            ;;
-        "stable")
-                cat << 'EOF' > /etc/apt/sources.list.d/stable.list
-# debian stable
-# See https://wiki.debian.org/SourcesList for more information.
-deb http://deb.debian.org/debian/ stable main non-free contrib   
-deb-src http://deb.debian.org/debian/ stable main non-free contrib    
-
-deb http://deb.debian.org/debian/ stable-updates main non-free contrib  
-deb-src http://deb.debian.org/debian/ stable-updates main non-free contrib   
-
-deb http://security.debian.org/debian-security/ stable-security main non-free contrib  
-deb-src http://security.debian.org/debian-security/ stable-security main non-free contrib  
-#
-EOF
-                echo "Dependencies: Selected \"stable\"."
-                rm $str_file
-                mv $str_file'_temp' $str_file
-                break
-            ;;
-        "testing")
-                cat << 'EOF' > /etc/apt/sources.list.d/testing.list
-# debian testing
-#deb http://deb.debian.org/debian/ testing main non-free contrib   
-#deb-src http://deb.debian.org/debian/ testing main non-free contrib    
-
-#deb http://deb.debian.org/debian/ testing-updates main non-free contrib  
-#deb-src http://deb.debian.org/debian/ testing-updates main non-free contrib   
-
-#deb http://security.debian.org/debian-security/ testing-security main non-free contrib  
-#deb-src http://security.debian.org/debian-security/ testing-security main non-free contrib  
-#
-EOF
-                echo "Dependencies: Selected \"testing\"."
-                rm $str_file
-                mv $str_file'_temp' $str_file
-                break
-            ;;
-        "backports")
-                cat << 'EOF' >> $str_file'_temp'
+                 # LOOP THRU ARRAY
+                int_line=${#arr_sources[@]}
+                for (( int_index=0; int_index<$int_line; int_index++ )); do
+                    str_line=${arr_sources[$int_index]}
+                    echo $str_line >> '/etc/apt/sources.list.d/'$str_input'.list'
+                done
+                
+                break;;
             
-# debian 11/bullseye backports
-deb http://deb.debian.org/debian bullseye-backports main contrib non-free
-deb-src http://deb.debian.org/debian bullseye-backports main contrib non-free
-#
+            # TESTING
+            "testing")
+                
+                echo "Dependencies: Selected \"$str_input\"."
 
-# debian 12/bookworm backports
-#deb http://deb.debian.org/debian bookworm-backports main contrib non-free
-#deb-src http://deb.debian.org/debian bookworm-backports main contrib non-free
-#
-EOF
-                echo "Dependencies: Selected \"backports\"."
-                rm $str_file
-                mv $str_file'_temp' $str_file
-                break
-            ;;
+                 # LOOP THRU ARRAY
+                int_line=${#arr_sources[@]}
+                for (( int_index=0; int_index<$int_line; int_index++ )); do
+                    str_line=${arr_sources[$int_index]}
+                    echo $str_line >> '/etc/apt/sources.list.d/'$str_input'.list'
+                done
+                
+                break;;
+
+            # CURRENT BRANCH WITH BACKPORTS AND NON-FREE
+            "backports")
+            
+                echo "Dependencies: Selected \"$str_input\"."
+                
+                # APT SOURCES 
+                declare -a arr_sources=(
+$'\n'
+"# debian $str_releaseVer/$str_releaseName"
+"# See https://wiki.debian.org/SourcesList for more information."
+"deb http://deb.debian.org/debian/ $str_releaseName main non-free contrib"
+"deb-src http://deb.debian.org/debian/ $str_releaseName main non-free contrib"
+$'\n'
+"deb http://deb.debian.org/debian/ $str_releaseName-updates main non-free contrib"
+"deb-src http://deb.debian.org/debian/ $str_releaseName-updates main non-free contrib"
+$'\n'
+"deb http://security.debian.org/debian-security/ $str_releaseName-security main non-free contrib"
+"deb-src http://security.debian.org/debian-security/ $str_releaseName-security main non-free contrib"
+"#"
+"# debian $str_releaseVer/$str_releaseName $str_input"
+"deb http://deb.debian.org/debian $str_releaseName-$str_input main contrib non-free"
+"deb-src http://deb.debian.org/debian $str_releaseName-$str_input main contrib non-free"
+"#"
+)
+
+                 # LOOP THRU ARRAY
+                int_line=${#arr_sources[@]}
+                for (( int_index=0; int_index<$int_line; int_index++ )); do
+                    str_line=${arr_sources[$int_index]}
+                    echo $str_line >> $str_file
+                done
+
+                break;;
+            
+            # INVALID SELECTION
             *)
-                echo "Dependencies: No changes."
-                rm $str_file'_temp'
-                break
-            ;;
+            
+                echo "Dependencies: Invalid input!"
+                
         esac
+        
+        ((int_count++))
+        
+        # AFTER THREE TRIES, EXIT
+        if [[ $int_count -ge 3 ]]; then
+        
+            echo "Dependencies: Exceeded max attempts! Selected \"$str_releaseName\"."
+            break
+            
+        fi
+        
     done
+    
+    # REMOVE TEMP FILE
+    rm $str_file'_temp'
+    
+    echo "Dependencies: End."
+    
+}
+
+function 01B_Dependencies {
+
+    echo "Dependencies: Start."
+
+    # APT
     apt clean
     apt update
+    
+    # MANUAL PROMPT
     if $bool_isManual; then
         apt autoremove
         apt upgrade
@@ -151,31 +239,40 @@ EOF
         apt autoremove -y
         apt upgrade -y
     fi
+    
     # UNUSED
     str_aptRem="os-prober"
+    
     # NOTE: any changes made, see SYSTEMD.
     # NOTE: update here!
-    str_aptAdd="apcupsd bleachbit cockpit curl fail2ban flashrom flatpak firefox-esr filezilla git grub-customizer gufw java-common lm-sensors neofetch python3 qemu rtl-sdr ssh synaptic ufw unzip virt-manager vlc wget wine youtube-dl zram-tools "
+    str_aptAdd="apcupsd bleachbit cockpit curl fail2ban flashrom flatpak firefox-esr filezilla git grub-customizer gufw java-common lm-sensors neofetch nvidia-detect python3 qemu rtl-sdr ssh synaptic ufw unzip virt-manager vlc wget wine youtube-dl zram-tools "
+    
     # VIDEO DRIVERS
-    str_aptAdd2="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+    str_aptAdd2="xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware "
+    
     if $bool_isManual; then
         apt remove $str_aptRem
         apt install $str_aptAdd
-        apt install $str_aptAdd2
+        #apt install $str_aptAdd2
     else
         apt remove -y $str_aptRem
         apt install -y $str_aptAdd
-        apt install -y $str_aptAdd2
+        #apt install -y $str_aptAdd2
     fi
+    
     flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    
     # NOTE: update here!
-    str_flatpakAdd="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv"
+    str_flatpakAdd="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv "
+    
     if $bool_isManual; then
         flatpak install flathub $str_flatpakAdd
     else
         flatpak install flathub -y $str_flatpakAdd
     fi
+    
     echo "Dependencies: End."
+    
 }
 
 function 02_Systemctl {
@@ -256,14 +353,14 @@ function 03_SSH {
     else
         cp $str_file'_old' $str_file
     fi
-    echo $'\n#\nPort '$sshAlt >> $str_file
+    echo $'\n#\nPort '$str_sshAlt >> $str_file
     str_file="/etc/ssh/sshd_config"
     if [ -d $str_file'_old' ]; then
         cp $str_file $str_file'_old' 
     else
         cp $str_file'_old' $str_file
     fi
-    echo $'\n#\nPort '$sshAlt >> $str_file
+    echo $'\n#\nPort '$str_sshAlt >> $str_file
     cat << 'EOF' >> $str_file
 LoginGraceTime 1m
 PermitRootLogin prohibit-password
@@ -368,7 +465,8 @@ echo "Script: Start."
 
 # TODO: either allow user to select each function to run, or have function check for existing changes and skip?
 00_Prompt           # works
-#01_Dependencies    # works
+01A_Dependencies    # works
+#01B_Dependencies   
 #02_Systemctl       # works
 #03_SSH             # works
 #04_UFW             # works
