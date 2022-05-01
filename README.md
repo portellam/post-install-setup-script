@@ -1,3 +1,5 @@
+# WIP
+
 # new-debian
 Personal Bash scripts to run at first-time setup for Debian Linux.
 
