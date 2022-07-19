@@ -11,7 +11,7 @@ local_int_count=0   # reset counter
     
 while true; do
 
-    if [ $int_count -gt 2 ]; then
+    if [ $local_int_count -gt 2 ]; then
         str_sshAlt=22
         echo -e "$0: Exceeded max attempts!\n$0: Value is set to default."
         break
@@ -29,7 +29,7 @@ while true; do
         if [ "$str_sshAlt" -gt 0 ]; then break; fi
     else echo -e "$0: Invalid input. First parameter must be an integer."; fi
         
-    ((int_count++)) 
+    ((local_int_count++))   # counter
 done
     
 # SSH, check if backup exists #
