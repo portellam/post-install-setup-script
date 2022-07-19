@@ -61,9 +61,9 @@ function UserInput {
 UserInput $1
 
 # parse and execute functions #
-echo -e "$0: Executing functions."
+echo -e "$0: Executing sudo functions."
 
-local_str_dir1="functions"
+local_str_dir1="sudo-functions"
 declare -a local_arr_dir1=`ls $local_str_dir1`
 
 for local_str_line in $local_arr_dir1; do
