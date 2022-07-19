@@ -1,8 +1,8 @@
 #!/bin/bash sh
 
 # check if sudo/root #
-if [[ `whoami` != "root" ]]; then
-    echo -e "$0: WARNING: Script must be run as Sudo or Root! Exiting."
+if [[ `whoami` == "root" ]]; then
+    echo "$0: WARNING: Script must be run as user not root! Exiting."
     exit 0
 fi
 #
@@ -10,7 +10,8 @@ fi
 ### NOTE: clone/update git repos here 
 
 echo "$0: Cloning/Updating Git repos."
-local_str_dir1="/root/git/"
+cd ~/
+local_str_dir1=$(pwd)'/git/'
 if [[ ! -d $local_str_dir1 ]]; then; mkdir -p $local_str_dir1; fi     # if dir doesn't exist, create it
 
 # here goes useful repos for system deployment
@@ -18,12 +19,11 @@ if [[ ! -d $local_str_dir1 ]]; then; mkdir -p $local_str_dir1; fi     # if dir d
 declare -a arr_repo=(   
 
 #"username/reponame"
-"corna/me_cleaner"
-"dt-zero/me_cleaner"
-"foundObjects/zram-swap"
-"portellam/Auto-Xorg"
+"awilliam/rom-parser"
+"pixelplanetdev/4chan-flag-filter"
 "pyllyukko/user.js"
-"StevenBlack/hosts"
+"SpaceinvaderOne/Dump_GPU_vBIOS"
+"spheenik/vfio-isolate"
 
 )
     
@@ -80,56 +80,14 @@ function ExecuteScript {
 }
 #
 
-## portellam/Auto-Xorg ##
-str_repo="portellam/Auto-Xorg"
-ExecuteScript $str_repo
+### portellam/Auto-Xorg ##
+#str_repo="portellam/Auto-Xorg"
+#ExecuteScript $str_repo
 
-if [[ $local_str_input1 != "Y"* ]]; then
-    cd $local_str_dir1$str_repo
-    sudo bash ./installer.sh
-fi
-##
-
-## StevenBlack/hosts ##
-str_repo="StevenBlack/hosts"
-ExecuteScript $str_repo
-
-if [[ $local_str_input1 != "Y"* ]]; then
-    cd $local_str_dir1$str_repo
-    local_str_file1="/etc/hosts"
-
-    if [[ -d $local_str_file1'_old' ]]; then; sudo cp $local_str_file1 $local_str_file1'_old'     # backup hosts
-    else sudo cp $local_str_file1'_old' $local_str_file1; fi                                    # restore backup
-
-    echo $'\n#' >> $local_str_file1
-    cat hosts >> $local_str_file1
-fi
-##
-    
-## pyllyukko/user.js ##
-str_repo="pyllyukko/user.js"
-ExecuteScript $str_repo
-
-if [[ $local_str_input1 != "Y"* ]]; then
-    cd $local_str_dir1$str_repo
-    make debian_locked.js
-    local_str_file1="/etc/firefox-esr/firefox-esr.js"
-
-    if [[ -d $local_str_file1'_old' ]]; then; cp $local_str_file1 $local_str_file1'_old'; fi          # backup system user.js
-
-    cp debian_locked.js $local_str_file1
-    #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
-fi
-##
-    
-## foundObjects/zram-swap ##
-str_repo="foundObjects/zram-swap"
-ExecuteScript $str_repo
-
-if [[ $local_str_input1 != "Y"* ]]; then
-    cd $local_str_dir1$str_repo
-    sudo sh ./install.sh
-fi
+#if [[ $local_str_input1 != "Y"* ]]; then
+#    cd $local_str_dir1$str_repo
+#    sudo bash ./installer.sh
+#fi
 ##
 
 IFS=$SAVEIFS                # reset IFS
