@@ -204,7 +204,7 @@ done
 #
 
 rm $local_str_file'_temp'   # remove temp file
-echo -en "$0: Updating system.\nWARNING: If System Update is prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a'"
+echo -en "\n$0: WARNING: If System Update is prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a\n$0: Updating system."
 sudo apt clean
 sudo apt update
 

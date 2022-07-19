@@ -13,16 +13,16 @@ IFS=$'\n'      # Change IFS to newline char
 # skip or stop at every user-input #
 function UserInput {
     
-    # PARAMETERS #
     declare -i local_int_count=0            # reset counter  
-    #
 
     while true; do
 
-        if [[ $1 == "Y"* || $1 == "y"* || $1 == "N"* || $1 == "n"* ]]; then
+        # passthru input variable if it is valid #
+        if [[ $1 == "Y"* || $1 == "y"* ]]; then
             local_str_input1=$1     # input variable
             break
         fi
+        #
 
         # manual prompt #
         if [[ $local_int_count -ge 3 ]]; then       # auto answer
@@ -30,7 +30,7 @@ function UserInput {
             local_str_input1="N"                     # default input     # NOTE: change here
 
         else                                        # manual prompt
-            echo -en "$0: Skip or stop at each user-input prompt (automically answer yes/no prompts with yes)?\n$0: [Y/n]: "
+            echo -en "$0: PLEASE READ CAREFULLY: Skip or stop at each user-input prompt?\n$0: In other words, automically answer Yes/No prompts with 'Yes'?\n$0: [Y/n]: "
             read local_str_input1
 
             # string to upper
@@ -70,16 +70,15 @@ for local_str_line in $local_arr_dir1; do
 
     # execute sh/bash scripts in directory
     if [[ $local_str_line == *".sh" ]]; then
-        echo -e "$0: Executing '$local_str_line'."
+        echo -e "\n$0: Executing '$local_str_line'."
         sudo sh $local_str_dir1"/"$local_str_line $local_str_input1
     fi
 
     if [[ $local_str_line == *".bash" ]]; then
-        echo -e "$0: Executing '$local_str_line'."
+        echo -e "\n$0: Executing '$local_str_line'."
         sudo bash $local_str_dir1"/"$local_str_line $local_str_input1
     fi  
     #
-
 done
 #
 
