@@ -30,7 +30,7 @@ function UserInput {
             local_str_input1="N"                     # default input     # NOTE: change here
 
         else                                        # manual prompt
-            echo -en "$0: PLEASE READ CAREFULLY: Skip or stop at each user-input prompt?\n$0: In other words, automically answer Yes/No prompts with 'Yes'?\n$0: [Y/n]: "
+            echo -en "$0: PLEASE READ: Automatically answer Yes/No prompts with 'Yes'?\n$0: [Y/n]: "
             read local_str_input1
 
             # string to upper
@@ -42,11 +42,11 @@ function UserInput {
         
         case $local_str_input1 in
             "Y")
-                echo -e "$0: Skipping at each user-input prompt."
+                echo -e "$0: Auto-answer prompts with 'Yes'."
                 break
             ;;
             "N")
-                echo -e "$0: Stopping at each user input prompt."
+                echo -e "$0: Stopping at each prompt."
                 break
             ;;
             *)  echo -e "$0: Invalid input!";;
