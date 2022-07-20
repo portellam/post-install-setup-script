@@ -12,7 +12,7 @@ fi
 echo "$0: Cloning/Updating Git repos."
 cd ~/
 local_str_dir1=$(pwd)'/git/'
-if [[ ! -d $local_str_dir1 ]]; then; mkdir -p $local_str_dir1; fi     # if dir doesn't exist, create it
+if [[ ! -d $local_str_dir1 ]]; then mkdir -p $local_str_dir1; fi     # if dir doesn't exist, create it
 
 # here goes useful repos for system deployment
 # list of git repos     # NOTE: update here
@@ -20,7 +20,7 @@ declare -a arr_repo=(
 
 #"username/reponame"
 "awilliam/rom-parser"
-"pixelplanetdev/4chan-flag-filter"
+#"pixelplanetdev/4chan-flag-filter"
 "pyllyukko/user.js"
 "SpaceinvaderOne/Dump_GPU_vBIOS"
 "spheenik/vfio-isolate"
@@ -37,7 +37,7 @@ for (( int_index=0; int_index<$int_repo; int_index++ )); do
     str_repo=${arr_repo[$int_index]}
     str_user=$(echo $str_repo | cut -d "/" -f1)
         
-    if [[ ! -d $local_str_dir1$str_user ]]; then; mkdir -p $local_str_dir1$str_user; fi     # create folder
+    if [[ ! -d $local_str_dir1$str_user ]]; then mkdir -p $local_str_dir1$str_user; fi     # create folder
         
     # update local repo #
     if [[ -e $local_str_dir1$str_repo ]]; then
@@ -46,9 +46,11 @@ for (( int_index=0; int_index<$int_repo; int_index++ )); do
     else
         # validate input variable #
         if [[ $1 != "Y"* ]]; then
-            echo -e "$0: Clone repo '$str_repo'?"
+            echo -en "$0: Clone repo '$str_repo'? [Y/n]: "
             read local_str_input1
             local_str_input1=$(echo $local_str_input1 | tr '[:lower:]' '[:upper:]')
+            local_str_input1=${local_str_input1:0:1}
+            UserInput $local_str_input1
 
             if [[ $local_str_input1 != "Y"* ]]; then
                 cd $local_str_dir1$str_user
@@ -68,11 +70,11 @@ done
 
 ### NOTE: execute git scripts here ###
 
-echo "$0: Executing Git scripts."
+#echo "$0: Executing Git scripts."
 
 # prompt user to execute script or do so automatically #
 function ExecuteScript {
-    if [[ $1 =! "Y" ]]; then
+    if [[ $1 != "Y" ]]; then
         echo -e "$0: Execute script '$str_repo'?"
         read local_str_input1
         local_str_input1=$(echo $local_str_input1 | tr '[:lower:]' '[:upper:]')

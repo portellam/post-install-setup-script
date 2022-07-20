@@ -7,11 +7,50 @@ if [[ `whoami` != "root" ]]; then
 fi
 #
 
+# user input #
+local_str_input1=""
+
+function UserInput {
+    declare -i local_int_count=0            # reset counter
+    echo $local_str_input1
+    while true; do
+        # passthru input variable if it is valid #
+        if [[ $1 == "Y"* || $1 == "y"* ]]; then
+            local_str_input1=$1     # input variable
+            break
+        fi
+        #
+        # manual prompt #
+        if [[ $local_int_count -ge 3 ]]; then       # auto answer
+            echo -e "$0: Exceeded max attempts."
+            local_str_input1="N"                     # default input     # NOTE: change here
+        else                                        # manual prompt
+            echo -en "$0: [Y/n]: "
+            read local_str_input1
+            # string to upper
+            local_str_input1=$(echo $local_str_input1 | tr '[:lower:]' '[:upper:]')
+            local_str_input1=${local_str_input1:0:1}
+            #
+        fi
+        #
+        case $local_str_input1 in
+            "Y"|"N")
+                break
+            ;;
+            *)
+                echo -e "$0: Invalid input."
+            ;;
+        esac  
+        ((local_int_count++))   # counter
+    done  
+}
+#
+
 ### NOTE: clone/update git repos here 
 
 echo "$0: Cloning/Updating Git repos."
 local_str_dir1="/root/git/"
-if [[ ! -d $local_str_dir1 ]]; then; mkdir -p $local_str_dir1; fi     # if dir doesn't exist, create it
+if [[ ! -d $local_str_dir1 ]]; then mkdir -p $local_str_dir1; fi     # if dir doesn't exist, create it
 
 # here goes useful repos for system deployment
 # list of git repos     # NOTE: update here
@@ -37,7 +76,7 @@ for (( int_index=0; int_index<$int_repo; int_index++ )); do
     str_repo=${arr_repo[$int_index]}
     str_user=$(echo $str_repo | cut -d "/" -f1)
         
-    if [[ ! -d $local_str_dir1$str_user ]]; then; mkdir -p $local_str_dir1$str_user; fi     # create folder
+    if [[ ! -d $local_str_dir1$str_user ]]; then mkdir -p $local_str_dir1$str_user; fi     # create folder
         
     # update local repo #
     if [[ -e $local_str_dir1$str_repo ]]; then
@@ -46,9 +85,11 @@ for (( int_index=0; int_index<$int_repo; int_index++ )); do
     else
         # validate input variable #
         if [[ $1 != "Y"* ]]; then
-            echo -e "$0: Clone repo '$str_repo'?"
+            echo -en "$0: Clone repo '$str_repo'? [Y/n]: "
             read local_str_input1
             local_str_input1=$(echo $local_str_input1 | tr '[:lower:]' '[:upper:]')
+            local_str_input1=${local_str_input1:0:1}
+            UserInput $local_str_input1
 
             if [[ $local_str_input1 != "Y"* ]]; then
                 cd $local_str_dir1$str_user
@@ -72,7 +113,7 @@ echo "$0: Executing Git scripts."
 
 # prompt user to execute script or do so automatically #
 function ExecuteScript {
-    if [[ $1 =! "Y" ]]; then
+    if [[ $1 != "Y" ]]; then
         echo -e "$0: Execute script '$str_repo'?"
         read local_str_input1
         local_str_input1=$(echo $local_str_input1 | tr '[:lower:]' '[:upper:]')
@@ -98,7 +139,7 @@ if [[ $local_str_input1 != "Y"* ]]; then
     cd $local_str_dir1$str_repo
     local_str_file1="/etc/hosts"
 
-    if [[ -d $local_str_file1'_old' ]]; then; sudo cp $local_str_file1 $local_str_file1'_old'     # backup hosts
+    if [[ -d $local_str_file1'_old' ]]; then sudo cp $local_str_file1 $local_str_file1'_old'     # backup hosts
     else sudo cp $local_str_file1'_old' $local_str_file1; fi                                    # restore backup
 
     echo $'\n#' >> $local_str_file1
@@ -115,7 +156,7 @@ if [[ $local_str_input1 != "Y"* ]]; then
     make debian_locked.js
     local_str_file1="/etc/firefox-esr/firefox-esr.js"
 
-    if [[ -d $local_str_file1'_old' ]]; then; cp $local_str_file1 $local_str_file1'_old'; fi          # backup system user.js
+    if [[ -d $local_str_file1'_old' ]]; then cp $local_str_file1 $local_str_file1'_old'; fi          # backup system user.js
 
     cp debian_locked.js $local_str_file1
     #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
