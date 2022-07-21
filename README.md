@@ -1,13 +1,13 @@
-## To-Do:
+## To-Do
+* sudo/root
 
-## root ##
-* 
+* user
+    * ssh/security script
+    * review other git repos and add and execute for new user?
+    * crontab or user startup scripts?
+    * edit user home config for custom desktop experience (KDE Plasma)
 
-## user ##
-* ssh/security script
+## DISCLAIMER
+**Work-in-progress**
 
-* review other git repos and add and execute for new user?
-
-* crontab or user startup scripts?
-
-* edit user home config for custom desktop experience (KDE Plasma)
+Use script at your own risk!
