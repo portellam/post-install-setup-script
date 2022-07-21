@@ -60,6 +60,7 @@ declare -a arr_repo=(
 "corna/me_cleaner"
 "dt-zero/me_cleaner"
 "foundObjects/zram-swap"
+#"portellam/Auto-VFIO"
 "portellam/Auto-Xorg"
 "pyllyukko/user.js"
 "StevenBlack/hosts"
