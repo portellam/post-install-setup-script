@@ -1,9 +1,9 @@
 ## To-Do:
 
-# root #
+## root ##
 * 
 
-# user #
+## user ##
 * ssh/security script
 
 * review other git repos and add and execute for new user?
