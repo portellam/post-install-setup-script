@@ -1,5 +1,7 @@
 #!/bin/bash sh
 
+exit 0
+
 # check if sudo/root #
 if [[ `whoami` == "root" ]]; then
     echo "$0: WARNING: Script must be run as User, not Root! Exiting."
