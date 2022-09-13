@@ -1,13 +1,13 @@
 #!/bin/bash sh
 
 # check if sudo/root #
-    function CheckIfUserIsNotRoot
+    function CheckIfUserIsRoot
     {
-        if [[ `whoami` == "root" ]]; then
+        if [[ `whoami` != "root" ]]; then
             str_file1=`echo ${0##/*}`
             str_file1=`echo $str_file1 | cut -d '/' -f2`
-            echo -e "WARNING: Script must execute as user."
-            bool_exit=true
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
+            exit 0
         fi
     }
 

@@ -3,49 +3,51 @@
 exit 0
 
 # check if sudo/root #
-if [[ `whoami` != "root" ]]; then
-    echo -e "$0: WARNING: Script must be run as Sudo or Root! Exiting."
-    exit 0
-fi
-#
-
-# user input #
-str_input1=""
-
-function UserInput {
-    declare -i int_count=0            # reset counter
-    echo $str_input1
-    while true; do
-        # passthru input variable if it is valid #
-        if [[ $1 == "Y"* || $1 == "y"* ]]; then
-            str_input1=$1     # input variable
-            break
+    function CheckIfUserIsRoot
+    {
+        if [[ `whoami` != "root" ]]; then
+            str_file1=`echo ${0##/*}`
+            str_file1=`echo $str_file1 | cut -d '/' -f2`
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
+            exit 0
         fi
-        #
-        # manual prompt #
-        if [[ $int_count -ge 3 ]]; then       # auto answer
-            echo -e "$0: Exceeded max attempts."
-            str_input1="N"                     # default input     # NOTE: change here
-        else                                        # manual prompt
-            echo -en "$0: [Y/n]: "
-            read str_input1
-            # string to upper
-            str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
-            str_input1=${str_input1:0:1}
-            #
-        fi
-        #
-        case $str_input1 in
-            "Y"|"N")
-                break
-            ;;
-            *)
-                echo -e "$0: Invalid input."
-            ;;
-        esac
-        ((int_count++))   # counter
-    done
-}
+    }
+
+# procede with echo prompt for input #
+    # ask user for input then validate #
+    function ReadInput {
+
+        # parameters #
+        str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+        str_input1=${str_input1:0:1}
+        declare -i int_count=0      # reset counter
+
+        while true; do
+
+            # manual prompt #
+            if [[ $int_count -ge 3 ]]; then
+                echo -en "Exceeded max attempts. "
+                str_input1="N"                    # default input     # NOTE: update here!
+
+            else
+                echo -en "\t$1 [Y/n]: "
+                read str_input1
+
+                str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+                str_input1=${str_input1:0:1}
+            fi
+
+            case $str_input1 in
+                "Y"|"N")
+                    break;;
+
+                *)
+                    echo -en "\tInvalid input. ";;
+            esac
+
+            ((int_count++))         # increment counter
+        done
+    }
 #
 
 ### NOTE: clone/update git repos here
