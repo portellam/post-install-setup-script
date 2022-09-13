@@ -6,7 +6,7 @@
         if [[ `whoami` != "root" ]]; then
             str_file1=`echo ${0##/*}`
             str_file1=`echo $str_file1 | cut -d '/' -f2`
-            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'.\n$str_file1: Exiting."
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
             bool_exit=true
         fi
     }
@@ -197,35 +197,6 @@
                     done
 
                     break;;
-
-                # testing #
-                # "testing")
-                #     echo -e "Selected \"$str_input2\"."
-
-                #     # write to file #
-                #     int_line1=${#arr_sources[@]}
-
-                #     for (( int_i=0; int_i<$int_line1; int_i++ )); do
-                #         str_line1=${arr_sources[$int_i]}
-                #         echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
-                #     done
-
-                #     break;;
-
-                # unstable #
-                # "unstable")
-                #     echo -e "Selected \"$str_input2\"."
-
-                #     # write to file #
-                #     int_line1=${#arr_sources[@]}
-
-                #     for (( int_i=0; int_i<$int_line1; int_i++ )); do
-                #         str_line1=${arr_sources[$int_i]}
-                #         echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
-                #     done
-
-                #     break;;
-                #
 
                 # current branch with backports
                 "backports")

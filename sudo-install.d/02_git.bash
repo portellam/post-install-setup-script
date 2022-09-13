@@ -42,13 +42,13 @@ function UserInput {
             *)
                 echo -e "$0: Invalid input."
             ;;
-        esac  
+        esac
         ((int_count++))   # counter
-    done  
+    done
 }
 #
 
-### NOTE: clone/update git repos here 
+### NOTE: clone/update git repos here
 
 echo "$0: Cloning/Updating Git repos."
 str_dir1="/root/git/"
@@ -56,7 +56,7 @@ if [[ ! -d $str_dir1 ]]; then mkdir -p $str_dir1; fi     # if dir doesn't exist,
 
 # here goes useful repos for system deployment
 # list of git repos     # NOTE: update here
-declare -a arr_repo=(   
+declare -a arr_repo=(
 
 #"username/reponame"
 "corna/me_cleaner"
@@ -68,19 +68,19 @@ declare -a arr_repo=(
 "StevenBlack/hosts"
 
 )
-    
+
 # loop thru list
 int_repo=${#arr_repo[@]}
 for (( int_index=0; int_index<$int_repo; int_index++ )); do
-    
+
     # reset working dir
     cd ~/
-        
+
     str_repo=${arr_repo[$int_index]}
     str_user=$(echo $str_repo | cut -d "/" -f1)
-        
+
     if [[ ! -d $str_dir1$str_user ]]; then mkdir -p $str_dir1$str_user; fi     # create folder
-        
+
     # update local repo #
     if [[ -e $str_dir1$str_repo ]]; then
         cd $str_dir1$str_repo
@@ -107,7 +107,7 @@ for (( int_index=0; int_index<$int_repo; int_index++ )); do
         #
     fi
     #
-        
+
 done
 
 ### NOTE: execute git scripts here ###
@@ -149,7 +149,7 @@ if [[ $str_input1 != "Y"* ]]; then
     cat hosts >> $str_file1
 fi
 ##
-    
+
 ## pyllyukko/user.js ##
 str_repo="pyllyukko/user.js"
 ExecuteScript $str_repo
@@ -165,7 +165,7 @@ if [[ $str_input1 != "Y"* ]]; then
     #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
 fi
 ##
-    
+
 ## foundObjects/zram-swap ##
 str_repo="foundObjects/zram-swap"
 ExecuteScript $str_repo

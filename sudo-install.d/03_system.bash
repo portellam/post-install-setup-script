@@ -13,7 +13,7 @@ fi
 
 str_file1="/var/spool/cron/crontabs/root"      # set working file
 declare -a arr_file1
-    
+
 # create backup or restore from backup #
 if [ ! -d $str_file1 ]; then
     cp $str_file1 $str_file1'_old'
@@ -72,7 +72,7 @@ fi
 ## SSH ##
 
 int_count=0   # reset counter
-    
+
 while true; do
 
     if [ $int_count -gt 2 ]; then
@@ -80,26 +80,26 @@ while true; do
         echo -e "$0: Exceeded max attempts!\n$0: Value is set to default."
         break
     fi
-        
+
     echo -e "$0: Enter a new IP Port number for SSH:"
     read str_sshAlt
-        
+
     if [ "$str_sshAlt" -eq "$str_sshAlt" ] 2> /dev/null; then
-        
-        if [ "$str_sshAlt" -eq 22 ]; then   
+
+        if [ "$str_sshAlt" -eq 22 ]; then
             echo -e "$0: Value is set to default."
-            break     
+            break
         fi
         if [ "$str_sshAlt" -gt 0 ]; then break; fi
     else echo -e "$0: Invalid input. First parameter must be an integer."; fi
-        
+
     ((int_count++))   # counter
 done
-    
+
 # SSH, check if backup exists #
 str_file1="/etc/ssh/ssh_config"
 
-if [ ! -d $str_file1'_old' ]; then cp $str_file1 $str_file1'_old' 
+if [ ! -d $str_file1'_old' ]; then cp $str_file1 $str_file1'_old'
 else cp $str_file1'_old' $str_file1; fi
 
 echo $'\n#\nPort '$str_sshAlt >> $str_file1
@@ -107,10 +107,10 @@ echo $'\n#\nPort '$str_sshAlt >> $str_file1
 
 # SSHD, check if backup exists #
 str_file1="/etc/ssh/sshd_config"
-    
-if [ ! -d $str_file1'_old' ]; then cp $str_file1 $str_file1'_old' 
+
+if [ ! -d $str_file1'_old' ]; then cp $str_file1 $str_file1'_old'
 else cp $str_file1'_old' $str_file1; fi
-    
+
 echo $'\n#\nPort '$str_sshAlt >> $str_file1
 cat << 'EOF' >> $str_file1
 LoginGraceTime 1m
@@ -125,16 +125,16 @@ systemctl restart ssh sshd  # restart services
 
 ## UFW ##
 if [[ $str_sshAlt -eq 22 ]]; then
-    sudo ufw limit from 192.168.0.0/16 to any port 22 proto tcp    
+    sudo ufw limit from 192.168.0.0/16 to any port 22 proto tcp
 else
     sudo ufw deny ssh
     sudo ufw limit from 192.168.0.0/16 to any port $str_sshAlt proto tcp
 fi
-    
+
 # NOTE: changes here
 sudo ufw allow DNS
 sudo ufw allow VNC
-sudo ufw allow from 192.168.0.0/16 to any port 2049                 # NFS   
+sudo ufw allow from 192.168.0.0/16 to any port 2049                 # NFS
 sudo ufw allow from 192.168.0.0/16 to any port 3389                 # RDP
 sudo ufw allow from 192.168.0.0/16 to any port 9090 proto tcp       # cockpit
 sudo ufw allow from 192.168.0.0/16 to any port 137:138 proto udp    # CIFS
