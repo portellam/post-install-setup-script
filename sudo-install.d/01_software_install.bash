@@ -6,7 +6,7 @@
         if [[ `whoami` != "root" ]]; then
             str_file1=`echo ${0##/*}`
             str_file1=`echo $str_file1 | cut -d '/' -f2`
-            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
             exit 0
         fi
     }
@@ -55,18 +55,13 @@
 
         if [[ `echo ${str_pwd##*/}` != "install.d" ]]; then
             if [[ -e `find . -name install.d` ]]; then
-                # echo -e "Script located the correct working directory."
                 cd `find . -name install.d`
 
             else
                 echo -e "WARNING: Script cannot locate the correct working directory."
             fi
-
-        # else
-        #     echo -e "Script is in the correct working directory."
         fi
     }
-
 # check linux distro #
     function CheckCurrentDistro
     {
