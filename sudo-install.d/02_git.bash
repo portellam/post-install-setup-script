@@ -1,5 +1,9 @@
 #!/bin/bash sh
 
+#
+# Author(s):    Alex Portell <github.com/portellam>
+#
+
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
@@ -67,8 +71,8 @@
         "corna/me_cleaner"
         "dt-zero/me_cleaner"
         "foundObjects/zram-swap"
-        "portellam/VFIO-setup"
         "portellam/Auto-Xorg"
+        "portellam/deploy-VFIO-setup"
         "pyllyukko/user.js"
         "StevenBlack/hosts"
 
@@ -125,7 +129,7 @@
 
         if [[ $str_input1 == "Y" ]]; then
             cd $str_dir1$str_repo
-            sudo bash ./installer.sh
+            sudo bash ./installer.bash
         fi
 
         # StevenBlack/hosts #

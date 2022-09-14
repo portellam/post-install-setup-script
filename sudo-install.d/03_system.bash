@@ -1,5 +1,9 @@
 #!/bin/bash sh
 
+#
+# Author(s):    Alex Portell <github.com/portellam>
+#
+
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
@@ -9,6 +13,51 @@
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
             exit 0
         fi
+    }
+
+# systemd #
+    function AppendToSystemd
+    {
+        echo -en "Appending files to Systemd... "
+
+        # parameters #
+        str_dir1=`find .. -name files`
+
+        if [[ -e $str_dir1 ]];
+            cd $str_dir1
+
+            # parameters #
+            str_pattern=".service"
+            declare -a arr1=(`ls ./ | grep *.service` )
+
+            for str_inFile1 in ${arr_dir[@]}; do
+
+                # parameters #
+                str_line1=${str_inFile1##*(str_pattern)}      # truncate filetype
+                str_inFile2=`ls | grep *"$str_line1"* | grep -Ev *".service" | uniq | head -n1`
+                str_outFile1="/etc/systemd/system/$str_file1"
+
+                if [[ -z $str_outFile1 ]]; then
+                    cp $str_outFile1 $str_outFile1
+                    chown root $str_outFile1
+                    chmod +x $str_outFile1
+                fi
+
+                if [[ -e $str_inFile2 ]]; then
+                    str_outFile2="/usr/sbin/$str_file2"
+
+                    if [[ -z $str_outFile2 ]]; then
+                        cp $str_inFile2 $str_outFile2
+                        chown root $str_outFile2
+                        chmod +x $str_outFile2
+                    fi
+                fi
+
+                str_outFile2=""
+            done
+        fi
+
+        echo -e "Complete."
     }
 
 # crontab #
@@ -24,7 +73,7 @@
             cp $str_file1 $str_file1'_old'
         fi
 
-        echo -en "$0: Editing crontab.\n$0: Enter your preferred ntp server (default: time.nist.gov): "
+        echo -en "Editing crontab.\nEnter your preferred ntp server (default: time.nist.gov): "
         read str_input1
 
         if [[ -z $str_input1 ]]; then
@@ -191,6 +240,7 @@
 
         # call functions #
         CheckIfUserIsRoot
+        AppendToSystemd
         EditCrontab
         EditSSH
         EditFirewall

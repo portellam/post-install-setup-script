@@ -1,7 +1,10 @@
 #!/bin/bash sh
 
+#
+# Author(s):    Alex Portell <github.com/portellam>
+#
 
-# check if sudo/root #
+# check if not sudo/root #
     function CheckIfUserIsNotRoot
     {
         if [[ `whoami` == "root" ]]; then
