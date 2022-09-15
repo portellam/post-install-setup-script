@@ -4,12 +4,12 @@
 # Author(s):    Alex Portell <github.com/portellam>
 #
 
-# check if not sudo/root #
+# check if sudo/root #
     function CheckIfUserIsNotRoot
     {
-        if [[ `whoami` == "root" ]]; then
-            str_file1=`echo ${0##/*}`
-            str_file1=`echo $str_file1 | cut -d '/' -f2`
+        if [[ $(whoami) != "root" ]]; then
+            str_file1=$(echo ${0##/*})
+            str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as user. Exiting."
             exit 0
         fi
@@ -20,7 +20,7 @@
     function ReadInput {
 
         # parameters #
-        str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+        str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
         str_input1=${str_input1:0:1}
         declare -i int_count=0      # reset counter
 
@@ -35,7 +35,7 @@
                 echo -en "\t$1 [Y/n]: "
                 read str_input1
 
-                str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+                str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
                 str_input1=${str_input1:0:1}
             fi
 
@@ -55,19 +55,15 @@
     function CheckForCorrectWorkingDir
     {
         # parameters #
-        str_pwd=`pwd`
+        str_pwd=$(pwd)
 
-        if [[ `echo ${str_pwd##*/}` != "install.d" ]]; then
-            if [[ -e `find . -name install.d` ]]; then
-                # echo -e "Script located the correct working directory."
-                cd `find . -name install.d`
+        if [[ $(echo ${str_pwd##*/}) != "install.d" ]]; then
+            if [[ -e $(find . -name install.d) ]]; then
+                cd $(find . -name install.d)
 
             else
                 echo -e "WARNING: Script cannot locate the correct working directory."
             fi
-
-        # else
-        #     echo -e "Script is in the correct working directory."
         fi
     }
 
@@ -76,23 +72,22 @@
 
     # parameters #
     bool_exit=false
-    str_output1=""
-    str_dir1="user-install.d"
+    str_dir1="user-install.d/"
 
     # call functions #
     CheckIfUserIsNotRoot
     CheckForCorrectWorkingDir
 
-    while [[ $bool_exit == false ]]; do
+        while [[ $bool_exit == false ]]; do
 
-        if [[ -z `find . -name *$str_dir1*` ]]; then
-            echo -e "Executing functions... Failed. Missing files."
-            bool_exit=true
+            if [[ -z $(find . -name *$str_dir1*) ]]; then
+                echo -e "Executing functions... Failed. Missing files."
+                bool_exit=true
 
-        else
-            echo -e "Executing functions..."
+            else
+                echo -e "Executing functions..."
 
-            declare -a arr_dir1=`ls $str_dir1 | sort -h`
+                declare -a arr_dir1=$(ls $str_dir1 | sort -h)
 
                 # call functions #
                 for str_line1 in $arr_dir1; do
@@ -101,27 +96,27 @@
                     str_input1=""
 
                     # execute sh/bash scripts in directory
-                    if [[ $str_line1 == *".bash"||*".sh" && $str_line1 != *".log" ]]; then
+                    if [[ $str_line1 == *".bash" && $str_line1 == *".sh" && $str_line1 != *".log" ]]; then
                         ReadInput "Execute '$str_line1'?"
                         echo
                     fi
 
                     if [[ $str_input1 == "Y" && $str_line1 == *".bash" && $str_line1 != *".log" ]]; then
-                        sudo bash $str_dir1"/"$str_line1
+                        sudo bash $str_dir1$str_line1
                         echo
                     fi
 
                     if [[ $str_input1 == "Y" && $str_line1 == *".sh" && $str_line1 != *".log" ]]; then
-                        sudo sh $str_dir1"/"$str_line1
+                        sudo sh $str_dir1$str_line1
                         echo
                     fi
                 done
 
-            echo -e "Review changes made. "
-        fi
+                echo -en "Review changes made. "
+            fi
 
-    break
-    done
+        break
+        done
 
     if [[ $bool_exit == true ]]; then
         echo -en "WARNING: Setup cannot continue. "

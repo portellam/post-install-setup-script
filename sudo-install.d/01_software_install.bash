@@ -7,9 +7,9 @@
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
-        if [[ `whoami` != "root" ]]; then
-            str_file1=`echo ${0##/*}`
-            str_file1=`echo $str_file1 | cut -d '/' -f2`
+        if [[ $(whoami) != "root" ]]; then
+            str_file1=$(echo ${0##/*})
+            str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
             exit 0
         fi
@@ -20,7 +20,7 @@
     function ReadInput {
 
         # parameters #
-        str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+        str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
         str_input1=${str_input1:0:1}
         declare -i int_count=0      # reset counter
 
@@ -35,7 +35,7 @@
                 echo -en "\t$1 [Y/n]: "
                 read str_input1
 
-                str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+                str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
                 str_input1=${str_input1:0:1}
             fi
 
@@ -55,11 +55,11 @@
     function CheckForCorrectWorkingDir
     {
         # parameters #
-        str_pwd=`pwd`
+        str_pwd=$(pwd)
 
-        if [[ `echo ${str_pwd##*/}` != "install.d" ]]; then
-            if [[ -e `find . -name install.d` ]]; then
-                cd `find . -name install.d`
+        if [[ $(echo ${str_pwd##*/}) != "install.d" ]]; then
+            if [[ -e $(find . -name install.d) ]]; then
+                cd $(find . -name install.d)
 
             else
                 echo -e "WARNING: Script cannot locate the correct working directory."
@@ -69,10 +69,10 @@
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -en "Linux distribution found: `lsb_release -i -s`"
+        echo -en "Linux distribution found: $(lsb_release -i -s)"
 
         # Debian/Ubuntu
-        if [[ `lsb_release -i -s | grep -Ei "debian|ubuntu"` ]]; then
+        if [[ $(lsb_release -i -s | grep -Ei "debian|ubuntu") ]]; then
             echo -e "Linux distribution is compatible with setup. Continuing."
 
         else
@@ -101,7 +101,7 @@
 
         # Qt DE (KDE-plasma, LXQT)
         str_aptCheck=""
-        str_aptCheck=`sudo apt list --installed plasma-desktop lxqt`
+        str_aptCheck=$(sudo apt list --installed plasma-desktop lxqt)
 
         if [[ $str_aptCheck != "" ]]; then
             sudo apt install -y plasma-discover-backend-flatpak
@@ -109,7 +109,7 @@
 
         # GNOME DE (gnome, XFCE)
         str_aptCheck=""
-        str_aptCheck=`sudo apt list --installed gnome xfwm4`
+        str_aptCheck=$(sudo apt list --installed gnome xfwm4)
 
         if [[ $str_aptCheck != "" ]]; then
             sudo apt install -y gnome-software-plugin-flatpak
@@ -140,8 +140,8 @@
             if [[ $str_aptUnsorted == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptUnsorted | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptUnsorted | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptUnsorted | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -164,8 +164,8 @@
             if [[ $str_aptDeveloper == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptDeveloper | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptDeveloper | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptDeveloper | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptDeveloper | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -188,8 +188,8 @@
             if [[ $str_aptGames == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptGames | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptGames | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptGames | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptGames | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -212,8 +212,8 @@
             if [[ $str_aptInternet == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptInternet | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptInternet | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptInternet | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptInternet | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -236,8 +236,8 @@
             if [[ $str_aptMedia == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptMedia | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptMedia | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptMedia | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptMedia | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -260,8 +260,8 @@
             if [[ $str_aptOffice == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptOffice | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptOffice | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptOffice | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptOffice | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -284,8 +284,8 @@
             if [[ $str_aptPrismBreak == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptPrismBreak | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptPrismBreak | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptPrismBreak | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptPrismBreak | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -308,8 +308,8 @@
             if [[ $str_aptSecurity == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptSecurity | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptSecurity | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptSecurity | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptSecurity | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -332,8 +332,8 @@
             if [[ $str_aptSuites == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptSuites | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptSuites | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptSuites | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptSuites | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -356,8 +356,8 @@
             if [[ $str_aptTools == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptTools | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptTools | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptTools | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptTools | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -380,8 +380,8 @@
             if [[ $str_aptVGAdrivers == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_aptVGAdrivers | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_aptVGAdrivers | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_aptVGAdrivers | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -433,8 +433,8 @@
             if [[ $str_flatpakUnsorted == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_flatpakUnsorted | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_flatpakUnsorted | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -457,8 +457,8 @@
             if [[ $str_flatpakPrismBreak == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -481,8 +481,8 @@
             if [[ $str_snapUnsorted == *" "* ]]; then
                 declare -i int_i=1
 
-                while [[ `echo $str_snapUnsorted | cut -d ' ' -f$int_i` ]]; do
-                    echo -e "\t"`echo $str_snapUnsorted | cut -d ' ' -f$int_i`
+                while [[ $(echo $str_snapUnsorted | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t")echo $str_snapUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -502,7 +502,7 @@
         sudo apt install -y flatpak snapd
         flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-        if [[ -e `apt list --installed flatpak` ]]; then
+        if [[ -e $(apt list --installed flatpak) ]]; then
             if [[ $str_flatpakAll != "" ]]; then
                 echo -e "Install selected Flatpak apps?"
                 sudo flatpak install flathub $str_args $str_flatpakAll

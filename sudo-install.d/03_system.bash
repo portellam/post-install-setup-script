@@ -7,9 +7,9 @@
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
-        if [[ `whoami` != "root" ]]; then
-            str_file1=`echo ${0##/*}`
-            str_file1=`echo $str_file1 | cut -d '/' -f2`
+        if [[ $(whoami) != "root" ]]; then
+            str_file1=$(echo ${0##/*})
+            str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
             exit 0
         fi
@@ -21,20 +21,20 @@
         echo -en "Appending files to Systemd... "
 
         # parameters #
-        str_dir1=`find .. -name files`
+        str_dir1=$(find .. -name files)
 
-        if [[ -e $str_dir1 ]];
+        if [[ -e $str_dir1 ]]; then
             cd $str_dir1
 
             # parameters #
             str_pattern=".service"
-            declare -a arr1=(`ls ./ | grep *.service` )
+            declare -a arr1=($(ls ./ | grep *".service") )
 
             for str_inFile1 in ${arr_dir[@]}; do
 
                 # parameters #
                 str_line1=${str_inFile1##*(str_pattern)}      # truncate filetype
-                str_inFile2=`ls | grep *"$str_line1"* | grep -Ev *".service" | uniq | head -n1`
+                str_inFile2=$(ls | grep *"$str_line1"* | grep -Ev *".service" | uniq | head -n1)
                 str_outFile1="/etc/systemd/system/$str_file1"
 
                 if [[ -z $str_outFile1 ]]; then
@@ -80,7 +80,7 @@
             str_input1="time.nist.gov";     # default value, change here!
         fi
 
-        str_aptCheck=`apt list --installed ntpdate`
+        str_aptCheck=$(apt list --installed ntpdate)
 
         if [[ $str_aptCheck == *"installed"* ]]; then
             arr_file1+=(
@@ -91,10 +91,15 @@
             )
         fi
 
-        str_aptCheck=`apt list --installed unattended-upgrades`
+        str_aptCheck=$(apt list --installed unattended-upgrades)
 
-        if [[ $str_aptCheck == *"installed"* ]]; then str_line1="#"
-        else str_line1=""; fi
+        if [[ $str_aptCheck == *"installed"* ]]; then
+            str_line1="#"
+
+        else
+            str_line1=""
+        fi
+
         arr_file1+=(
             ""
             "# apt #    # NOTE: better to use 'unattended-upgrades'"
@@ -104,7 +109,7 @@
             "#0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y && apt autoremove -y"
         )
 
-        str_aptCheck=`apt list --installed flatpak`
+        str_aptCheck=$(apt list --installed flatpak)
 
         if [[ $str_aptCheck == *"installed"* ]]; then
             arr_file1+=(
@@ -115,7 +120,7 @@
             )
         fi
 
-        str_aptCheck=`apt list --installed snapd`
+        str_aptCheck=$(apt list --installed snapd)
 
         if [[ $str_aptCheck == *"installed"* ]]; then
             arr_file1+=(
@@ -245,7 +250,6 @@
         EditSSH
         EditFirewall
 
-        echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
         break
     done
 

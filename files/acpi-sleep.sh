@@ -9,7 +9,7 @@
 SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
 IFS=$'\n'      # Change IFS to newline char
 
-declare -a arr1=(`cat /proc/acpi/wakeup | grep enabled | grep -Ei '*EHC*|*XHC*' | cut -d ' ' -f1`)
+declare -a arr1=($(cat /proc/acpi/wakeup | grep enabled | grep -Ei '*EHC*|*XHC*' | cut -d ' ' -f1))
 for str_line1 in ${arr1[@]}; do
         echo $str_line1 > /proc/acpi/wakeup
 done

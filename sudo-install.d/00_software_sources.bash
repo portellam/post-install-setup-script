@@ -7,9 +7,9 @@
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
-        if [[ `whoami` != "root" ]]; then
-            str_file1=`echo ${0##/*}`
-            str_file1=`echo $str_file1 | cut -d '/' -f2`
+        if [[ $(whoami) != "root" ]]; then
+            str_file1=$(echo ${0##/*})
+            str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
             exit 0
         fi
@@ -20,7 +20,7 @@
     function ReadInput {
 
         # parameters #
-        str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+        str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
         str_input1=${str_input1:0:1}
         declare -i int_count=0      # reset counter
 
@@ -35,7 +35,7 @@
                 echo -en "\t$1 [Y/n]: "
                 read str_input1
 
-                str_input1=`echo $str_input1 | tr '[:lower:]' '[:upper:]'`
+                str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
                 str_input1=${str_input1:0:1}
             fi
 
@@ -55,11 +55,11 @@
     function CheckForCorrectWorkingDir
     {
         # parameters #
-        str_pwd=`pwd`
+        str_pwd=$(pwd)
 
-        if [[ `echo ${str_pwd##*/}` != "install.d" ]]; then
-            if [[ -e `find . -name install.d` ]]; then
-                cd `find . -name install.d`
+        if [[ $(echo ${str_pwd##*/}) != "install.d" ]]; then
+            if [[ -e $(find . -name install.d) ]]; then
+                cd $(find . -name install.d)
 
             else
                 echo -e "WARNING: Script cannot locate the correct working directory."
@@ -70,10 +70,10 @@
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -e "Linux distribution found: `lsb_release -i -s`"
+        echo -e "Linux distribution found: $(lsb_release -i -s)"
 
         # Debian/Ubuntu
-        if [[ `lsb_release -i -s | grep -Ei "debian|ubuntu"` ]]; then
+        if [[ $(lsb_release -i -s | grep -Ei "debian|ubuntu") ]]; then
             echo -e "Linux distribution is compatible with setup. Continuing."
 
         else
@@ -87,8 +87,8 @@
     {
 
         # parameters #
-        str_releaseName=`lsb_release -sc`
-        str_releaseVer=`lsb_release -sr`
+        str_releaseName=$(lsb_release -sc)
+        str_releaseVer=$(lsb_release -sr)
         str_file1="/etc/apt/sources.list"
         str_oldFile1="${str_file1}_old"
         str_newFile1="${str_file1}_new"
