@@ -57,13 +57,8 @@
         # parameters #
         str_pwd=$(pwd)
 
-        if [[ $(echo ${str_pwd##*/}) != "install.d" ]]; then
-            if [[ -e $(find . -name install.d) ]]; then
-                cd $(find . -name install.d)
-
-            else
-                echo -e "WARNING: Script cannot locate the correct working directory."
-            fi
+        if [[ $(echo ${str_pwd##*/}) != *"sudo-install.d" ]]; then
+            echo -e "WARNING: Script cannot locate the correct working directory."
         fi
     }
 
