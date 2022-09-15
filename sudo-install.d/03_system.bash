@@ -80,9 +80,8 @@
             str_input1="time.nist.gov";     # default value, change here!
         fi
 
-        str_aptCheck=$(apt list --installed ntpdate)
-
-        if [[ $str_aptCheck == *"installed"* ]]; then
+        # append to output #
+        if [[ $(apt list --installed ntpdate) ]]; then
             arr_file1+=(
                 ""
                 "# ntp #"
@@ -91,15 +90,15 @@
             )
         fi
 
-        str_aptCheck=$(apt list --installed unattended-upgrades)
-
-        if [[ $str_aptCheck == *"installed"* ]]; then
+        # append to output #
+        if [[ $(apt list --installed unattended-upgrades) ]]; then
             str_line1="#"
 
         else
             str_line1=""
         fi
 
+        # append to output #
         arr_file1+=(
             ""
             "# apt #    # NOTE: better to use 'unattended-upgrades'"
@@ -109,9 +108,8 @@
             "#0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y && apt autoremove -y"
         )
 
-        str_aptCheck=$(apt list --installed flatpak)
-
-        if [[ $str_aptCheck == *"installed"* ]]; then
+        # append to output #
+        if [[ $(apt list --installed flatpak) ]]; then
             arr_file1+=(
                 ""
                 "# flatpak #"
@@ -120,9 +118,8 @@
             )
         fi
 
-        str_aptCheck=$(apt list --installed snapd)
-
-        if [[ $str_aptCheck == *"installed"* ]]; then
+        # append to output #
+        if [[ $(apt list --installed snapd) ]]; then
             arr_file1+=(
                 ""
                 "# snap #"
@@ -172,6 +169,7 @@
                     else
                         echo -e "Invalid selection. Available port range: 1000-65535"
                     fi
+
                 else
                     echo -e "Invalid integer. Valid port range: 1-65535."
                 fi
@@ -186,22 +184,24 @@
 
         # backup system file #
         str_file1="/etc/ssh/ssh_config"
+        str_oldFile1=$str_file1"_old"
 
         if [ -e $str_file1 ]; then
-            cp $str_file1 $str_file1'_old'
+            cp $str_file1 $str_oldFile1
         fi
 
         # backup system file #
         str_file1="/etc/ssh/sshd_config"
+        str_oldFile1=$str_file1"_old"
 
         if [ -e $str_file1 ]; then
-            cp $str_file1 $str_file1'_old'
+            cp $str_file1 $str_oldFile1
         fi
 
         # append to output #
         str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
 
-        echo -e $str_output1 >> $strfile1
+        echo -e $str_output1 >> $str_file1
 
         systemctl restart ssh sshd  # restart services
     }

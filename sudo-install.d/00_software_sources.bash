@@ -51,16 +51,6 @@
         done
     }
 
-# check if in correct dir #
-    function CheckForCorrectWorkingDir
-    {
-        # parameters #
-        str_pwd=$(pwd)
-
-        if [[ $(echo ${str_pwd##*/}) != *"sudo-install.d" ]]; then
-            echo -e "WARNING: Script cannot locate the correct working directory."
-        fi
-    }
 
 # check linux distro #
     function CheckCurrentDistro
@@ -260,7 +250,6 @@
 
         # call functions #
         CheckIfUserIsRoot
-        CheckForCorrectWorkingDir
         CheckCurrentDistro
         ModifyDebianRepos
 

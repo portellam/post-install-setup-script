@@ -97,7 +97,7 @@
 
                 ReadInput "Clone repo '$str_repo'?"
 
-                if [[ $str_input1 != "Y"* ]]; then
+                if [[ $str_input1 == "Y" ]]; then
                     cd $str_dir1$str_userName
                     git clone https://github.com/$str_repo
                 fi

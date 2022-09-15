@@ -64,7 +64,8 @@
         fi
 
         # here goes useful repos for system deployment
-        # list of git repos     # NOTE: update here!
+        # list of git repos
+        # NOTE: update here!
         declare -a arr_repo=(
 
         #"username/reponame"
@@ -100,7 +101,7 @@
 
                 ReadInput "Clone repo '$str_repo'?"
 
-                if [[ $str_input1 != "Y"* ]]; then
+                if [[ $str_input1 == "Y" ]]; then
                     cd $str_dir1$str_userName
                     git clone https://github.com/$str_repo
                 fi
@@ -115,6 +116,7 @@
         echo "Executing Git scripts."
 
         # parameters #
+        str_dir1="/root/git/"
         str_input1=""
 
         # prompt user to execute script or do so automatically #
@@ -125,59 +127,74 @@
 
         # portellam/Auto-Xorg #
         str_repo="portellam/Auto-Xorg"
-        ExecuteScript $str_repo
 
-        if [[ $str_input1 == "Y" ]]; then
-            cd $str_dir1$str_repo
-            sudo bash ./installer.bash
+        if [[ -e $str_repo ]]; then
+            ExecuteScript $str_repo
+
+            if [[ $str_input1 == "Y" ]]; then
+                cd $str_dir1$str_repo
+                sudo bash ./installer.bash
+                cd $str_dir1
+            fi
         fi
 
         # StevenBlack/hosts #
         str_repo="StevenBlack/hosts"
-        ExecuteScript $str_repo
+        if [[ -e $str_repo ]]; then
+            ExecuteScript $str_repo
 
-        if [[ $str_input1 == "Y" ]]; then
-            cd $str_dir1$str_repo
-            str_file1="/etc/hosts"
+            if [[ $str_input1 == "Y" ]]; then
+                cd $str_dir1$str_repo
+                str_file1="/etc/hosts"
 
-            # backup hosts #
-            if [[ -e $str_file1'_old' ]]; then
-                sudo cp $str_file1 $str_file1'_old'
+                # backup hosts #
+                if [[ -e $str_file1'_old' ]]; then
+                    sudo cp $str_file1 $str_file1'_old'
 
-            # restore backup #
-            else
-                sudo cp $str_file1'_old' $str_file1
+                # restore backup #
+                else
+                    sudo cp $str_file1'_old' $str_file1
+                fi
+
+                echo $'\n#' >> $str_file1
+                cat hosts >> $str_file1
+                cd $str_dir1
             fi
-
-            echo $'\n#' >> $str_file1
-            cat hosts >> $str_file1
         fi
 
         # pyllyukko/user.js #
         str_repo="pyllyukko/user.js"
-        ExecuteScript $str_repo
 
-        if [[ $str_input1 == "Y" ]]; then
-            cd $str_dir1$str_repo
-            make debian_locked.js
-            str_file1="/etc/firefox-esr/firefox-esr.js"
+        if [[ -e $str_repo ]]; then
+            ExecuteScript $str_repo
 
-            # backup user.js #
-            if [[ -e $str_file1'_old' ]]; then
-                sudo cp $str_file1 $str_file1'_old'
+            if [[ $str_input1 == "Y" ]]; then
+                cd $str_dir1$str_repo
+                make debian_locked.js
+                str_file1="/etc/firefox-esr/firefox-esr.js"
+
+                # backup user.js #
+                if [[ -e $str_file1'_old' ]]; then
+                    sudo cp $str_file1 $str_file1'_old'
+                fi
+
+                cp debian_locked.js $str_file1
+                #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
+                cd $str_dir1
             fi
-
-            cp debian_locked.js $str_file1
-            #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
         fi
 
         # foundObjects/zram-swap #
         str_repo="foundObjects/zram-swap"
-        ExecuteScript $str_repo
 
-        if [[ $str_input1 == "Y" ]]; then
-            cd $str_dir1$str_repo
-            sudo sh ./install.sh
+        if [[ -e $str_repo ]]; then
+            ExecuteScript $str_repo
+
+            if [[ $str_input1 == "Y" ]]; then
+                cd $str_dir1$str_repo
+                sudo sh ./install.sh
+                cd $str_dir1
+            fi
         fi
     }
 

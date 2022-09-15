@@ -51,32 +51,18 @@
         done
     }
 
-# check if in correct dir #
-    function CheckForCorrectWorkingDir
-    {
-        # parameters #
-        str_pwd=$(pwd)
 
-        if [[ $(echo ${str_pwd##*/}) != "install.d" ]]; then
-            if [[ -e $(find . -name install.d) ]]; then
-                cd $(find . -name install.d)
-
-            else
-                echo -e "WARNING: Script cannot locate the correct working directory."
-            fi
-        fi
-    }
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -en "Linux distribution found: $(lsb_release -i -s)"
+        echo -en "Linux distribution found ($(lsb_release -i -s)) "
 
         # Debian/Ubuntu
         if [[ $(lsb_release -i -s | grep -Ei "debian|ubuntu") ]]; then
-            echo -e "Linux distribution is compatible with setup. Continuing."
+            echo -e "is compatible with setup. Continuing."
 
         else
-            echo -e "Linux distribution not compatible with setup. Exiting."
+            echo -e "is not compatible with setup. Exiting."
             bool_exit=true
         fi
     }
@@ -84,6 +70,7 @@
 # install Debian software #
     function InstallFromDebianRepos
     {
+        echo -e "Installing from distribution repositories."
 
         # parameters #
         ReadInput "Auto-accept install prompts? "
@@ -115,6 +102,8 @@
             sudo apt install -y gnome-software-plugin-flatpak
         fi
 
+        echo
+
         # apps #
         # NOTE: update here!
 
@@ -141,7 +130,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptUnsorted | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -165,7 +154,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptDeveloper | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptDeveloper | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptDeveloper | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -189,7 +178,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptGames | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptGames | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptGames | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -213,7 +202,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptInternet | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptInternet | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptInternet | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -237,7 +226,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptMedia | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptMedia | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptMedia | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -261,7 +250,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptOffice | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptOffice | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptOffice | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -285,7 +274,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptPrismBreak | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptPrismBreak | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptPrismBreak | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -309,7 +298,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptSecurity | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptSecurity | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptSecurity | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -333,7 +322,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptSuites | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptSuites | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptSuites | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -357,7 +346,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptTools | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptTools | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptTools | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -381,7 +370,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_aptVGAdrivers | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -409,6 +398,8 @@
 # install alternative software repos #
     function EnableAndInstallFromAltRepos
     {
+        echo -e "Installing from alternative repositories."
+
         # parameters #
         ReadInput "Auto-accept install prompts? "
 
@@ -434,7 +425,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -458,7 +449,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -482,7 +473,7 @@
                 declare -i int_i=1
 
                 while [[ $(echo $str_snapUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t")echo $str_snapUnsorted | cut -d ' ' -f$int_i)
+                    echo -e "\t"$(echo $str_snapUnsorted | cut -d ' ' -f$int_i)
                     ((int_i++))     # counter
                 done
 
@@ -536,7 +527,6 @@
 
         # call functions #
         CheckIfUserIsRoot
-        CheckForCorrectWorkingDir
         CheckCurrentDistro
         InstallFromDebianRepos
         EnableAndInstallFromAltRepos
