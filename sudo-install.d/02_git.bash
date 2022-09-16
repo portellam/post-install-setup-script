@@ -118,6 +118,7 @@
         # parameters #
         str_dir1="/root/git/"
         str_input1=""
+        cd $str_dir1
 
         # prompt user to execute script or do so automatically #
         function ExecuteScript {
@@ -146,14 +147,16 @@
             if [[ $str_input1 == "Y" ]]; then
                 cd $str_dir1$str_repo
                 str_file1="/etc/hosts"
+                str_oldFile1=$str_file1'_old'
 
                 # backup hosts #
-                if [[ -e $str_file1'_old' ]]; then
-                    sudo cp $str_file1 $str_file1'_old'
+                if [[ ! -e $str_oldFile1 ]]; then
+                    if [[ -e $str_file1 ]]; then
+                        sudo cp $str_file1 $str_oldFile1
+                    fi
 
-                # restore backup #
                 else
-                    sudo cp $str_file1'_old' $str_file1
+                    sudo cp $str_oldFile1 $str_file1
                 fi
 
                 echo $'\n#' >> $str_file1

@@ -21,30 +21,31 @@
         echo -en "Appending files to Systemd... "
 
         # parameters #
-        str_dir1=$(find .. -name files)
+        str_dir1=$(find . -name files | uniq | head -n1 | cut -d '.' -f2)
+        cd '.'$str_dir1
 
-        if [[ -e $str_dir1 ]]; then
-            cd $str_dir1
+        if [[ $(echo $(pwd)) == *"$str_dir1"* ]]; then
 
             # parameters #
             str_pattern=".service"
-            declare -a arr1=($(ls ./ | grep *".service") )
+            declare -a arr1=($(ls | grep *".service") )
 
-            for str_inFile1 in ${arr_dir[@]}; do
+            for str_inFile1 in ${arr1[@]}; do
 
                 # parameters #
-                str_line1=${str_inFile1##*(str_pattern)}      # truncate filetype
-                str_inFile2=$(ls | grep *"$str_line1"* | grep -Ev *".service" | uniq | head -n1)
-                str_outFile1="/etc/systemd/system/$str_file1"
+                declare -i int_rem=${#str_pattern}
+                int_rem=$((int_rem * -1))
+                str_line1=${str_inFile1::int_rem}
+                str_inFile2=$(find . | grep "$str_line1" | grep -Ev *".service" | uniq | head -n1)
+                str_inFile2=$(echo $str_inFile2 | cut -d '/' -f2)
+                str_outFile1="/etc/systemd/system/$str_inFile1"
 
-                if [[ -z $str_outFile1 ]]; then
-                    cp $str_outFile1 $str_outFile1
-                    chown root $str_outFile1
-                    chmod +x $str_outFile1
-                fi
+                cp $str_inFile1 $str_outFile1
+                chown root $str_outFile1
+                chmod +x $str_outFile1
 
                 if [[ -e $str_inFile2 ]]; then
-                    str_outFile2="/usr/sbin/$str_file2"
+                    str_outFile2="/usr/sbin/$str_inFile2"
 
                     if [[ -z $str_outFile2 ]]; then
                         cp $str_inFile2 $str_outFile2
@@ -137,7 +138,7 @@
         str_output1=""          # reset output
 
         # prompt #
-        while true; do
+        while [[ $int_count -le 3 ]]; do
 
             # default input #
             if [ $int_count -gt 2 ]; then
@@ -246,9 +247,9 @@
         # call functions #
         CheckIfUserIsRoot
         AppendToSystemd
-        EditCrontab
-        EditSSH
-        EditFirewall
+        # EditCrontab
+        # EditSSH
+        # EditFirewall
 
         break
     done
