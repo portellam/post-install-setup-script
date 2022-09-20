@@ -7,11 +7,11 @@
 # check if sudo/root #
     function CheckIfUserIsRoot
     {
-        if [[ $(whoami) != "root" ]]; then
+        if [[ $(whoami) != *"root"* ]]; then
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
-            exit 0
+            exit 1
         fi
     }
 
@@ -55,15 +55,15 @@
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -e "Linux distribution found: $(lsb_release -i -s)"
+        echo -en "Linux distribution found ($(lsb_release -i -s)) "
 
-        # Debian/Ubuntu
-        if [[ $(lsb_release -i -s | grep -Ei "debian|ubuntu") ]]; then
-            echo -e "Linux distribution is compatible with setup. Continuing."
+        # Debian, Ubuntu
+        if [[ -e $(lsb_release -is | tr '[:upper:]' '[:lower:]' | grep -Ev 'debian|ubuntu') ]]; then
+            echo -e "is compatible with setup. Continuing."
 
         else
-            echo -e "Linux distribution not compatible with setup. Exiting."
-            bool_exit=true
+            echo -e "is not compatible with setup. Exiting."
+            exit 1
         fi
     }
 
@@ -72,11 +72,12 @@
     {
 
         # parameters #
-        str_releaseName=$(lsb_release -sc)
-        str_releaseVer=$(lsb_release -sr)
         str_file1="/etc/apt/sources.list"
         str_oldFile1="${str_file1}_old"
         str_newFile1="${str_file1}_new"
+        str_releaseName=$(lsb_release -sc)
+        str_releaseVer=$(lsb_release -sr)
+        str_sources=""
 
         # create backup or restore from backup #
         if [ -z $str_file1 ]; then
@@ -86,17 +87,28 @@
         # prompt user to change apt dependencies #
         while true; do
 
-            # prompt for non-free sources #
+            # prompt for alt sources #
             str_input1=""
-            ReadInput "Include non-free sources?"
+            ReadInput "Include 'contrib' sources?"
 
             case $str_input1 in
-                    "Y")
-                        str_sources="non-free contrib";;
+                "Y")
+                    str_sources="contrib";;
 
-                    *)
-                        str_sources="contrib";;
-                esac
+                *)
+                    ;;
+            esac
+
+            str_input1=""
+            ReadInput "Include 'non-free' sources?"
+
+            case $str_input1 in
+                "Y")
+                    str_sources+="non-free";;
+
+                *)
+                    ;;
+            esac
 
 
             # manual prompt #
@@ -239,28 +251,17 @@
 
 # main #
 
-    # parameters #
-    bool_exit=false
+    # NOTE: necessary for newline preservation in arrays and files #
+    SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+    IFS=$'\n'      # Change IFS to newline char
 
-    while [[ $bool_exit == false ]]; do
+    # call functions #
+    CheckIfUserIsRoot
+    CheckCurrentDistro
+    ModifyDebianRepos
 
-        # NOTE: necessary for newline preservation in arrays and files #
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-        IFS=$'\n'      # Change IFS to newline char
-
-        # call functions #
-        CheckIfUserIsRoot
-        CheckCurrentDistro
-        ModifyDebianRepos
-
-        echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
-        break
-    done
-
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
+    echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
 
     IFS=$SAVEIFS        # reset IFS
-    echo "Exiting."
+    echo -e "Exiting."
     exit 0

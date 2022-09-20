@@ -11,7 +11,7 @@
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
-            exit 0
+            exit 1
         fi
     }
 
@@ -56,13 +56,12 @@
     # parse and execute functions #
 
     # parameters #
-    bool_exit=false
     str_dir1="sudo-install.d"
 
     # call functions #
     CheckIfUserIsRoot
 
-        while [[ $bool_exit == false ]]; do
+        while true; do
 
             if [[ -e $(find .. -name *$str_dir1*) ]]; then
                 echo -e "Executing functions..."
@@ -71,7 +70,6 @@
 
                 # call functions #
                 for str_line1 in $arr_dir1; do
-                    echo -e $str_line1
 
                     # update parameters #
                     str_input1=""
@@ -97,16 +95,11 @@
 
             else
 
-                echo -e "Executing functions... Failed. Missing files."
-                bool_exit=true
+                echo -en "FAILURE: Missing files. "
             fi
 
         break
         done
-
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
 
     IFS=$SAVEIFS        # reset IFS
     echo "Exiting."

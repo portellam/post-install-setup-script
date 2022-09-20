@@ -11,7 +11,7 @@
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as user. Exiting."
-            exit 0
+            exit 1
         fi
     }
 
@@ -144,26 +144,16 @@
 # main #
 
     # parameters #
-    bool_exit=false
     declare -a arr_repo=()
 
-    while [[ $bool_exit == false ]]; do
+    # NOTE: necessary for newline preservation in arrays and files #
+    SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+    IFS=$'\n'      # Change IFS to newline char
 
-        # NOTE: necessary for newline preservation in arrays and files #
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-        IFS=$'\n'      # Change IFS to newline char
-
-        # call functions #
-        CheckIfUserIsRoot
-        CloneGitRepos
-        # InstallFromGitRepos
-
-        break
-    done
-
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
+    # call functions #
+    CheckIfUserIsRoot
+    CloneGitRepos
+    # InstallFromGitRepos
 
     IFS=$SAVEIFS        # reset IFS
     echo "Exiting."

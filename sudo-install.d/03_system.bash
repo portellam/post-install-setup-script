@@ -11,7 +11,7 @@
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'."
-            exit 0
+            exit 1
         fi
     }
 
@@ -235,29 +235,19 @@
 # main #
 
     # parameters #
-    bool_exit=false
     str_sshAlt=""
 
-    while [[ $bool_exit == false ]]; do
+    # NOTE: necessary for newline preservation in arrays and files #
+    SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+    IFS=$'\n'      # Change IFS to newline char
 
-        # NOTE: necessary for newline preservation in arrays and files #
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-        IFS=$'\n'      # Change IFS to newline char
-
-        # call functions #
-        CheckIfUserIsRoot
-        AppendToSystemd
-        # EditCrontab
-        # EditSSH
-        # EditFirewall
-
-        break
-    done
-
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
+    # call functions #
+    CheckIfUserIsRoot
+    AppendToSystemd
+    # EditCrontab
+    # EditSSH
+    # EditFirewall
 
     IFS=$SAVEIFS        # reset IFS
-    echo "Exiting."
+    echo -e "Exiting."
     exit 0

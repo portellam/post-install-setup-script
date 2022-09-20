@@ -11,7 +11,7 @@
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
             echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
-            exit 0
+            exit 1
         fi
     }
 
@@ -57,13 +57,13 @@
     {
         echo -en "Linux distribution found ($(lsb_release -i -s)) "
 
-        # Debian/Ubuntu
-        if [[ $(lsb_release -i -s | grep -Ei "debian|ubuntu") ]]; then
+        # Debian, Ubuntu
+        if [[ -e $(lsb_release -is | tr '[:upper:]' '[:lower:]' | grep -Ev 'debian|ubuntu') ]]; then
             echo -e "is compatible with setup. Continuing."
 
         else
             echo -e "is not compatible with setup. Exiting."
-            bool_exit=true
+            exit 1
         fi
     }
 
@@ -516,29 +516,18 @@
 
 # main #
 
-    # parameters #
-    bool_exit=false
+    # NOTE: necessary for newline preservation in arrays and files #
+    SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
+    IFS=$'\n'      # Change IFS to newline char
 
-    while [[ $bool_exit == false ]]; do
+    # call functions #
+    CheckIfUserIsRoot
+    CheckCurrentDistro
+    InstallFromDebianRepos
+    EnableAndInstallFromAltRepos
 
-        # NOTE: necessary for newline preservation in arrays and files #
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-        IFS=$'\n'      # Change IFS to newline char
-
-        # call functions #
-        CheckIfUserIsRoot
-        CheckCurrentDistro
-        InstallFromDebianRepos
-        EnableAndInstallFromAltRepos
-
-        echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
-        break
-    done
-
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
+    echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
 
     IFS=$SAVEIFS        # reset IFS
-    echo "Exiting."
+    echo -e "Exiting."
     exit 0

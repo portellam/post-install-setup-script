@@ -204,10 +204,9 @@
 # main #
 
     # parameters #
-    bool_exit=false
     declare -a arr_repo=()
 
-    while [[ $bool_exit == false ]]; do
+    while true; do
 
         # NOTE: necessary for newline preservation in arrays and files #
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
@@ -222,10 +221,6 @@
         break
     done
 
-    if [[ $bool_exit == true ]]; then
-        echo -en "WARNING: Setup cannot continue. "
-    fi
-
     IFS=$SAVEIFS        # reset IFS
-    echo "Exiting."
+    echo -e"Exiting."
     exit 0
