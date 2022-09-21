@@ -55,21 +55,19 @@
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -en "Linux distribution found ($(lsb_release -i -s)) "
-
-        # Debian, Ubuntu
-        if [[ -e $(lsb_release -is | tr '[:upper:]' '[:lower:]' | grep -Ev 'debian|ubuntu') ]]; then
-            echo -e "is compatible with setup. Continuing."
+        if [[ $(command -v apt) == "/usr/bin/apt" ]]; then
+            bool_distroIsDebian=true
 
         else
-            echo -e "is not compatible with setup. Exiting."
-            exit 1
+            echo -e "WARNING: Unrecognized Linux distribution. Continuing with minimal setup."
+            bool_distroIsDebian=false
         fi
     }
 
 # set software repositories #
     function ModifyDebianRepos
     {
+        echo -e "Modifying $(lsb_release -is) $(uname -o) repositories..."
 
         # parameters #
         str_file1="/etc/apt/sources.list"
@@ -250,6 +248,8 @@
     }
 
 # main #
+    # parameters #
+    bool_distroIsDebian=false
 
     # NOTE: necessary for newline preservation in arrays and files #
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
@@ -257,8 +257,11 @@
 
     # call functions #
     CheckIfUserIsRoot
-    CheckCurrentDistro
-    ModifyDebianRepos
+    CheckCurrentDistro $bool_distroIsDebian
+
+    if [[ $bool_distroIsDebian == true ]]; then
+        ModifyDebianRepos
+    fi
 
     echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
 

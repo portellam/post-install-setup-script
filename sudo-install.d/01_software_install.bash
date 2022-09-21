@@ -55,22 +55,19 @@
 # check linux distro #
     function CheckCurrentDistro
     {
-        echo -en "Linux distribution found ($(lsb_release -i -s)) "
-
-        # Debian, Ubuntu
-        if [[ -e $(lsb_release -is | tr '[:upper:]' '[:lower:]' | grep -Ev 'debian|ubuntu') ]]; then
-            echo -e "is compatible with setup. Continuing."
+        if [[ $(command -v apt) == "/usr/bin/apt" ]]; then
+            bool_distroIsDebian=true
 
         else
-            echo -e "is not compatible with setup. Exiting."
-            exit 1
+            echo -e "WARNING: Unrecognized Linux distribution. Continuing with minimal setup."
+            bool_distroIsDebian=false
         fi
     }
 
 # install Debian software #
     function InstallFromDebianRepos
     {
-        echo -e "Installing from distribution repositories."
+        echo -e "Installing from $(lsb_release -is) $(uname -o) repositories..."
 
         # parameters #
         ReadInput "Auto-accept install prompts? "
@@ -398,7 +395,9 @@
 # install alternative software repos #
     function EnableAndInstallFromAltRepos
     {
-        echo -e "Installing from alternative repositories."
+        echo -e "Installing from alternative $(uname -o) repositories..."
+
+#        if [[ $(command -v flatpak) != ]]
 
         # parameters #
         ReadInput "Auto-accept install prompts? "
@@ -515,6 +514,8 @@
     }
 
 # main #
+    # parameters #
+    bool_distroIsDebian=false
 
     # NOTE: necessary for newline preservation in arrays and files #
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
@@ -522,8 +523,12 @@
 
     # call functions #
     CheckIfUserIsRoot
-    CheckCurrentDistro
-    InstallFromDebianRepos
+    CheckCurrentDistro $bool_distroIsDebian
+
+    if [[ $bool_distroIsDebian == true ]]; then
+        InstallFromDebianRepos
+    fi
+
     EnableAndInstallFromAltRepos
 
     echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"

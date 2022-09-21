@@ -54,7 +54,7 @@
 # clone repos #
     function CloneGitRepos
     {
-        echo "Cloning/Updating Git repos."
+        echo "Cloning/Updating Git repos..."
 
         # parameters #
         str_dir1="/root/git/"
@@ -113,7 +113,7 @@
 # install from git repos #
     function InstallFromGitRepos
     {
-        echo "Executing Git scripts."
+        echo "Executing Git scripts..."
 
         # parameters #
         str_dir1="/root/git/"
@@ -214,8 +214,15 @@
 
         # call functions #
         CheckIfUserIsRoot
-        CloneGitRepos
-        InstallFromGitRepos
+
+        if [[ $(command -v git) == "/usr/bin/git" ]]; then
+            CloneGitRepos
+            InstallFromGitRepos
+
+        else
+            echo -e "WARNING: Git is not installed on this system. Exiting."
+            exit 1
+        fi
 
         echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
         break

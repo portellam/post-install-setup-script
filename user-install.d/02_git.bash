@@ -54,7 +54,7 @@
 # clone repos #
     function CloneGitRepos
     {
-        echo "Cloning/Updating Git repos."
+        echo "Cloning/Updating Git repos..."
 
         # parameters #
         str_dir1="~/git/"
@@ -109,7 +109,7 @@
 # install from git repos #
     function InstallFromGitRepos
     {
-        echo "Executing Git scripts."
+        echo "Executing Git scripts..."
 
         # parameters #
         str_input1=""
@@ -142,7 +142,6 @@
     }
 
 # main #
-
     # parameters #
     declare -a arr_repo=()
 
@@ -151,9 +150,16 @@
     IFS=$'\n'      # Change IFS to newline char
 
     # call functions #
-    CheckIfUserIsRoot
-    CloneGitRepos
-    # InstallFromGitRepos
+    CheckIfUserIsNotRoot
+
+    if [[ $(command -v git) == "/usr/bin/git" ]]; then
+            CloneGitRepos
+            InstallFromGitRepos
+
+    else
+        echo -e "WARNING: Git is not installed on this system. Exiting."
+        exit 1
+    fi
 
     IFS=$SAVEIFS        # reset IFS
     echo "Exiting."
