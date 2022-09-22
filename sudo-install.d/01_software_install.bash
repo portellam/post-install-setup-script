@@ -10,7 +10,7 @@
         if [[ $(whoami) != "root" ]]; then
             str_file1=$(echo ${0##/*})
             str_file1=$(echo $str_file1 | cut -d '/' -f2)
-            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'sudo bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
+            echo -e "WARNING: Script must execute as root. In terminal, run:\n\t'bash $str_file1'\n\tor\n\t'su' and 'bash $str_file1'. Exiting."
             exit 1
         fi
     }
@@ -59,7 +59,7 @@
             bool_distroIsDebian=true
 
         else
-            echo -e "WARNING: Unrecognized Linux distribution. Continuing with minimal setup."
+            echo -e "WARNING: Unrecognized Linux distribution. Continuing..."
             bool_distroIsDebian=false
         fi
     }
@@ -79,24 +79,24 @@
             str_args=""
         fi
 
-        sudo apt clean
-        sudo apt update
-        sudo apt full-upgrade $str_args
+        apt clean
+        apt update
+        apt full-upgrade $str_args
 
         # Qt DE (KDE-plasma, LXQT)
         str_aptCheck=""
-        str_aptCheck=$(sudo apt list --installed plasma-desktop lxqt)
+        str_aptCheck=$(apt list --installed plasma-desktop lxqt)
 
         if [[ $str_aptCheck != "" ]]; then
-            sudo apt install -y plasma-discover-backend-flatpak
+            apt install -y plasma-discover-backend-flatpak
         fi
 
         # GNOME DE (gnome, XFCE)
         str_aptCheck=""
-        str_aptCheck=$(sudo apt list --installed gnome xfwm4)
+        str_aptCheck=$(apt list --installed gnome xfwm4)
 
         if [[ $str_aptCheck != "" ]]; then
-            sudo apt install -y gnome-software-plugin-flatpak
+            apt install -y gnome-software-plugin-flatpak
         fi
 
         echo
@@ -385,11 +385,11 @@
         fi
 
         if [[ $str_aptAll != "" ]]; then
-            sudo apt install $str_args $str_aptAll
+            apt install $str_args $str_aptAll
         fi
 
         # clean up #
-        # sudo apt autoremove $str_args
+        # apt autoremove $str_args
     }
 
 # install alternative software repos #
@@ -397,75 +397,107 @@
     {
         echo -e "Installing from alternative $(uname -o) repositories..."
 
-#        if [[ $(command -v flatpak) != ]]
-
-        # parameters #
-        ReadInput "Auto-accept install prompts? "
-
-        if [[ $str_input1 == "Y" ]]; then
-            str_args="-y"
+        # flatpak #
+        if [[ $(command -v flatpak) != "/usr/bin/flatpak" ]]; then
+            echo -e "WARNING: Flatpak not installed. Skipping..."
 
         else
-            str_args=""
-        fi
 
-        # apps #
-        # NOTE: update here!
-        str_flatpakAll=""
-        str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-        str_flatpakPrismBreak=""   # include from all, monero etc.
-        str_snapAll=""
-        str_snapUnsorted=""
+            # add remote repo #
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-        if [[ $str_flatpakUnsorted != "" ]]; then
-            echo -e "Select given Flatpak software?"
-
-            if [[ $str_flatpakUnsorted == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_flatpakUnsorted"
-            fi
-
-            ReadInput
+            # parameters #
+            ReadInput "Auto-accept install prompts? "
 
             if [[ $str_input1 == "Y" ]]; then
-                str_flatpakAll+="$str_flatpakUnsorted "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_flatpakPrismBreak != "" ]]; then
-            echo -e "Select recommended Prism Break Flatpak software?"
-
-            if [[ $str_flatpakPrismBreak == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
+                str_args="-y"
 
             else
-                echo -e "\t$str_flatpakPrismBreak"
+                str_args=""
             fi
 
-            ReadInput
+            # apps #
+            # NOTE: update here!
+            str_flatpakAll=""
+            str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
+            str_flatpakPrismBreak=""   # include from all, monero etc.
 
-            if [[ $str_input1 == "Y" ]]; then
-                str_flatpakAll+="$str_flatpakPrismBreak "
+            if [[ $str_flatpakUnsorted != "" ]]; then
+                echo -e "Select given Flatpak software?"
+
+                if [[ $str_flatpakUnsorted == *" "* ]]; then
+                    declare -i int_i=1
+
+                    while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
+                        ((int_i++))     # counter
+                    done
+
+                else
+                    echo -e "\t$str_flatpakUnsorted"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_flatpakAll+="$str_flatpakUnsorted "
+                fi
+
+                echo
             fi
 
-            echo
+            if [[ $str_flatpakPrismBreak != "" ]]; then
+                echo -e "Select recommended Prism Break Flatpak software?"
+
+                if [[ $str_flatpakPrismBreak == *" "* ]]; then
+                    declare -i int_i=1
+
+                    while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
+                        ((int_i++))     # counter
+                    done
+
+                else
+                    echo -e "\t$str_flatpakPrismBreak"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_flatpakAll+="$str_flatpakPrismBreak "
+                fi
+
+                echo
+            fi
+
+            if [[ $str_flatpakAll != "" ]]; then
+                echo -e "Install selected Flatpak apps?"
+                flatpak install flathub $str_args $str_flatpakAll
+            fi
         fi
 
-        if [[ $str_snapUnsorted != "" ]]; then
+        # snap #
+        if [[ $(command -v snap) != "/usr/bin/snap" ]]; then
+            echo -e "WARNING: Snap not installed. Skipping..."
+
+        else
+
+            # parameters #
+            ReadInput "Auto-accept install prompts? "
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_args="-y"
+
+            else
+                str_args=""
+            fi
+
+            # apps #
+            # NOTE: update here!
+            str_snapAll=""
+            str_snapUnsorted=""
+
+            if [[ $str_snapUnsorted != "" ]]; then
             echo -e "Select given Snap software?"
 
             if [[ $str_snapUnsorted == *" "* ]]; then
@@ -487,29 +519,11 @@
             fi
 
             echo
-        fi
 
-        sudo apt install -y flatpak snapd
-        flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-
-        if [[ -e $(apt list --installed flatpak) ]]; then
-            if [[ $str_flatpakAll != "" ]]; then
-                echo -e "Install selected Flatpak apps?"
-                sudo flatpak install flathub $str_args $str_flatpakAll
-            fi
-
-        else
-            echo -e "WARNING: Flatpak not installed! Skipping."
-        fi
-
-        if [[ -e 'apt list --installed snapd' ]]; then
             if [[ $str_snapAll != "" ]]; then
                 echo -e "Install selected Snap apps?"
-                sudo snap install $str_args $str_snapAll
+                snap install $str_args $str_snapAll
             fi
-
-        else
-            echo -e "WARNING: Snapd not installed! Skipping."
         fi
     }
 
@@ -531,7 +545,7 @@
 
     EnableAndInstallFromAltRepos
 
-    echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+    echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'dpkg --configure -a"
 
     IFS=$SAVEIFS        # reset IFS
     echo -e "Exiting."
