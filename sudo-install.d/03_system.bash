@@ -62,16 +62,90 @@
     }
 
 # crontab #
+    function AppendCron
+    {
+        # parameters #
+
+        # list of packages that have cron files (see below) #
+        # NOTE: may change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm")
+        # NOTE: update here!
+        declare -a arr_requiredPackages=(
+            "flatpak"
+            "ntpdate"
+            "rsync"
+            "snap"
+            "unattended-upgrades"
+            )
+
+        str_outDir1="/etc/cron.d/"
+        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+        cd $str_dir1
+
+        while true; do
+
+            if [[ -e $(find . -name '*-cron' | uniq) ]]; then
+                echo -e "Appending cron entries..."
+
+                # list of cron files #
+                declare -a arr_dir1=$(find . -name '*-cron' | uniq)
+
+                for str_line1 in $arr_dir1; do
+
+                    # update parameters #
+                    str_input1=""
+
+                    ReadInput "Append '$str_line1'?"
+                    echo
+
+                    if [[ $str_input1 == "Y" ]]; then
+
+                        # parse list of packages that have cron files #
+                        for str_line2 in $arr_requiredPackages; do
+
+                            # match given cron file, append only if package exists in system #
+                            case $str_line1 in
+
+                                *"$str_line2"*)
+                                    if [[ $(command -v $str_line2) == "/usr/bin/$str_line2" ]]; then
+                                        cp $str_line1 ${str_outDir1}${str_line1}
+                                        #echo -e "Appended file '$str_line1'."
+
+                                    else
+                                        echo -e "WARNING: Missing required package '$str_line2'. Skipping..."
+                                    fi
+                                    ;;
+
+                                *)
+                                    echo;;
+                            esac
+                        done
+                    fi
+                done
+
+                echo -en "Review changes made. "
+
+            else
+                echo -en "FAILURE: Missing files. "
+            fi
+
+        break
+        done
+    }
+
     function EditCrontab
     {
         str_file1="/var/spool/cron/crontabs/root"      # set working file
-        declare -a arr_file1
+        declare -a arr_output1=()
 
         # backup system file #
         str_file1="/etc/ssh/ssh_config"
+        str_oldFile1=${str_file1}"_old"
 
         if [ -e $str_file1 ]; then
-            cp $str_file1 $str_file1'_old'
+            cp $str_file1 $str_oldFile1
+
+        else
+            touch $str_file1
         fi
 
         echo -en "Editing crontab.\nEnter your preferred ntp server (default: time.nist.gov): "
@@ -82,8 +156,8 @@
         fi
 
         # append to output #
-        if [[ $(apt list --installed ntpdate) ]]; then
-            arr_file1+=(
+        if [[ $(command -v ntpdate) != "/usr/bin/ntpdate" ]]; then
+            arr_output1+=(
                 ""
                 "# ntp #"
                 "# update every 15 min"
@@ -92,7 +166,7 @@
         fi
 
         # append to output #
-        if [[ $(apt list --installed unattended-upgrades) ]]; then
+        if [[ $(command -v unattended-upgrade) != "/usr/bin/unattended-upgrade"* ]]; then
             str_line1="#"
 
         else
@@ -100,7 +174,7 @@
         fi
 
         # append to output #
-        arr_file1+=(
+        arr_output1+=(
             ""
             "# apt #    # NOTE: better to use 'unattended-upgrades'"
             "# clean, update every 8 hours"
@@ -110,8 +184,8 @@
         )
 
         # append to output #
-        if [[ $(apt list --installed flatpak) ]]; then
-            arr_file1+=(
+        if [[ $(command -v flatpak) == "/usr/bin/flatpak" ]]; then
+            arr_output1+=(
                 ""
                 "# flatpak #"
                 " update every 8 hours"
@@ -120,8 +194,8 @@
         fi
 
         # append to output #
-        if [[ $(apt list --installed snapd) ]]; then
-            arr_file1+=(
+        if [[ $(command -v snap) == "/usr/bin/snap" ]]; then
+            arr_output1+=(
                 ""
                 "# snap #"
                 "# update every 8 hours"
@@ -244,6 +318,7 @@
     # call functions #
     CheckIfUserIsRoot
     AppendToSystemd
+    AppendCron
     # EditCrontab
     # EditSSH
     # EditFirewall
