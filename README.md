@@ -17,7 +17,7 @@
 
 * Distro-agnostic
     * Add/Ignore alternative repo sources (Flathub, Snap)
-    * Install Flatpak/Snap software packages **[2]**
+    * Install Flatpak/Snap software packages **[1]**
     * Update Flatpak/Snap packages
     * Add Systemd services to machine
     * Clone Git repositories
@@ -26,19 +26,19 @@
     * Security-hardening
     * Firewall setup
 
-* Install listed software by given category (of all sources) **[1],[2]**
-        * Development
-        * Games
-        * Internet-based and Communication
-        * Multi-media
-        * Office
-        * Prism-break (EFF recommended for user-privacy)
-        * Security
-        * Software suites
-        * Tools
-        * VGA/GPU drivers
-        * other/unsorted
+* **[1]** Install listed software by given category (of all sources)
+    * Development
+    * Games
+    * Internet-based and Communication
+    * Multi-media
+    * Office
+    * Prism-break (EFF, recommended for user-privacy)
+    * Security
+    * Software suites
+    * Tools
+    * VGA/GPU drivers
+    * other/unsorted
 
-## To-do
+## To-Do
 * lots of work to be done
 * make processes that can be distro-agnostic, more-so
