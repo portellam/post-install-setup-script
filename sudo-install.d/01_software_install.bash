@@ -393,8 +393,7 @@
     }
 
 # install alternative software repos #
-    function EnableAndInstallFromAltRepos
-    {
+    function EnableAndInstallFromAltRepos() {
         echo -e "Installing from alternative $(uname -o) repositories..."
 
         # flatpak #
@@ -420,7 +419,7 @@
             # NOTE: update here!
             str_flatpakAll=""
             str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-            str_flatpakPrismBreak=""   # include from all, monero etc.
+            str_flatpakPrismBreak="" # include from all, monero etc.
 
             if [[ $str_flatpakUnsorted != "" ]]; then
                 echo -e "Select given Flatpak software?"
@@ -430,7 +429,7 @@
 
                     while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
                         echo -e "\t"$(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
-                        ((int_i++))     # counter
+                        ((int_i++)) # counter
                     done
 
                 else
@@ -454,7 +453,7 @@
 
                     while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
                         echo -e "\t"$(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
-                        ((int_i++))     # counter
+                        ((int_i++)) # counter
                     done
 
                 else
@@ -498,33 +497,35 @@
             str_snapUnsorted=""
 
             if [[ $str_snapUnsorted != "" ]]; then
-            echo -e "Select given Snap software?"
+                echo -e "Select given Snap software?"
 
-            if [[ $str_snapUnsorted == *" "* ]]; then
-                declare -i int_i=1
+                if [[ $str_snapUnsorted == *" "* ]]; then
+                    declare -i int_i=1
 
-                while [[ $(echo $str_snapUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_snapUnsorted | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
+                    while [[ $(echo $str_snapUnsorted | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_snapUnsorted | cut -d ' ' -f$int_i)
+                        ((int_i++)) # counter
+                    done
 
-            else
-                echo -e "\t$str_snapUnsorted"
+                else
+                    echo -e "\t$str_snapUnsorted"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_snapAll+="$str_snapUnsorted "
+                fi
+
+                echo
+
+                if [[ $str_snapAll != "" ]]; then
+                    echo -e "Install selected Snap apps?"
+                    snap install $str_args $str_snapAll
+                fi
             fi
 
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_snapAll+="$str_snapUnsorted "
-            fi
-
-            echo
-
-            if [[ $str_snapAll != "" ]]; then
-                echo -e "Install selected Snap apps?"
-                snap install $str_args $str_snapAll
-            fi
-        fi
+        fi ## NOTE: I am currently at a loss for an explanation as to why I require a closing statement here.
     }
 
 # main #
