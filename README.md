@@ -1,4 +1,5 @@
 ## Description
+Post-install changes to a Debian Linux system.
 
 ## How-to
 * To install root scripts, execute:
@@ -38,6 +39,9 @@
     * Tools
     * VGA/GPU drivers
     * other/unsorted
+
+## DISCLAIMER
+Tested on Debian Linux.
 
 ## To-Do
 * lots of work to be done
