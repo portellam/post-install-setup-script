@@ -26,7 +26,7 @@
     * Security-hardening
     * Firewall setup
 
-* Install listed software by given category (of all sources) **[1],[2]**
+**[1]** Install listed software by given category (of all sources)
         * Development
         * Games
         * Internet-based and Communication
