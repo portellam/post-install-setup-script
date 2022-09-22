@@ -57,7 +57,7 @@
         echo "Cloning/Updating Git repos..."
 
         # parameters #
-        str_dir1="/root/git/"
+        str_dir1="/root/source/"
 
         if [[ -z $str_dir1 ]]; then
             sudo mkdir -p $str_dir1

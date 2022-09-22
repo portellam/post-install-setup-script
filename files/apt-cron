@@ -3,9 +3,9 @@
 # Author(s):    Alex Portell <github.com/portellam>
 #
 
-# apt
+# apt #
 #
-# auto-upgrade every 8 hours"
+# auto-upgrade every 8 hours
 0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y
 #
 # auto-upgrade and autoremove every 8 hours

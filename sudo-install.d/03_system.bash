@@ -79,57 +79,54 @@
 
         str_outDir1="/etc/cron.d/"
         str_dir1=$(find .. -name files | uniq | head -n1)"/"
-        cd $str_dir1
+        # cd $str_dir1
 
-        while true; do
 
-            if [[ -e $(find . -name '*-cron' | uniq) ]]; then
-                echo -e "Appending cron entries..."
+        # how do i get the file name after the last delimiter "/" ? check other repos or check for pattern regex
+        if [[ -e $(find .. -wholename ${str_dir1}*-cron | uniq) ]]; then
+            echo -e "Appending cron entries..."
 
-                # list of cron files #
-                declare -a arr_dir1=$(find . -name '*-cron' | uniq)
+            # # list of cron files #
+            # declare -a arr1=$(find . -wholename ${str_dir1}*-cron | uniq | cut -d '/' -f2)
 
-                for str_line1 in $arr_dir1; do
+            # for str_line1 in $arr1; do
 
-                    # update parameters #
-                    str_input1=""
+            #     # update parameters #
+            #     str_input1=""
 
-                    ReadInput "Append '$str_line1'?"
-                    echo
+            #     ReadInput "Append '$str_line1'?"
+            #     echo
 
-                    if [[ $str_input1 == "Y" ]]; then
+            #     if [[ $str_input1 == "Y" ]]; then
 
-                        # parse list of packages that have cron files #
-                        for str_line2 in $arr_requiredPackages; do
+            #         # parse list of packages that have cron files #
+            #         for str_line2 in $arr_requiredPackages; do
 
-                            # match given cron file, append only if package exists in system #
-                            case $str_line1 in
+            #             # match given cron file, append only if package exists in system #
+            #             case $str_line1 in
 
-                                *"$str_line2"*)
-                                    if [[ $(command -v $str_line2) == "/usr/bin/$str_line2" ]]; then
-                                        cp $str_line1 ${str_outDir1}${str_line1}
-                                        #echo -e "Appended file '$str_line1'."
+            #                 *"$str_line2"*)
+            #                     if [[ $(command -v $str_line2) == "/usr/bin/$str_line2" ]]; then
+            #                         cp ${str_dir1}$str_line1 ${str_outDir1}${str_line1}
+            #                         #echo -e "Appended file '$str_line1'."
 
-                                    else
-                                        echo -e "WARNING: Missing required package '$str_line2'. Skipping..."
-                                    fi
-                                    ;;
+            #                     else
+            #                         echo -e "WARNING: Missing required package '$str_line2'. Skipping..."
+            #                     fi
+            #                     ;;
 
-                                *)
-                                    echo;;
-                            esac
-                        done
-                    fi
-                done
+            #                 *)
+            #                     echo;;
+            #             esac
+            #         done
+            #     fi
+            # done
 
-                echo -en "Review changes made. "
+            echo -e "Review changes made. "
 
-            else
-                echo -en "FAILURE: Missing files. "
-            fi
-
-        break
-        done
+        else
+            echo -e "WARNING: Missing files. Skipping..."
+        fi
     }
 
     function EditCrontab
