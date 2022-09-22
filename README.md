@@ -12,8 +12,21 @@
 ## Features
 * Distro-specific
     * Modify software repository sources (APT)
+    * Install APT software packages **[1]**
+    * Update APT packages
+
+* Distro-agnostic
     * Add/Ignore alternative repo sources (Flathub, Snap)
-    * Install listed software by given category (of all sources)
+    * Install Flatpak/Snap software packages **[2]**
+    * Update Flatpak/Snap packages
+    * Add Systemd services to machine
+    * Clone Git repositories
+    * Execute scripts of given Git repos
+    * Append to Cron
+    * Security-hardening
+    * Firewall setup
+
+* Install listed software by given category (of all sources) **[1],[2]**
         * Development
         * Games
         * Internet-based and Communication
@@ -25,14 +38,6 @@
         * Tools
         * VGA/GPU drivers
         * other/unsorted
-
-* Distro-agnostic
-    * Add Systemd services to machine
-    * Clone Git repositories
-    * Execute scripts of given Git repos
-    * Append to Cron
-    * Security-hardening
-    * Firewall setup
 
 ## To-do
 * lots of work to be done

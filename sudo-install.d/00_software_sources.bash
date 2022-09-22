@@ -102,12 +102,11 @@
 
             case $str_input1 in
                 "Y")
-                    str_sources+="non-free";;
+                    str_sources+=" non-free";;
 
                 *)
                     ;;
             esac
-
 
             # manual prompt #
             if [[ $int_count -ge 3 ]]; then
