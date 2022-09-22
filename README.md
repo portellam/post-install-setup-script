@@ -39,6 +39,6 @@
     * VGA/GPU drivers
     * other/unsorted
 
-## To-do
+## To-Do
 * lots of work to be done
 * make processes that can be distro-agnostic, more-so
