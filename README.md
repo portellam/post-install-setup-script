@@ -27,17 +27,17 @@
     * Firewall setup
 
 **[1]** Install listed software by given category (of all sources)
-        * Development
-        * Games
-        * Internet-based and Communication
-        * Multi-media
-        * Office
-        * Prism-break (EFF recommended for user-privacy)
-        * Security
-        * Software suites
-        * Tools
-        * VGA/GPU drivers
-        * other/unsorted
+    * Development
+    * Games
+    * Internet-based and Communication
+    * Multi-media
+    * Office
+    * Prism-break (EFF recommended for user-privacy)
+    * Security
+    * Software suites
+    * Tools
+    * VGA/GPU drivers
+    * other/unsorted
 
 ## To-do
 * lots of work to be done
