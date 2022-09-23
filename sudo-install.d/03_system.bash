@@ -15,6 +15,42 @@
         fi
     }
 
+# procede with echo prompt for input #
+    # ask user for input then validate #
+    function ReadInput {
+
+        # parameters #
+        str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
+        str_input1=${str_input1:0:1}
+        declare -i int_count=0      # reset counter
+
+        while true; do
+
+            # manual prompt #
+            if [[ $int_count -ge 3 ]]; then
+                echo -en "Exceeded max attempts. "
+                str_input1="N"                    # default input     # NOTE: update here!
+
+            else
+                echo -en "\t$1 [Y/n]: "
+                read str_input1
+
+                str_input1=$(echo $str_input1 | tr '[:lower:]' '[:upper:]')
+                str_input1=${str_input1:0:1}
+            fi
+
+            case $str_input1 in
+                "Y"|"N")
+                    break;;
+
+                *)
+                    echo -en "\tInvalid input. ";;
+            esac
+
+            ((int_count++))         # increment counter
+        done
+    }
+
 # systemd #
     function AppendToSystemd
     {
@@ -59,12 +95,16 @@
         fi
 
         echo -e "Complete."
+        systemctl daemon-reload
     }
 
 # crontab #
     function AppendCron
     {
         # parameters #
+        declare -a arr1=()
+        str_outDir1="/etc/cron.d/"
+        str_dir1=$(find .. -name files | uniq | head -n1)"/"
 
         # list of packages that have cron files (see below) #
         # NOTE: may change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm")
@@ -74,132 +114,132 @@
             "ntpdate"
             "rsync"
             "snap"
-            "unattended-upgrades"
-            )
+        )
 
-        str_outDir1="/etc/cron.d/"
-        str_dir1=$(find .. -name files | uniq | head -n1)"/"
-        # cd $str_dir1
+        if [[ $(command -v unattended-upgrades) == "" ]]; then
+            arr_requiredPackages+=("apt")
+        fi
 
+        if [[ $str_dir1 != "" ]]; then
+            cd $str_dir1
+
+            # list of cron files #
+            arr1=$(ls *-cron)
+        fi
 
         # how do i get the file name after the last delimiter "/" ? check other repos or check for pattern regex
-        if [[ -e $(find .. -wholename ${str_dir1}*-cron | uniq) ]]; then
+        if [[ ${#arr1[@]} -gt 0 ]]; then
             echo -e "Appending cron entries..."
 
-            # # list of cron files #
-            # declare -a arr1=$(find . -wholename ${str_dir1}*-cron | uniq | cut -d '/' -f2)
+            for str_line1 in $arr1; do
 
-            # for str_line1 in $arr1; do
+                # update parameters #
+                str_input1=""
 
-            #     # update parameters #
-            #     str_input1=""
+                ReadInput "Append '$str_line1'?"
+                echo
 
-            #     ReadInput "Append '$str_line1'?"
-            #     echo
+                if [[ $str_input1 == "Y" ]]; then
 
-            #     if [[ $str_input1 == "Y" ]]; then
+                    # parse list of packages that have cron files #
+                    for str_line2 in ${arr_requiredPackages[@]}; do
 
-            #         # parse list of packages that have cron files #
-            #         for str_line2 in $arr_requiredPackages; do
+                        # match given cron file, append only if package exists in system #
+                        if [[ $str_line1 == *"$str_line2"* ]]; then
+                            if [[ $(command -v $str_line2) != "" ]]; then
+                                cp ${str_dir1}$str_line1 ${str_outDir1}${str_line1}
+                                # echo -e "Appended file '$str_line1'."
 
-            #             # match given cron file, append only if package exists in system #
-            #             case $str_line1 in
-
-            #                 *"$str_line2"*)
-            #                     if [[ $(command -v $str_line2) == "/usr/bin/$str_line2" ]]; then
-            #                         cp ${str_dir1}$str_line1 ${str_outDir1}${str_line1}
-            #                         #echo -e "Appended file '$str_line1'."
-
-            #                     else
-            #                         echo -e "WARNING: Missing required package '$str_line2'. Skipping..."
-            #                     fi
-            #                     ;;
-
-            #                 *)
-            #                     echo;;
-            #             esac
-            #         done
-            #     fi
-            # done
+                            else
+                                echo -e "WARNING: Missing required package '$str_line2'. Skipping..."
+                            fi
+                        fi
+                    done
+                fi
+            done
 
             echo -e "Review changes made. "
 
         else
             echo -e "WARNING: Missing files. Skipping..."
         fi
+
+        # restart service #
+        systemctl restart cron
     }
 
-    function EditCrontab
-    {
-        str_file1="/var/spool/cron/crontabs/root"      # set working file
-        declare -a arr_output1=()
+    # NOTE: old
+    # function EditCrontab
+    # {
+    #     str_file1="/var/spool/cron/crontabs/root"      # set working file
+    #     declare -a arr_output1=()
 
-        # backup system file #
-        str_file1="/etc/ssh/ssh_config"
-        str_oldFile1=${str_file1}"_old"
+    #     # backup system file #
+    #     str_file1="/etc/ssh/ssh_config"
+    #     str_oldFile1=${str_file1}"_old"
 
-        if [ -e $str_file1 ]; then
-            cp $str_file1 $str_oldFile1
+    #     if [ -e $str_file1 ]; then
+    #         cp $str_file1 $str_oldFile1
 
-        else
-            touch $str_file1
-        fi
+    #     else
+    #         touch $str_file1
+    #     fi
 
-        echo -en "Editing crontab.\nEnter your preferred ntp server (default: time.nist.gov): "
-        read str_input1
+    #     echo -en "Editing crontab.\nEnter your preferred ntp server (default: time.nist.gov): "
+    #     read str_input1
 
-        if [[ -z $str_input1 ]]; then
-            str_input1="time.nist.gov";     # default value, change here!
-        fi
+    #     if [[ -z $str_input1 ]]; then
+    #         str_input1="time.nist.gov";     # default value, change here!
+    #     fi
 
-        # append to output #
-        if [[ $(command -v ntpdate) != "/usr/bin/ntpdate" ]]; then
-            arr_output1+=(
-                ""
-                "# ntp #"
-                "# update every 15 min"
-                "0,15,30,45 * * * * ntpdate -s $str_input1"
-            )
-        fi
+    #     # append to output #
+    #     if [[ $(command -v ntpdate) != "/usr/bin/ntpdate" ]]; then
+    #         arr_output1+=(
+    #             ""
+    #             "# ntp #"
+    #             "# update every 15 min"
+    #             "0,15,30,45 * * * * ntpdate -s $str_input1"
+    #         )
+    #     fi
 
-        # append to output #
-        if [[ $(command -v unattended-upgrade) != "/usr/bin/unattended-upgrade"* ]]; then
-            str_line1="#"
+    #     # append to output #
+    #     if [[ $(command -v unattended-upgrade) != "/usr/bin/unattended-upgrade"* ]]; then
+    #         str_line1="#"
 
-        else
-            str_line1=""
-        fi
+    #     else
+    #         str_line1=""
+    #     fi
 
-        # append to output #
-        arr_output1+=(
-            ""
-            "# apt #    # NOTE: better to use 'unattended-upgrades'"
-            "# clean, update every 8 hours"
-            "${str_line1}0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y"
-            "# clean, update, autoremove every 8 hours"
-            "#0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y && apt autoremove -y"
-        )
+    #     # append to output #
+    #     arr_output1+=(
+    #         ""
+    #         "# apt #    # NOTE: better to use 'unattended-upgrades'"
+    #         "# clean, update every 8 hours"
+    #         "${str_line1}0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y"
+    #         "# clean, update, autoremove every 8 hours"
+    #         "#0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y && apt autoremove -y"
+    #     )
 
-        # append to output #
-        if [[ $(command -v flatpak) == "/usr/bin/flatpak" ]]; then
-            arr_output1+=(
-                ""
-                "# flatpak #"
-                " update every 8 hours"
-                "0 0,8,16 * * * flatpak update -y"
-            )
-        fi
+    #     # append to output #
+    #     if [[ $(command -v flatpak) == "/usr/bin/flatpak" ]]; then
+    #         arr_output1+=(
+    #             ""
+    #             "# flatpak #"
+    #             " update every 8 hours"
+    #             "0 0,8,16 * * * flatpak update -y"
+    #         )
+    #     fi
 
-        # append to output #
-        if [[ $(command -v snap) == "/usr/bin/snap" ]]; then
-            arr_output1+=(
-                ""
-                "# snap #"
-                "# update every 8 hours"
-                "0 0,8,16 * * * snap update -y"
-            )
-        fi
-    }
+    #     # append to output #
+    #     if [[ $(command -v snap) == "/usr/bin/snap" ]]; then
+    #         arr_output1+=(
+    #             ""
+    #             "# snap #"
+    #             "# update every 8 hours"
+    #             "0 0,8,16 * * * snap update -y"
+    #         )
+    #     fi
+    # }
 
 # SSH #
     function EditSSH
@@ -316,7 +356,7 @@
     CheckIfUserIsRoot
     AppendToSystemd
     AppendCron
-    # EditCrontab
+    # EditCrontab       # deprecated
     # EditSSH
     # EditFirewall
 
