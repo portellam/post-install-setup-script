@@ -51,7 +51,6 @@
         done
     }
 
-
 # check linux distro #
     function CheckCurrentDistro
     {
@@ -113,7 +112,7 @@
         str_aptMedia="vlc"
         str_aptOffice="libreoffice"
         str_aptPrismBreak=""
-        str_aptSecurity="fail2ban gufw ssh ufw"
+        str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
         str_aptSuites="debian-edu-install science-all"
         str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
         str_aptUnsorted=""
@@ -414,6 +413,8 @@
             else
                 str_args=""
             fi
+
+            flatpak update $str_args
 
             # apps #
             # NOTE: update here!

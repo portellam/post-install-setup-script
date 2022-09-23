@@ -318,29 +318,125 @@
         systemctl restart ssh sshd  # restart services
     }
 
-# UFW #
-    function EditFirewall
+# security #
+    function ModifySecurity
     {
-        if [[ $str_sshAlt == "" ]]; then
-            sudo ufw limit from 192.168.0.0/16 to any port 22 proto tcp
+        echo -e "Configuring system security..."
+
+        # parameters #
+        str_input1=""
+        str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpdtftpd-hpa xinetd yp-tools"
+        str_servicesToEnable="fail2ban"
+
+        ReadInput "Auto-accept command argument prompts (ex: '-y', '--yes') ?"
+
+        if [[ $str_input1 == "Y" ]]; then
+            str_args="-y"
 
         else
-            sudo ufw deny ssh
-            sudo ufw limit from 192.168.0.0/16 to any port $str_sshAlt proto tcp
+            str_args=""
         fi
 
-        # NOTE: change here!
-        sudo ufw allow DNS
-        sudo ufw allow VNC
-        sudo ufw allow from 192.168.0.0/16 to any port 2049                 # NFS
-        sudo ufw allow from 192.168.0.0/16 to any port 3389                 # RDP
-        sudo ufw allow from 192.168.0.0/16 to any port 9090 proto tcp       # cockpit
-        sudo ufw allow from 192.168.0.0/16 to any port 137:138 proto udp    # CIFS
-        sudo ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp    # CIFS
+        str_input1=""
+        ReadInput "Remove given apt packages?"
 
-        # save changes #
-        sudo ufw enable
-        sudo ufw reload
+        if [[ $str_input1 == "Y" ]]; then
+            apt remove $str_args $str_packagesToRemove
+        fi
+
+        str_input1=""
+        ReadInput "Disable given storage interfaces: USB, Firewire, Thunderbolt?"
+
+        case $str_input1 in
+            "Y")
+                echo 'install usb-storage /bin/true' > /etc/modprobe.d/disable-usb-storage.conf
+                echo "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
+                echo "blacklist thunderbolt" >> /etc/modprobe.d/disable-thunderbolt.conf
+                update-initramfs -u -k all
+                ;;
+
+            "N")
+                if [[ -e /etc/modprobe.d/disable-usb-storage.conf ]]; then
+                    rm /etc/modprobe.d/disable-usb-storage.conf
+                fi
+
+                if [[ -e /etc/modprobe.d/disable-firewire.conf ]]; then
+                    rm /etc/modprobe.d/disable-firewire.conf
+                fi
+
+                if [[ -e /etc/modprobe.d/disable-thunderbolt.conf ]]; then
+                    rm /etc/modprobe.d/disable-thunderbolt.conf
+                fi
+                update-initramfs -u -k all
+                ;;
+        esac
+
+        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+
+        if [[ $str_dir1 != "" ]]; then
+            cd $str_dir1
+            str_inFile1="./sysctl.conf"
+            str_file1="/etc/sysctl.conf"
+            str_oldFile1="/etc/sysctl.conf_old"
+        else
+            str_inFile1=""
+        fi
+
+        echo -e "Setup /etc/sysctl.conf with defaults?"
+        str_input1=""
+        ReadInput
+
+        if [[ $str_input1 == "Y" && $str_inFile1 != "" ]]; then
+            cp $str_file1 $str_oldFile1
+            cat $str_inFile1 >> $str_file1
+        fi
+
+        echo -e "Setup firewall?"
+        str_input1=""
+        ReadInput
+
+        if [[ $str_input1 == "Y" ]]; then
+            if [[ $(command -v ufw) != "" ]]; then
+                # NOTE: change here!
+                # basic #
+                sudo ufw default allow outgoing
+                sudo ufw default deny incoming
+
+                # NOTE: default LAN subnets may be 192.168.1.0/24
+
+                # secure-shell on local lan #
+                if [[ $(command -v ssh) != "" ]]; then
+                    sudo ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh'
+                fi
+
+                # services a desktop uses #
+                sudo ufw allow DNS comment 'dns'
+                # sudo ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server'
+                # sudo ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server'
+
+                # sudo ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
+                # sudo ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
+                # sudo ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server'
+                # sudo ufw allow VNC comment 'VNC, local remote desktop server'
+
+                # services a server may use #
+                # sudo ufw allow http comment 'HTTP, local Web server'
+                # sudo ufw allow https comment 'HTTPS, local Web server'
+
+                # sudo ufw allow 25 comment 'SMTPD, local mail server'
+                # sudo ufw allow 110 comment 'POP3, local mail server'
+                # sudo ufw allow 995 comment 'POP3S, local mail server'
+                # sudo ufw allow 1194/udp 'SMTPD, local VPN server'
+                # sudo ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server'
+
+                # save changes #
+                sudo ufw enable
+                sudo ufw reload
+
+            else
+                echo -e "WARNING: UFW is not installed. Skipping..."
+            fi
+        fi
     }
 
 # main #
@@ -358,7 +454,7 @@
     AppendCron
     # EditCrontab       # deprecated
     # EditSSH
-    # EditFirewall
+    ModifySecurity
 
     IFS=$SAVEIFS        # reset IFS
     echo -e "Exiting."

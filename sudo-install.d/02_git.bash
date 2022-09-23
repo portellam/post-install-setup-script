@@ -68,14 +68,14 @@
         # NOTE: update here!
         declare -a arr_repo=(
 
-        #"username/reponame"
-        "corna/me_cleaner"
-        "dt-zero/me_cleaner"
-        "foundObjects/zram-swap"
-        "portellam/Auto-Xorg"
-        "portellam/deploy-VFIO-setup"
-        "pyllyukko/user.js"
-        "StevenBlack/hosts"
+            #"username/reponame"
+            "corna/me_cleaner"
+            "dt-zero/me_cleaner"
+            "foundObjects/zram-swap"
+            "portellam/Auto-Xorg"
+            "portellam/deploy-VFIO-setup"
+            "pyllyukko/user.js"
+            "StevenBlack/hosts"
 
         )
 
