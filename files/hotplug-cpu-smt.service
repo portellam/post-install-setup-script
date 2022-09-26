@@ -2,9 +2,9 @@
 Description=Hotplug disable/enable CPU simultaenous multi-threading (SMT)
 
 [Service]
-ExecStart=/bin/bash /usr/sbin/hotplug-cpu-smt.bash y
+ExecStart=/bin/bash /usr/sbin/hotplug-cpu-smt.bash n
+# ExecStart=/bin/bash /usr/sbin/hotplug-cpu-smt.bash y
 # ExecStart=/bin/bash /usr/sbin/hotplug-cpu-smt.bash
-# ExecStart=/bin/bash /usr/sbin/hotplug-cpu-smt.bash n
 RemainAfterExit=true
 Type=oneshot
 

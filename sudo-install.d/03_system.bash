@@ -77,11 +77,6 @@
             str_inFile1="${str_dir1}/"${str_inFile1}
             str_inFile2="${str_dir1}/"${str_inFile2}
 
-            echo -e "$str_inFile1"
-            echo -e "$str_outFile1"
-            echo -e "$str_inFile2"
-            echo -e "$str_outFile2"
-
             cp $str_inFile1 $str_outFile1
             chown root $str_outFile1
             chmod +x $str_outFile1
