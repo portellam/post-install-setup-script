@@ -55,44 +55,45 @@
     function AppendToSystemd
     {
         echo -en "Appending files to Systemd... "
+        echo
+        echo
 
         # parameters #
-        str_dir1=$(find . -name files | uniq | head -n1 | cut -d '.' -f2)
-        cd '.'$str_dir1
+        str_dir1="$(pwd)/$( basename $(find . -name files | uniq | head -n1 | cut -d '/' -f2 ))"
+        str_pattern=".service"
+        declare -a arr1=( $( ls ${str_dir1} | uniq | grep -E *"${str_pattern}" ))
 
-        if [[ $(echo $(pwd)) == *"$str_dir1"* ]]; then
+        for str_inFile1 in ${arr1[@]}; do
 
             # parameters #
-            str_pattern=".service"
-            declare -a arr1=($(ls | grep *".service") )
+            declare -i int_rem=${#str_pattern}
+            int_rem=$((int_rem * -1))
+            str_line1=${str_inFile1::int_rem}
+            str_inFile2=$( basename $( find . | grep "$str_line1" | grep -Ev *".service" | uniq | head -n1 ))
 
-            for str_inFile1 in ${arr1[@]}; do
+            str_outFile1="/etc/systemd/system/$str_inFile1"
+            str_outFile2="/usr/sbin/$str_inFile2"
 
-                # parameters #
-                declare -i int_rem=${#str_pattern}
-                int_rem=$((int_rem * -1))
-                str_line1=${str_inFile1::int_rem}
-                str_inFile2=$(find . | grep "$str_line1" | grep -Ev *".service" | uniq | head -n1)
-                str_inFile2=$(echo $str_inFile2 | cut -d '/' -f2)
-                str_outFile1="/etc/systemd/system/$str_inFile1"
+            str_inFile1="${str_dir1}/"${str_inFile1}
+            str_inFile2="${str_dir1}/"${str_inFile2}
 
-                cp $str_inFile1 $str_outFile1
-                chown root $str_outFile1
-                chmod +x $str_outFile1
+            echo -e "$str_inFile1"
+            echo -e "$str_outFile1"
+            echo -e "$str_inFile2"
+            echo -e "$str_outFile2"
 
-                if [[ -e $str_inFile2 ]]; then
-                    str_outFile2="/usr/sbin/$str_inFile2"
+            cp $str_inFile1 $str_outFile1
+            chown root $str_outFile1
+            chmod +x $str_outFile1
 
-                    if [[ -z $str_outFile2 ]]; then
-                        cp $str_inFile2 $str_outFile2
-                        chown root $str_outFile2
-                        chmod +x $str_outFile2
-                    fi
-                fi
+            if [[ -e $str_inFile2 ]]; then
+                cp $str_inFile2 $str_outFile2
+                chown root $str_outFile2
+                chmod +x $str_outFile2
+            fi
 
-                str_outFile2=""
-            done
-        fi
+            str_outFile2=""
+        done
 
         echo -e "Complete."
         systemctl daemon-reload
@@ -454,7 +455,7 @@
     AppendCron
     # EditCrontab       # deprecated
     # EditSSH
-    ModifySecurity
+    # ModifySecurity
 
     IFS=$SAVEIFS        # reset IFS
     echo -e "Exiting."
