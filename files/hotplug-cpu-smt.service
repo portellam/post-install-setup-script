@@ -1,5 +1,5 @@
 [Unit]
-Description=Disable/enable CPU simultaenous multi-threading (SMT)
+Description=Hotplug disable/enable CPU simultaenous multi-threading (SMT)
 
 [Service]
 ExecStart=/bin/bash /usr/sbin/disable-cpu-smt.bash
