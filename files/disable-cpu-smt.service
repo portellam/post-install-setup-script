@@ -1,0 +1,10 @@
+[Unit]
+Description=Disable/enable CPU simultaenous multi-threading (SMT)
+
+[Service]
+ExecStart=/bin/bash /usr/sbin/disable-cpu-smt.bash
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
