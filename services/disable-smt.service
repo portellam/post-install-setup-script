@@ -1,0 +1,10 @@
+[Unit]
+Description=Hotplug disable CPU simultaenous multi-threading (SMT)
+
+[Service]
+ExecStart=/bin/bash /usr/sbin/toggle-smt.bash n
+RemainAfterExit=true
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target

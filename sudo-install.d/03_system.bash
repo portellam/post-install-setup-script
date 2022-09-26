@@ -54,44 +54,48 @@
 # systemd #
     function AppendToSystemd
     {
-        echo -en "Appending files to Systemd... "
-        echo
-        echo
+        echo -e "Appending files to Systemd..."
 
         # parameters #
-        str_dir1="$(pwd)/$( basename $(find . -name files | uniq | head -n1 | cut -d '/' -f2 ))"
+        str_dir1="$(pwd)/$( basename $(find . -name services | uniq | head -n1 ))"
         str_pattern=".service"
-        declare -a arr1=( $( ls ${str_dir1} | uniq | grep -E *"${str_pattern}" ))
+        cd $str_dir1
+
+        declare -a arr1=( $( ls | uniq | grep -Ev $str_pattern ))
 
         for str_inFile1 in ${arr1[@]}; do
-
-            # parameters #
-            declare -i int_rem=${#str_pattern}
-            int_rem=$((int_rem * -1))
-            str_line1=${str_inFile1::int_rem}
-            str_inFile2=$( basename $( find . | grep "$str_line1" | grep -Ev *".service" | uniq | head -n1 ))
-
-            str_outFile1="/etc/systemd/system/$str_inFile1"
-            str_outFile2="/usr/sbin/$str_inFile2"
-
-            str_inFile1="${str_dir1}/"${str_inFile1}
-            str_inFile2="${str_dir1}/"${str_inFile2}
-
+            str_outFile1="/usr/sbin/${str_inFile1}"
             cp $str_inFile1 $str_outFile1
             chown root $str_outFile1
             chmod +x $str_outFile1
-
-            if [[ -e $str_inFile2 ]]; then
-                cp $str_inFile2 $str_outFile2
-                chown root $str_outFile2
-                chmod +x $str_outFile2
-            fi
-
-            str_outFile2=""
         done
 
-        echo -e "Complete."
+        declare -a arr1=( $( ls | uniq | grep $str_pattern ))
+
+        for str_inFile1 in ${arr1[@]}; do
+            declare -i int_fileNameLength=$((${#str_inFile1} - ${#str_pattern}))
+            str_outFile1="/etc/systemd/system/${str_inFile1}"
+            cp $str_dir1"/"$str_inFile1 $str_outFile1
+            chown root $str_outFile1
+            chmod +x $str_outFile1
+            systemctl daemon-reload
+
+            echo -e ${str_inFile1::$int_fileNameLength}
+            str_input1=""
+            ReadInput "Enable/disable '${str_inFile1}'?"
+
+
+            case $str_input1 in
+                "Y")
+                    systemctl enable $str_inFile1;;
+
+                "N")
+                    systemctl disable $str_inFile1;;
+            esac
+        done
+
         systemctl daemon-reload
+        echo -e "Appending files to Systemd... Complete."
     }
 
 # crontab #
