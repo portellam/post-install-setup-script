@@ -168,79 +168,6 @@
         systemctl restart cron
     }
 
-    # NOTE: old
-    # function EditCrontab
-    # {
-    #     str_file1="/var/spool/cron/crontabs/root"      # set working file
-    #     declare -a arr_output1=()
-
-    #     # backup system file #
-    #     str_file1="/etc/ssh/ssh_config"
-    #     str_oldFile1=${str_file1}"_old"
-
-    #     if [ -e $str_file1 ]; then
-    #         cp $str_file1 $str_oldFile1
-
-    #     else
-    #         touch $str_file1
-    #     fi
-
-    #     echo -en "Editing crontab.\nEnter your preferred ntp server (default: time.nist.gov): "
-    #     read str_input1
-
-    #     if [[ -z $str_input1 ]]; then
-    #         str_input1="time.nist.gov";     # default value, change here!
-    #     fi
-
-    #     # append to output #
-    #     if [[ $(command -v ntpdate) != "/usr/bin/ntpdate" ]]; then
-    #         arr_output1+=(
-    #             ""
-    #             "# ntp #"
-    #             "# update every 15 min"
-    #             "0,15,30,45 * * * * ntpdate -s $str_input1"
-    #         )
-    #     fi
-
-    #     # append to output #
-    #     if [[ $(command -v unattended-upgrade) != "/usr/bin/unattended-upgrade"* ]]; then
-    #         str_line1="#"
-
-    #     else
-    #         str_line1=""
-    #     fi
-
-    #     # append to output #
-    #     arr_output1+=(
-    #         ""
-    #         "# apt #    # NOTE: better to use 'unattended-upgrades'"
-    #         "# clean, update every 8 hours"
-    #         "${str_line1}0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y"
-    #         "# clean, update, autoremove every 8 hours"
-    #         "#0 0,8,16 * * * apt clean && apt update && apt full-upgrade -y && apt autoremove -y"
-    #     )
-
-    #     # append to output #
-    #     if [[ $(command -v flatpak) == "/usr/bin/flatpak" ]]; then
-    #         arr_output1+=(
-    #             ""
-    #             "# flatpak #"
-    #             " update every 8 hours"
-    #             "0 0,8,16 * * * flatpak update -y"
-    #         )
-    #     fi
-
-    #     # append to output #
-    #     if [[ $(command -v snap) == "/usr/bin/snap" ]]; then
-    #         arr_output1+=(
-    #             ""
-    #             "# snap #"
-    #             "# update every 8 hours"
-    #             "0 0,8,16 * * * snap update -y"
-    #         )
-    #     fi
-    # }
-
 # SSH #
     function EditSSH
     {
@@ -294,28 +221,28 @@
             ((int_count++))   # counter
         done
 
-        # backup system file #
-        str_file1="/etc/ssh/ssh_config"
-        str_oldFile1=$str_file1"_old"
+        # # backup system file #
+        # str_file1="/etc/ssh/ssh_config"
+        # str_oldFile1=$str_file1"_old"
 
-        if [ -e $str_file1 ]; then
-            cp $str_file1 $str_oldFile1
-        fi
+        # if [ -e $str_file1 ]; then
+        #     cp $str_file1 $str_oldFile1
+        # fi
 
-        # backup system file #
-        str_file1="/etc/ssh/sshd_config"
-        str_oldFile1=$str_file1"_old"
+        # # backup system file #
+        # str_file1="/etc/ssh/sshd_config"
+        # str_oldFile1=$str_file1"_old"
 
-        if [ -e $str_file1 ]; then
-            cp $str_file1 $str_oldFile1
-        fi
+        # if [ -e $str_file1 ]; then
+        #     cp $str_file1 $str_oldFile1
+        # fi
 
-        # append to output #
-        str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
+        # # append to output #
+        # str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
 
-        echo -e $str_output1 >> $str_file1
+        # echo -e $str_output1 >> $str_file1
 
-        systemctl restart ssh sshd  # restart services
+        # systemctl restart ssh sshd  # restart services
     }
 
 # security #
@@ -325,8 +252,8 @@
 
         # parameters #
         str_input1=""
-        str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpdtftpd-hpa xinetd yp-tools"
-        str_servicesToEnable="fail2ban"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
+        str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
 
         echo -e "Remove given apt packages?"
         apt remove $str_args $str_packagesToRemove
@@ -354,6 +281,7 @@
                 if [[ -e /etc/modprobe.d/disable-thunderbolt.conf ]]; then
                     rm /etc/modprobe.d/disable-thunderbolt.conf
                 fi
+
                 update-initramfs -u -k all
                 ;;
         esac
@@ -441,7 +369,6 @@
     CheckIfUserIsRoot
     AppendToSystemd
     AppendCron
-    # EditCrontab       # deprecated
     # EditSSH
     # ModifySecurity
 
