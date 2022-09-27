@@ -326,23 +326,10 @@
         # parameters #
         str_input1=""
         str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpdtftpd-hpa xinetd yp-tools"
-        str_servicesToEnable="fail2ban"
+        str_servicesToEnable="fail2ban"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
 
-        ReadInput "Auto-accept command argument prompts (ex: '-y', '--yes') ?"
-
-        if [[ $str_input1 == "Y" ]]; then
-            str_args="-y"
-
-        else
-            str_args=""
-        fi
-
-        str_input1=""
-        ReadInput "Remove given apt packages?"
-
-        if [[ $str_input1 == "Y" ]]; then
-            apt remove $str_args $str_packagesToRemove
-        fi
+        echo -e "Remove given apt packages?"
+        apt remove $str_args $str_packagesToRemove
 
         str_input1=""
         ReadInput "Disable given storage interfaces: USB, Firewire, Thunderbolt?"
@@ -437,6 +424,8 @@
                 echo -e "WARNING: UFW is not installed. Skipping..."
             fi
         fi
+
+        # edit hosts file here?
     }
 
 # main #
