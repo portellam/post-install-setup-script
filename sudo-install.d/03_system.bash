@@ -52,7 +52,7 @@
     }
 
 # systemd #
-    function AppendToSystemd
+    function AppendServices
     {
         echo -e "Appending files to Systemd..."
 
@@ -170,82 +170,86 @@
 # SSH #
     function ModifySSH
     {
-        echo -e "Modifying SSH..."
+        # parameters #
+        str_input1=""
+        ReadInput "Modify SSH?"
 
-        if [[ $( command -v ssh ) != "" ]]; then
-            declare -i int_count=0
-            str_output1=""
+        if [[ $str_input1 = "Y" ]]; then
+            if [[ $( command -v ssh ) != "" ]]; then
+                declare -i int_count=0
+                str_output1=""
 
-            # prompt #
-            while [[ ${int_count} -le 3 ]]; do
+                # prompt #
+                while [[ ${int_count} -le 3 ]]; do
 
-                # default input #
-                if [ ${int_count} -gt 2 ]; then
-                    str_sshAlt=22
-                    echo -en "Exceeded max attempts! "
+                    # default input #
+                    if [ ${int_count} -gt 2 ]; then
+                        str_sshAlt=22
+                        echo -en "Exceeded max attempts! "
 
-                # read input #
-                else
-                    echo -en "\tEnter a new IP Port number for SSH (leave blank for default): "
-                    read str_sshAlt
-                fi
+                    # read input #
+                    else
+                        echo -en "\tEnter a new IP Port number for SSH (leave blank for default): "
+                        read str_sshAlt
+                    fi
 
-                # match string with valid integer #
-                if [ "${str_sshAlt}" -eq "$(( ${str_sshAlt} ))" ] 2> /dev/null; then
-                    declare -i int_result="${str_sshAlt}"
+                    # match string with valid integer #
+                    if [ "${str_sshAlt}" -eq "$(( ${str_sshAlt} ))" ] 2> /dev/null; then
+                        declare -i int_result="${str_sshAlt}"
 
-                    if [[ ${int_result} -gt 0 && ${int_result} -lt 65536 ]]; then
-                        if [[ ${int_result} -gt 1000 ]]; then
-                            if [[ ${int_result} == 22 ]]; then
-                                echo -e "Default value."
+                        if [[ ${int_result} -gt 0 && ${int_result} -lt 65536 ]]; then
+                            if [[ ${int_result} -gt 1000 ]]; then
+                                if [[ ${int_result} == 22 ]]; then
+                                    echo -e "Default value."
 
-                            # append to output #
+                                # append to output #
+                                else
+                                    str_output1+="\n#\nPort ${str_sshAlt}"
+                                    break
+                                fi
+
                             else
-                                str_output1+="\n#\nPort ${str_sshAlt}"
-                                break
+                                echo -e "Invalid selection. Available port range: 1000-65535"
                             fi
 
                         else
-                            echo -e "Invalid selection. Available port range: 1000-65535"
+                            echo -e "Invalid integer. Valid port range: 1-65535."
                         fi
 
+                    # false match string with valid integer #
                     else
-                        echo -e "Invalid integer. Valid port range: 1-65535."
+                        echo -e "Invalid input."
                     fi
 
-                # false match string with valid integer #
-                else
-                    echo -e "Invalid input."
-                fi
+                    ((int_count++))
+                done
 
-                ((int_count++))
-            done
+                # backup and write to file #
+                    str_file1="/etc/ssh/ssh_config"
+                    str_oldFile1=${str_file1}"_old"
 
-            # backup and write to file #
-                str_file1="/etc/ssh/ssh_config"
-                str_oldFile1=${str_file1}"_old"
+                    if [ -e ${str_file1} ]; then
+                        cp ${str_file1} ${str_oldFile1}
+                    fi
 
-                if [ -e ${str_file1} ]; then
-                    cp ${str_file1} ${str_oldFile1}
-                fi
+                    echo -e ${str_output} >> ${str_file1}
 
-                echo -e ${str_output} >> ${str_file1}
+                # backup and write to file #
+                    str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"    # append to output
+                    str_file1="/etc/ssh/ssh_config"
+                    str_oldFile1=${str_file1}"_old"
 
-            # backup and write to file #
-                str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"    # append to output
-                str_file1="/etc/ssh/ssh_config"
-                str_oldFile1=${str_file1}"_old"
+                    if [ -e ${str_file1} ]; then
+                        cp ${str_file1} ${str_oldFile1}
+                    fi
 
-                if [ -e ${str_file1} ]; then
-                    cp ${str_file1} ${str_oldFile1}
-                fi
+                    echo -e ${str_output1} >> ${str_file1}
 
-                echo -e ${str_output1} >> ${str_file1}
+                systemctl restart ssh sshd  # restart services
 
-            systemctl restart ssh sshd  # restart services
-
-        else
-            echo -e "WARNING: SSH not installed! Skipping..."
+            else
+                echo -e "WARNING: SSH not installed! Skipping..."
+            fi
         fi
 
         echo
@@ -348,6 +352,8 @@
                     else
                         ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh'
                     fi
+
+                    ufw deny ssh comment 'deny default ssh'
                 fi
 
                 # services a desktop uses #
@@ -392,9 +398,9 @@
     IFS=$'\n'      # Change IFS to newline char
 
     # call functions #
-    # CheckIfUserIsRoot
-    # AppendToSystemd
-    # AppendCron
+    CheckIfUserIsRoot
+    AppendServices
+    AppendCron
     ModifySSH $str_sshAlt
     ModifySecurity $str_sshAlt
 
