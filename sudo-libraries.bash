@@ -78,7 +78,7 @@
         # and returns exit code given result.
     # </summary>
     function CheckIfVarIsNull {
-        if [[ -z $1 ]]; then
+        if [[ -z "$1" ]]; then
             SetExitCodeIfVarIsNull; SaveThisExitCode
         else
             true; SaveThisExitCode
@@ -1178,15 +1178,17 @@
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
     IFS=$'\n'      # Change IFS to newline char
 
-    # echo "Checking if null variable is null."
-    # CheckIfVarIsNull
-    # EchoPassOrFailThisExitCode
-    # echo $int_thisExitCode
+    echo "Checking if null variable is null."
+    CheckIfVarIsNull
+    EchoPassOrFailThisExitCode
+    echo $int_thisExitCode
 
-    # echo "Checking if given variable is null."
-    # CheckIfVarIsNull "hello world"
-    # EchoPassOrFailThisExitCode
-    # echo $int_thisExitCode
+    str="hello world"
+
+    echo "Checking if given variable is null."
+    CheckIfVarIsNull $str
+    EchoPassOrFailThisExitCode
+    echo $int_thisExitCode
 
     # thisFile="newfile"
     # CheckIfVarIsNull $thisFile
