@@ -4,32 +4,40 @@
 # Author(s):    Alex Portell <github.com/portellam>
 #
 
-### main ###
-# <parameters>
+### main parameters ###
+# <code>
     declare -r str_pwd=$( pwd )
 
     # <summary>
         # Necessary for exit code preservation, for conditional statements.
     # </summary>
     declare -i int_thisExitCode=$?
-# </parameters>
+# </code>
 
 ### exception functions ###
 # <code>
     # <summary>
         # This statement (function) must follow an exit code statement.
         #   Exit Code   |   Description
-        #   0               true
-        #   1,255           false
-        #   0-130           reserved
-        #   131-255         unreserved
-        #   255             unspecified error
-        #   254             input is null
-        #   253             file/dir is null
-        #   252             file/dir is not readable
-        #   251             file/dir is not writable
-        #   250             file/dir is not executable
         #
+        #   0               True
+        #   1               False; Catch-all for general errors.
+        #   2               Misuse of shell built-ins.
+        #
+        #   126             Command invoked cannot execute.
+        #   127             Command not found.
+        #   128             Invalid argument to exit.
+        #   128 +n          Where 'n' is a number, '$?' returns '128 + n'.
+        #   130             Script terminated by 'CTRL+C'.
+        #
+        #   131-255         Unreserved
+        #
+        #   255             Unspecified error.
+        #   254             Input is null.
+        #   253             File/Dir is null.
+        #   252             File/Dir is not readable.
+        #   251             File/Dir is not writable.
+        #   250             File/Dir is not executable.
         #
     # </summary>
 
@@ -116,6 +124,66 @@
     }
 # </code>
 
+### special functions ###
+# <code>
+    # <summary>
+        # Checks if current user is sudo/root.
+    # </summary>
+    function CheckIfUserIsRoot
+    {
+        if [[ $( whoami ) != "root" ]]; then
+            SaveThisExitCode
+            local str_thisFile=$( echo ${0##/*} )
+            readonly str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
+            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root."
+            CheckIfFileIsNull $str_thisFile &> /dev/null || echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'"
+            ExitWithThisExitCode
+        fi
+    }
+
+    # <summary>
+        # Output pass or fail statement given exit code.
+    # </summary>
+    function EchoPassOrFailThisExitCode
+    {
+        CheckIfVarIsNull $1 &> /dev/null || echo -en "$1"
+
+        case "$int_thisExitCode" in
+            0)
+                echo -e " \e[32mSuccessful. \e[0m";;
+            131)
+                echo -e " \e[33mSkipped. \e[0m";;
+            *)
+                echo -e " \e[31mFailed. \e[0m";;
+        esac
+    }
+
+    # <summary>
+        # Output pass or fail test-case given exit code.
+    # </summary>
+    function EchoPassOrFailThisTestCase
+    {
+        str_testCaseName=$1
+        CheckIfVarIsNull $str_testCaseName &> /dev/null || str_testCaseName="TestCase"
+
+        case "$int_thisExitCode" in
+            0)
+                echo -e "\e[32mPASS:\e[0m""\t$str_testCaseName";;
+            *)
+                echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
+        esac
+    }
+
+    # <summary>
+        # Exit bash session/script with current exit code.
+    # </summary>
+    function ExitWithThisExitCode
+    {
+        echo -e "Exiting."
+        exit $int_thisExitCode
+    }
+# </code>
+
 ### general functions ###
 # <code>
     # function ChangeOwnershipOfFileOrDir
@@ -136,18 +204,6 @@
         #         SaveThisExitCode
         #     fi
         # }
-
-    function CheckIfUserIsRoot
-    {
-        if [[ $( whoami ) != "root" ]]; then
-            SaveThisExitCode
-            local str_thisFile=$( echo ${0##/*} )
-            readonly str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
-            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root."
-            CheckIfFileIsNull $str_thisFile &> /dev/null || echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'"
-            ExitWithThisExitCode
-        fi
-    }
 
     # <summary>
         # Checks if two given files are the same, in composition.
@@ -296,59 +352,6 @@
         ParseThisExitCode
     }
 
-    function EchoPassOrFailThisExitCode
-    {
-        # behavior:
-        # output a pass or fail depending on the exit code
-        #
-        # reserved/unreserved exit codes:
-        #
-        #   0       == always pass
-        #   3       == free
-        #   131-255 == free
-        #
-
-        if [[ ! -z $1 ]]; then                      # append output
-            echo -en "$1"
-        fi
-
-        case "$int_thisExitCode" in                 # append output
-            0|3)
-                echo -e " \e[32mSuccessful. \e[0m";;
-
-            131)
-                echo -e " \e[33mSkipped. \e[0m";;
-
-            *)
-                echo -e " \e[31mFailed. \e[0m";;
-        esac
-    }
-
-    function EchoPassOrFailThisTestCase
-    {
-        # behavior:
-        # output a pass or fail depending on the test case exut cide
-        #
-
-        str_testCaseName=$1
-
-        if [[ ! -z $str_testCaseName ]]; then
-            str_testCaseName="TestCase"
-        fi
-
-        case "$int_thisExitCode" in                 # append output
-            0)
-                echo -e "\e[32mPASS:\e[0m""\t$str_testCaseName";;
-            *)
-                echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
-        esac
-    }
-
-    function ExitWithThisExitCode
-    {
-        echo -e "Exiting."
-        exit $int_thisExitCode
-    }
 
     function ReadFile
     {
