@@ -186,24 +186,18 @@
 
 ### general functions ###
 # <code>
-    # function ChangeOwnershipOfFileOrDir
-        # {
-        #     # behavior:
-        #     # change ownership of existing file to current user
-        #     # current user may be the sudoer or root (either is not necessarily the same)
-        #     # note: $UID is intelligent enough to differentiate between the two
-        #     #
-
-        #     if [[ -z $1 ]]; then        # null exception
-        #         (exit 254)
-        #         SaveThisExitCode
-        #     else
-        #         echo '$UID =='"'$UID'"
-        #         chown -f $UID $1
-        #         (exit 0)
-        #         SaveThisExitCode
-        #     fi
-        # }
+    # <summary>
+        # Change ownership of given file to current user.
+        # NOTE: $UID is intelligent enough to differentiate between the two
+    # </summary>
+    function ChangeOwnershipOfFileOrDir
+    {
+        CheckIfFileIsNull $1 || (
+            echo '$UID =='"'$UID'"
+            chown -f $UID $1
+            true && SaveThisExitCode
+        )
+    }
 
     # <summary>
         # Checks if two given files are the same, in composition.
@@ -352,7 +346,9 @@
         ParseThisExitCode
     }
 
-
+    # <summary>
+        # 
+    # </summary>
     function ReadFile
     {
         echo -en "Reading file... "
@@ -382,6 +378,9 @@
         ParseThisExitCode
     }
 
+    # <summary>
+        # 
+    # </summary>
     function ReadInput
     {
         # behavior:
@@ -424,6 +423,9 @@
         echo
     }
 
+    # <summary>
+        # 
+    # </summary>
     function ReadInputFromMultipleChoiceIgnoreCase
     {
         # behavior:
@@ -478,6 +480,9 @@
         ParseThisExitCode
     }
 
+    # <summary>
+        # 
+    # </summary>
     function ReadInputFromMultipleChoiceUpperCase
     {
         # behavior:
@@ -533,6 +538,9 @@
         ParseThisExitCode
     }
 
+    # <summary>
+        # 
+    # </summary>
     function ReadInputFromRangeOfNums
     {
         # behavior:
@@ -567,8 +575,9 @@
         done
     }
 
-
-
+    # <summary>
+        # 
+    # </summary>
     function TestNetwork
     {
         # behavior:
@@ -596,6 +605,9 @@
         echo
     }
 
+    # <summary>
+        # 
+    # </summary>
     function WriteArrayToFile
     {
         # TODO: not working!
@@ -644,6 +656,9 @@
         ParseThisExitCode
     }
 
+    # <summary>
+        # 
+    # </summary>
     function WriteVarToFile
     {
         # behavior:
