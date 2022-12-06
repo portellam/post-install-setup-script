@@ -42,21 +42,14 @@
     # </summary>
 
     # <summary>
-        # Updates main parameter.
-    # </summary>
-    function SaveThisExitCode {
-        int_thisExitCode=$?
-    }
-
-    # <summary>
         # Checks if input parameter is null,
         # and returns exit code given result.
     # </summary>
     function CheckIfVarIsNull {
         if [[ -z $1 ]]; then
-            (exit 254) && SaveThisExitCode
+            (exit 254); SaveThisExitCode
         else
-            true && SaveThisExitCode
+            true; SaveThisExitCode
         fi
     }
 
@@ -66,9 +59,9 @@
     # </summary>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
-            (exit 253) && SaveThisExitCode
+            (exit 253); SaveThisExitCode
         else
-            true && SaveThisExitCode
+            true; SaveThisExitCode
         fi
     }
 
@@ -78,9 +71,9 @@
     # </summary>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
-            (exit 252) && SaveThisExitCode
+            (exit 252); SaveThisExitCode
         else
-            true && SaveThisExitCode
+            true; SaveThisExitCode
         fi
     }
 
@@ -90,9 +83,9 @@
     # </summary>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
-            (exit 251) && SaveThisExitCode
+            (exit 251); SaveThisExitCode
         else
-            true && SaveThisExitCode
+            true; SaveThisExitCode
         fi
     }
 
@@ -135,7 +128,7 @@
             SaveThisExitCode
             local str_thisFile=$( echo ${0##/*} )
             readonly str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
-            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root."
+            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root. "
             CheckIfFileIsNull $str_thisFile &> /dev/null || echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'"
             ExitWithThisExitCode
         fi
@@ -146,15 +139,17 @@
     # </summary>
     function EchoPassOrFailThisExitCode
     {
-        CheckIfVarIsNull $1 &> /dev/null || echo -en "$1"
+        if [[ ! -z $1 ]]; then
+            echo -en "$1 "
+        fi
 
         case "$int_thisExitCode" in
             0)
-                echo -e " \e[32mSuccessful. \e[0m";;
+                echo -e "\e[32mSuccessful. \e[0m";;
             131)
-                echo -e " \e[33mSkipped. \e[0m";;
+                echo -e "\e[33mSkipped. \e[0m";;
             *)
-                echo -e " \e[31mFailed. \e[0m";;
+                echo -e "\e[31mFailed. \e[0m";;
         esac
     }
 
@@ -182,6 +177,13 @@
         echo -e "Exiting."
         exit $int_thisExitCode
     }
+
+    # <summary>
+        # Updates main parameter.
+    # </summary>
+    function SaveThisExitCode {
+        int_thisExitCode=$?
+    }
 # </code>
 
 ### general functions ###
@@ -195,7 +197,7 @@
         CheckIfFileIsNull $1 || (
             echo '$UID =='"'$UID'"
             chown -f $UID $1
-            true && SaveThisExitCode
+            true; SaveThisExitCode
         )
     }
 
@@ -218,7 +220,7 @@
                 echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             else
                 echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-                false && SaveThisExitCode
+                false; SaveThisExitCode
             fi
         fi
 
@@ -254,18 +256,18 @@
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
                     declare -ir int_firstIndex="${str_line}"
                 else
-                    false && SaveThisExitCode                                       # NOTE: redundant?
+                    false; SaveThisExitCode                                       # NOTE: redundant?
                 fi
 
                 for str_element in ${arr_thisDir[@]}; do
                     if cmp -s $str_thisFile $str_element; then
-                        false && SaveThisExitCode
+                        false; SaveThisExitCode
                         break
                     fi
                 done
 
                 if cmp -s $str_thisFile ${arr_thisDir[-1]}; then        # if latest backup is same as original file, exit
-                    true && SaveThisExitCode
+                    true; SaveThisExitCode
                 fi
 
                 while [[ ${#arr_thisDir[@]} -ge $int_maxCount ]]; do    # before backup, delete all but some number of backup files
@@ -276,7 +278,7 @@
                 done
 
                 if cmp -s $str_thisFile ${arr_thisDir[0]}; then         # if *first* backup is same as original file, exit
-                    false && SaveThisExitCode
+                    false; SaveThisExitCode
                 fi
 
                 # <parameters>
@@ -287,7 +289,7 @@
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
                     declare -i int_lastIndex="${str_line}"
                 else
-                    false && SaveThisExitCode
+                    false; SaveThisExitCode
                 fi
 
                 (( int_lastIndex++ ))                                               # counter
@@ -295,9 +297,9 @@
                 if [[ $str_thisFile -nt ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then       # source file is newer and different than backup, add to backups
                     cp $str_thisFile "${str_thisFile}.${int_lastIndex}${str_suffix}"
                 elif [[ $str_thisFile -ot ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then
-                    false && SaveThisExitCode
+                    false; SaveThisExitCode
                 else
-                    false && SaveThisExitCode
+                    false; SaveThisExitCode
                 fi
             else
                 cp $str_thisFile "${str_thisFile}.0${str_suffix}"   # no backups, create backup
@@ -323,7 +325,7 @@
 
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfFileIsNull $1 &> /dev/null && (
-            touch $1 &> /dev/null || ( false && SaveThisExitCode )
+            touch $1 &> /dev/null || ( false; SaveThisExitCode )
         )
 
         EchoPassOrFailThisExitCode      # call functions
@@ -339,7 +341,7 @@
 
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfFileIsNull $1 &> /dev/null || (
-            rm $1 &> /dev/null || ( false && SaveThisExitCode )
+            rm $1 &> /dev/null || ( false; SaveThisExitCode )
         )
 
         EchoPassOrFailThisExitCode          # call functions
@@ -371,7 +373,7 @@
         declare -la arr_output_thisFile=()
 
         while read str_line; do
-            arr_output_thisFile+=("$str_line") || ( (exit 249) && SaveThisExitCode && arr_output_thisFile=() && break )
+            arr_output_thisFile+=("$str_line") || ( (exit 249); SaveThisExitCode; arr_output_thisFile=() && break )
         done < $1
 
         EchoPassOrFailThisExitCode  # call functions
@@ -643,10 +645,10 @@
         if [[ $int_thisExitCode -eq 0 ]]; then
             case ${!var_input[@]} in                                                    # check number of key-value pairs
                 0)                                                                      # check if var is not an array
-                    echo -e $var_input >> $1 || ( (exit 255) && SaveThisExitCode );;
+                    echo -e $var_input >> $1 || ( (exit 255); SaveThisExitCode );;
                 *)                                                                      # check if var is an array
                     for str_element in ${var_input[@]}; do
-                        echo -e $str_element >> $1 || ( (exit 255) && SaveThisExitCode && break )
+                        echo -e $str_element >> $1 || ( (exit 255); SaveThisExitCode; break )
                     done;;
             esac
         fi
@@ -1162,45 +1164,66 @@
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
     IFS=$'\n'      # Change IFS to newline char
 
-    bool_executeDeleteSetup=false
-    bool_executeFullSetup=false
-    bool_executeMultiBootSetup=false
-    bool_executeStaticSetup=false
-    bool_executeDeleteSetup=false
+    # echo "Checking if null variable is null."
+    # CheckIfVarIsNull
+    # EchoPassOrFailThisExitCode
+    # echo $int_thisExitCode
 
-    if [[ -z $2 ]]; then
-        # ParseInputParamForOptions $1            # TODO: need to fix params function
-        CheckIfUserIsRoot
-        CheckIfIOMMU_IsEnabled
+    # echo "Checking if given variable is null."
+    # CheckIfVarIsNull "hello world"
+    # EchoPassOrFailThisExitCode
+    # echo $int_thisExitCode
 
-        case true in
-            $bool_executeDeleteSetup)
-                DeleteSetup;;
-            $bool_executeFullSetup)
-                PreInstallSetup
-                SelectVFIOSetup
-                PostInstallSetup;;
-            $bool_executeMultiBootSetup)
-                MultiBootSetup;;
-            $bool_executeStaticSetup)
-                StaticSetup;;
-            *)
-                SelectVFIOSetup;;
-        esac
-    else
-        (exit 254)
-        SaveThisExitCode
-        ParseThisExitCode "Cannot parse multiple options."
-    fi
+    # thisFile="newfile"
+    # CheckIfVarIsNull $thisFile
+    # echo $int_thisExitCode
+    # EchoPassOrFailThisExitCode
+
+    # touch $thisFile && echo "hello world" >> $thisFile
+    # CheckIfFileIsNull $thisFile
+
+    # rm $thisFile
+    # ParseThisExitCode
+
+    # bool_executeDeleteSetup=false
+    # bool_executeFullSetup=false
+    # bool_executeMultiBootSetup=false
+    # bool_executeStaticSetup=false
+    # bool_executeDeleteSetup=false
 
     # if [[ -z $2 ]]; then
+    #     # ParseInputParamForOptions $1            # TODO: need to fix params function
     #     CheckIfUserIsRoot
     #     CheckIfIOMMU_IsEnabled
-    #     ParseInputParamForOptions_2 $1 || SelectVFIOSetup
+
+    #     case true in
+    #         $bool_executeDeleteSetup)
+    #             DeleteSetup;;
+    #         $bool_executeFullSetup)
+    #             PreInstallSetup
+    #             SelectVFIOSetup
+    #             PostInstallSetup;;
+    #         $bool_executeMultiBootSetup)
+    #             MultiBootSetup;;
+    #         $bool_executeStaticSetup)
+    #             StaticSetup;;
+    #         *)
+    #             SelectVFIOSetup;;
+    #     esac
     # else
     #     (exit 254)
     #     SaveThisExitCode
     #     ParseThisExitCode "Cannot parse multiple options."
     # fi
+
+    # # if [[ -z $2 ]]; then
+    # #     CheckIfUserIsRoot
+    # #     CheckIfIOMMU_IsEnabled
+    # #     ParseInputParamForOptions_2 $1 || SelectVFIOSetup
+    # # else
+    # #     (exit 254)
+    # #     SaveThisExitCode
+    # #     ParseThisExitCode "Cannot parse multiple options."
+    # # fi
 
     ExitWithThisExitCode
