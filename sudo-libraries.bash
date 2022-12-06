@@ -14,7 +14,7 @@
     declare -i int_thisExitCode=$?
 # </code>
 
-### exception functions ###
+### exit code functions ###
 # <code>
     # <summary>
         # This statement (function) must follow an exit code statement.
@@ -38,16 +38,48 @@
         #   252             File/Dir is not readable.
         #   251             File/Dir is not writable.
         #   250             File/Dir is not executable.
+        #   131             Neither pass or fail; Skipped execution.
         #
     # </summary>
 
+    function SetExitCodeOnError {
+        (exit 255)
+    }
+
+    function SetExitCodeIfVarIsNull {
+        (exit 254)
+    }
+
+    function SetExitCodeIfFileIsNull {
+        (exit 253)
+    }
+
+    function SetExitCodeIfFileIsNotReadable {
+        (exit 252)
+    }
+
+    function SetExitCodeIfFileIsNotWritable {
+        (exit 251)
+    }
+
+    function SetExitCodeIfFileIsNotExecutable {
+        (exit 250)
+    }
+
+    function SetExitCodeIfPassNorFail {
+        (exit 131)
+    }
+# </code>
+
+### exception functions ###
+# <code>
     # <summary>
         # Checks if input parameter is null,
         # and returns exit code given result.
     # </summary>
     function CheckIfVarIsNull {
         if [[ -z $1 ]]; then
-            (exit 254); SaveThisExitCode
+            SetExitCodeIfVarIsNull; SaveThisExitCode
         else
             true; SaveThisExitCode
         fi
@@ -59,7 +91,7 @@
     # </summary>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
-            (exit 253); SaveThisExitCode
+            SetExitCodeIfFileIsNull; SaveThisExitCode
         else
             true; SaveThisExitCode
         fi
@@ -71,7 +103,7 @@
     # </summary>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
-            (exit 252); SaveThisExitCode
+            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
         else
             true; SaveThisExitCode
         fi
@@ -83,7 +115,7 @@
     # </summary>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
-            (exit 251); SaveThisExitCode
+            SetExitCodeIfFileIsNotWritable; SaveThisExitCode
         else
             true; SaveThisExitCode
         fi
@@ -125,11 +157,16 @@
     function CheckIfUserIsRoot
     {
         if [[ $( whoami ) != "root" ]]; then
-            SaveThisExitCode
             local str_thisFile=$( echo ${0##/*} )
-            readonly str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
+            CheckIfFileIsNull $str_thisFile &> /dev/null
             echo -en "\e[33mWARNING:\e[0m"" Script must execute as root. "
-            CheckIfFileIsNull $str_thisFile &> /dev/null || echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'"
+
+            case "$int_thisExitCode" in
+                0)
+                    readonly str_thisFile=$( echo $str_thisFile | cut -d '/' -f2 )
+                    echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'";;
+            esac
+
             ExitWithThisExitCode
         fi
     }
@@ -139,9 +176,12 @@
     # </summary>
     function EchoPassOrFailThisExitCode
     {
-        if [[ ! -z $1 ]]; then
-            echo -en "$1 "
-        fi
+        CheckIfVarIsNull $1 &> /dev/null
+
+        case "$int_thisExitCode" in
+            0)
+                echo -en "$1 ";;
+        esac
 
         case "$int_thisExitCode" in
             0)
@@ -159,7 +199,12 @@
     function EchoPassOrFailThisTestCase
     {
         str_testCaseName=$1
-        CheckIfVarIsNull $str_testCaseName &> /dev/null || str_testCaseName="TestCase"
+        CheckIfVarIsNull $str_testCaseName &> /dev/null
+
+        case "$int_thisExitCode" in
+            0)
+                str_testCaseName="TestCase";;
+        esac
 
         case "$int_thisExitCode" in
             0)
@@ -194,11 +239,13 @@
     # </summary>
     function ChangeOwnershipOfFileOrDir
     {
-        CheckIfFileIsNull $1 || (
+        CheckIfVarIsNull $1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             echo '$UID =='"'$UID'"
             chown -f $UID $1
             true; SaveThisExitCode
-        )
+        fi
     }
 
     # <summary>
@@ -234,21 +281,20 @@
     function CreateBackupFromFile
     {
         echo -en "Backing up file... "
-        declare -lr str_thisFile=$1
-
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
-        CheckIfFileIsReadable $1 &> /dev/null
+        declare -lr str_file=$1
+        CheckIfVarIsNull $str_file &> /dev/null
+        CheckIfFileIsNull $str_file &> /dev/null
+        CheckIfFileIsReadable $str_file &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             declare -r str_suffix=".old"
-            declare -r str_thisDir=$( dirname $1 )
-            declare -ar arr_thisDir=( $( ls -1v $str_thisDir | grep $str_thisFile | grep $str_suffix | uniq ) )
+            declare -r str_dir=$( dirname $1 )
+            declare -ar arr_dir=( $( ls -1v $str_dir | grep $str_file | grep $str_suffix | uniq ) )
 
-            if [[ "${#arr_thisDir[@]}" -ge 1 ]]; then       # positive non-zero count
+            if [[ "${#arr_dir[@]}" -ge 1 ]]; then           # positive non-zero count
                 # <parameters>
                     declare -ir int_maxCount=5
-                    str_line=${arr_thisDir[0]}
+                    str_line=${arr_dir[0]}
                     str_line=${str_line%"${str_suffix}"}    # substitution
                     str_line=${str_line##*.}                # ditto
                 # </parameters>
@@ -256,34 +302,34 @@
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
                     declare -ir int_firstIndex="${str_line}"
                 else
-                    false; SaveThisExitCode                                       # NOTE: redundant?
+                    false; SaveThisExitCode                                         # NOTE: redundant?
                 fi
 
-                for str_element in ${arr_thisDir[@]}; do
+                for str_element in ${arr_dir[@]}; do
                     if cmp -s $str_thisFile $str_element; then
                         false; SaveThisExitCode
                         break
                     fi
                 done
 
-                if cmp -s $str_thisFile ${arr_thisDir[-1]}; then        # if latest backup is same as original file, exit
+                if cmp -s $str_thisFile ${arr_dir[-1]}; then        # if latest backup is same as original file, exit
                     true; SaveThisExitCode
                 fi
 
-                while [[ ${#arr_thisDir[@]} -ge $int_maxCount ]]; do    # before backup, delete all but some number of backup files
-                    if [[ -e ${arr_thisDir[0]} ]]; then
-                        rm ${arr_thisDir[0]}
+                while [[ ${#arr_dir[@]} -ge $int_maxCount ]]; do    # before backup, delete all but some number of backup files
+                    if [[ -e ${arr_dir[0]} ]]; then
+                        rm ${arr_dir[0]}
                         break
                     fi
                 done
 
-                if cmp -s $str_thisFile ${arr_thisDir[0]}; then         # if *first* backup is same as original file, exit
+                if cmp -s $str_file ${arr_dir[0]}; then             # if *first* backup is same as original file, exit
                     false; SaveThisExitCode
                 fi
 
                 # <parameters>
-                    str_line=${arr_thisDir[-1]%"${str_suffix}"}         # substitution
-                    str_line=${str_line##*.}                            # ditto
+                    str_line=${arr_dir[-1]%"${str_suffix}"}         # substitution
+                    str_line=${str_line##*.}                        # ditto
                 # </parameters>
 
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
@@ -294,26 +340,25 @@
 
                 (( int_lastIndex++ ))                                               # counter
 
-                if [[ $str_thisFile -nt ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then       # source file is newer and different than backup, add to backups
-                    cp $str_thisFile "${str_thisFile}.${int_lastIndex}${str_suffix}"
-                elif [[ $str_thisFile -ot ${arr_thisDir[-1]} && ! ( $str_thisFile -ef ${arr_thisDir[-1]} ) ]]; then
-                    false; SaveThisExitCode
+                if [[ $str_file -nt ${arr_dir[-1]} && ! ( $str_file -ef ${arr_dir[-1]} ) ]]; then       # source file is newer and different than backup, add to backups
+                    cp $str_file "${str_file}.${int_lastIndex}${str_suffix}"
+                # elif [[ $str_file -ot ${arr_dir[-1]} && ! ( $str_file -ef ${arr_dir[-1]} ) ]]; then
+                #     false; SaveThisExitCode
                 else
                     false; SaveThisExitCode
                 fi
             else
-                cp $str_thisFile "${str_thisFile}.0${str_suffix}"   # no backups, create backup
+                cp $str_file "${str_file}.0${str_suffix}"           # no backups, create backup
                 SaveThisExitCode                                    # NOTE: redundant?
             fi
         fi
 
-        EchoPassOrFailThisExitCode                                  # call functions
+        EchoPassOrFailThisExitCode
         ParseThisExitCode
 
-        case $int_thisExitCode in                                   # append output and return code
-            255)
-                echo -e "No changes from most recent backup.";;
-        esac
+        if [[ $int_thisExitCode -ne 0 ]]; then
+            echo -e "No changes from most recent backup."
+        fi
     }
 
     # <summary>
@@ -322,11 +367,12 @@
     function CreateFile
     {
         echo -en "Creating file... "
-
         CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null && (
-            touch $1 &> /dev/null || ( false; SaveThisExitCode )
-        )
+        CheckIfFileIsNull $1 &> /dev/Null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            touch $1 &> /dev/null
+        fi
 
         EchoPassOrFailThisExitCode      # call functions
         ParseThisExitCode
@@ -338,42 +384,30 @@
     function DeleteFile
     {
         echo -en "Deleting file... "
-
         CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null || (
-            rm $1 &> /dev/null || ( false; SaveThisExitCode )
-        )
+        CheckIfFileIsNull $1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            rm $1 &> /dev/null
+        fi
 
         EchoPassOrFailThisExitCode          # call functions
         ParseThisExitCode
     }
 
     # <summary>
-        # 
+        # Reads a file.
     # </summary>
     function ReadFile
     {
         echo -en "Reading file... "
-
-        if [[ -z $1 ]]; then        # null exception
-            (exit 254)
-            SaveThisExitCode
-        fi
-
-        if [[ ! -e $1 ]]; then      # file not found exception
-            (exit 250)
-            SaveThisExitCode
-        fi
-
-        if [[ ! -r $1 ]]; then      # file is not readable exception
-            (exit 249)
-            SaveThisExitCode
-        fi
-
-        declare -la arr_output_thisFile=()
+        CheckIfVarIsNull $1 &> /dev/null
+        CheckIfFileIsNull $1 &> /dev/null
+        CheckIfFileIsReadable $1 &> /dev/null
+        declare -la arr_file=()
 
         while read str_line; do
-            arr_output_thisFile+=("$str_line") || ( (exit 249); SaveThisExitCode; arr_output_thisFile=() && break )
+            arr_file+=("$str_line") || ( (exit 249); SaveThisExitCode; arr_file=() && break )
         done < $1
 
         EchoPassOrFailThisExitCode  # call functions
@@ -381,19 +415,16 @@
     }
 
     # <summary>
-        # 
+        # Ask for Yes/No answer, return boolean,
+        # Default selection is N/false.
+        # Aways returns bool.
     # </summary>
     function ReadInput
     {
-        # behavior:
-        # ask for Yes/No answer, return boolean,
-        # default selection is N/false
-        # always returns bool
-        #
-
-        # parameters #
-        declare -ir int_maxCount=3
-        declare -ar arr_count=$( seq $int_maxCount )
+        # <parameters> #
+            declare -ir int_maxCount=3
+            declare -ar arr_count=$( seq $int_maxCount )
+        # </parameters> #
 
         for int_element in ${arr_count[@]}; do
             echo -en "$1 \e[30;43m[Y/n]:\e[0m "
@@ -418,7 +449,7 @@
             "Y")
                 true;;
             "N")
-                (exit 131);;
+                false;;
         esac
 
         SaveThisExitCode        # call functions
@@ -426,23 +457,19 @@
     }
 
     # <summary>
-        # 
+        # Ask for multiple choice, up to eight choices.
+        # Default selection is first choice.
+        # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromMultipleChoiceIgnoreCase
     {
-        # behavior:
-        # ask for multiple choice, up to eight choices
-        # default selection is first choice
-        # proper use always returns valid answer
-        #
+        CheckIfVarIsNull $2 &> /dev/null
 
-        if [[ -z $2 ]]; then
-            (exit 254)
-        else
-
-            # parameters
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <parameters> #
             declare -ir int_maxCount=3
             declare -ar arr_count=$( seq $int_maxCount )
+            # </parameters> #
 
             for int_element in ${arr_count[@]}; do
                 echo -en "$1 "
@@ -473,7 +500,7 @@
                     fi
 
                     echo -en "\e[33mInvalid input.\e[0m "
-                    (exit 253)
+                    SetExitCodeIfFileIsNull
                 fi
             done
         fi
@@ -483,24 +510,19 @@
     }
 
     # <summary>
-        # 
+        # Ask for multiple choice, up to eight choices.
+        # Default selection is first choice.
+        # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromMultipleChoiceUpperCase
     {
-        # behavior:
-        #
-        # ask for multiple choice, up to eight choices
-        # default selection is first choice
-        # proper use always returns valid answer
-        #
+        CheckIfVarIsNull $2 &> /dev/null
 
-        if [[ -z $2 ]]; then
-            (exit 254)
-        else
-
-            # parameters #
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <parameters> #
             declare -ir int_maxCount=3
             declare -ar arr_count=$( seq $int_maxCount )
+            # </parameters> #
 
             for int_element in ${arr_count[@]}; do
                 echo -en "$1 "
@@ -531,7 +553,7 @@
                     fi
 
                     echo -en "\e[33mInvalid input.\e[0m "
-                    (exit 253)
+                    SetExitCodeIfFileIsNull
                 fi
             done
         fi
@@ -541,19 +563,16 @@
     }
 
     # <summary>
-        # 
+        # Ask for multiple choice, up to eight choices.
+        # Default selection is first choice.
+        # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromRangeOfNums
     {
-        # behavior:
-        # ask for multiple choice, up to eight choices
-        # default selection is first choice
-        # proper use always returns valid answer
-        #
-
-        # parameters #
+        # <parameters> #
         declare -ir int_maxCount=3
         declare -ar arr_count=$( seq $int_maxCount )
+        # </parameters> #
 
         for int_element in ${arr_count[@]}; do
             echo -en "$1 "
@@ -578,16 +597,11 @@
     }
 
     # <summary>
-        # 
+        # Test network connection to Internet.
+        # Ping DNS servers by address and name.
     # </summary>
     function TestNetwork
     {
-        # behavior:
-        #   test internet connection and DNS servers
-        #   return boolean, to be used by main
-        #
-
-        # test IP resolution #
         echo -en "Testing Internet connection... "
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
 
@@ -627,28 +641,28 @@
         echo -en "Writing to file... "
 
         if [[ -z $1 || -z $var_input ]]; then   # null exception
-            (exit 254)
+            SetExitCodeIfVarIsNull
         fi
 
         if [[ ! -e $1 ]]; then          # file not found exception
-            (exit 253)
+            SetExitCodeIfFileIsNull
         fi
 
         if [[ ! -r $1 ]]; then          # file not readable exception
-            (exit 252)
+            SetExitCodeIfFileIsNotReadable
         fi
 
         if [[ ! -w $1 ]]; then          # file not readable exception
-            (exit 251)
+            SetExitCodeIfFileIsNotWritable
         fi
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             case ${!var_input[@]} in                                                    # check number of key-value pairs
                 0)                                                                      # check if var is not an array
-                    echo -e $var_input >> $1 || ( (exit 255); SaveThisExitCode );;
+                    echo -e $var_input >> $1 || ( SetExitCodeOnError; SaveThisExitCode );;
                 *)                                                                      # check if var is an array
                     for str_element in ${var_input[@]}; do
-                        echo -e $str_element >> $1 || ( (exit 255); SaveThisExitCode; break )
+                        echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode; break )
                     done;;
             esac
         fi
@@ -675,23 +689,23 @@
         echo -en "Writing to file... "
 
         if [[ -z $1 || -z $2 ]]; then   # null exception
-            (exit 254)
+            SetExitCodeIfVarIsNull
         fi
 
         if [[ ! -e $1 ]]; then          # file not found exception
-            (exit 253)
+            SetExitCodeIfFileIsNull
         fi
 
         if [[ ! -r $1 ]]; then          # file not readable exception
-            (exit 252)
+            SetExitCodeIfFileIsNotReadable
         fi
 
         if [[ ! -w $1 ]]; then          # file not readable exception
-            (exit 251)
+            SetExitCodeIfFileIsNotWritable
         fi
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            echo -e $2 >> $1 || (exit 255)
+            echo -e $2 >> $1 || SetExitCodeOnError
         fi
 
         SaveThisExitCode                # call functions
@@ -723,11 +737,11 @@
 
         # dir #
         if [[ -z $1 || -z $2 ]]; then       # null exception
-            (exit 254)
+            SetExitCodeIfVarIsNull
         fi
 
         if [[ ! -d $1 ]]; then              # dir not found exception
-            (exit 250)
+            SetExitCodeIfFileIsNotExecutable
         fi
 
         if [[ ! -w $1 ]]; then              # dir not writeable exception
@@ -739,11 +753,11 @@
 
             # git repos #
             if [[ -z $1 || -z $2 ]]; then   # null exception
-                (exit 254)
+                SetExitCodeIfVarIsNull
             fi
 
             if [[ ! -d $1 ]]; then          # dir not found exception
-                (exit 250)
+                SetExitCodeIfFileIsNotExecutable
             fi
 
             if [[ ! -w $1 ]]; then          # dir not writeable exception
@@ -767,21 +781,21 @@
                 for str_element in ${2}; do
                     if [[ -e $( basename $1 ) ]]; then      # cd into repo, update, and back out
                         cd $( basename $1 )
-                        git pull $str_element &> /dev/null || ( ((int_count++)) && (exit 131) )
+                        git pull $str_element &> /dev/null || ( ((int_count++)) && SetExitCodeIfPassNorFail )
                         cd ..
 
                     else                                    # clone new repo
-                        git clone $str_element &> /dev/null || ( ((int_count++)) && (exit 131) )
+                        git clone $str_element &> /dev/null || ( ((int_count++)) && SetExitCodeIfPassNorFail )
                     fi
 
                 done
 
                 if [[ ${#2[@]} -eq $int_count ]]; then      # if all repos failed to clone, change exit code
-                    (exit 255)
+                    SetExitCodeOnError
                 fi
 
             else                                            # git clone a repo
-                echo $2 >> $1 || (exit 255)
+                echo $2 >> $1 || SetExitCodeOnError
             fi
         fi
 
@@ -989,7 +1003,7 @@
             systemctl disable zramswap &> /dev/null
         fi
 
-        ( cd $( find -wholename zram-swap | uniq | head -n1 ) && sh ./install.sh && cd $str_pwd ) || (exit 255)
+        ( cd $( find -wholename zram-swap | uniq | head -n1 ) && sh ./install.sh && cd $str_pwd ) || SetExitCodeOnError
 
         # setup ZRAM #
         if [[ $int_thisExitCode -eq 0 ]]; then
@@ -1054,7 +1068,7 @@
             str_outFile1="/etc/default/zram-swap"
 
             CreateBackupFromFile $str_outFile1
-            WriteVarToFile $str_outFile1 $str_output1 || (exit 255)
+            WriteVarToFile $str_outFile1 $str_output1 || SetExitCodeOnError
         fi
 
         SaveThisExitCode            # call functions
@@ -1090,7 +1104,7 @@
             while [[ "$1" =~ ^-  ]]; do
                 case $1 in
                     "")                                     # no option
-                        (exit 255)
+                        SetExitCodeOnError
                         SaveThisExitCode
                         break;;
 
@@ -1116,7 +1130,7 @@
                 shift
             done
         else                                                # invalid option
-            (exit 255)
+            SetExitCodeOnError
             SaveThisExitCode
             ParseThisExitCode
             Help
@@ -1211,7 +1225,7 @@
     #             SelectVFIOSetup;;
     #     esac
     # else
-    #     (exit 254)
+    #     SetExitCodeIfVarIsNull
     #     SaveThisExitCode
     #     ParseThisExitCode "Cannot parse multiple options."
     # fi
@@ -1221,7 +1235,7 @@
     # #     CheckIfIOMMU_IsEnabled
     # #     ParseInputParamForOptions_2 $1 || SelectVFIOSetup
     # # else
-    # #     (exit 254)
+    # #     SetExitCodeIfVarIsNull
     # #     SaveThisExitCode
     # #     ParseThisExitCode "Cannot parse multiple options."
     # # fi
