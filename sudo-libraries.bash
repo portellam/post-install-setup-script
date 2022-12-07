@@ -877,328 +877,115 @@
     # </summary>
     function InstallFromDebianRepos {
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-
-        # parameters #
         ReadInput "Auto-accept install prompts? "
 
-        if [[ $str_input1 == "Y" ]]; then
-            str_args="-y"
+        case "$int_thisExitCode" in
+            0)
+                local str_args="-y";;
+            *)
+                str_args="";;
+        esac
 
-        else
-            str_args=""
-        fi
+        # <summary>
+            # Update and upgrade local packages
+        # </summary>
+        # <code>
+            apt clean
+            apt update
+            apt full-upgrade $str_args
+        # </code>
 
-        apt clean
-        apt update
-        apt full-upgrade $str_args
+        # <summary>
+            # Desktop environment checks
+        # </summary>
+        # <code>
+            str_aptCheck=""
+            str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
-        # Qt DE (KDE-plasma, LXQT)
-        str_aptCheck=""
-        str_aptCheck=$(apt list --installed plasma-desktop lxqt)
-
-        if [[ $str_aptCheck != "" ]]; then
-            apt install -y plasma-discover-backend-flatpak
-        fi
-
-        # GNOME DE (gnome, XFCE)
-        str_aptCheck=""
-        str_aptCheck=$(apt list --installed gnome xfwm4)
-
-        if [[ $str_aptCheck != "" ]]; then
-            apt install -y gnome-software-plugin-flatpak
-        fi
-
-        echo
-
-        # apps #
-        # NOTE: update here!
-
-        # parameters #
-        str_aptAll=""
-        str_aptDeveloper=""
-        str_aptDrivers="steam-devices"
-        str_aptGames=""
-        str_aptInternet="firefox-esr filezilla"
-        str_aptMedia="vlc"
-        str_aptOffice="libreoffice"
-        str_aptPrismBreak=""
-        str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-        str_aptSuites="debian-edu-install science-all"
-        str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-        str_aptUnsorted=""
-        str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-
-        # install apps #
-        if [[ $str_aptUnsorted != "" ]]; then
-            echo -e "Select given software?"
-
-            if [[ $str_aptUnsorted == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptUnsorted | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptUnsorted | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptUnsorted"
+            if [[ $str_aptCheck != "" ]]; then
+                apt install -y plasma-discover-backend-flatpak
             fi
 
-            ReadInput
+            str_aptCheck=""
+            str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
 
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptUnsorted "
+            if [[ $str_aptCheck != "" ]]; then
+                apt install -y gnome-software-plugin-flatpak
             fi
+        # </code>
 
-            echo
-        fi
+        echo    # output padding
 
-        if [[ $str_aptDeveloper != "" ]]; then
-            echo -e "Select Development software?"
+        # <summary>
+            # APT packages sorted by type.
+        # </summary>
+        # <parameters>
+            str_aptAll=""
+            str_aptDeveloper=""
+            str_aptDrivers="steam-devices"
+            str_aptGames=""
+            str_aptInternet="firefox-esr filezilla"
+            str_aptMedia="vlc"
+            str_aptOffice="libreoffice"
+            str_aptPrismBreak=""
+            str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+            str_aptSuites="debian-edu-install science-all"
+            str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+            str_aptUnsorted=""
+            str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        # </parameters>
 
-            if [[ $str_aptDeveloper == *" "* ]]; then
-                declare -i int_i=1
+        # <summary>
+            # Selec and Install software sorted by type.
+        # </summary>
+        # <code>
+            function InstallAptByType {
+                if [[ $1 != "" ]]; then
+                    echo -e $2
 
-                while [[ $(echo $str_aptDeveloper | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptDeveloper | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
+                    if [[ $1 == *" "* ]]; then
+                        declare -il int_i=1
 
-            else
-                echo -e "\t$str_aptDeveloper"
+                        while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                            echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                            (( int_i++ ))                                   # counter
+                        done
+                    else
+                        echo -e "\t$1"
+                    fi
+
+                    ReadInput
+
+                    if [[ $int_thisExitCode -eq 0 ]]; then
+                        str_aptAll+="$1 "
+                    fi
+
+                    echo    # output padding
+                fi
+            }
+
+            InstallAptByType $str_aptUnsorted "Select given software?"
+            InstallAptByType $str_aptDeveloper "Select Development software?"
+            InstallAptByType $str_aptGames "Select games?"
+            InstallAptByType $str_aptInternet "Select Internet software?"
+            InstallAptByType $str_aptMedia "Select multi-media software?"
+            InstallAptByType $str_aptOffice "Select office software?"
+            InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+            InstallAptByType $str_aptSecurity "Select security tools?"
+            InstallAptByType $str_aptSuites "Select software suites?"
+            InstallAptByType $str_aptTools "Select software tools?"
+            InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+            InstallAptByType $str_aptUnsorted "Select miscellaneous software?"
+
+            if [[ $str_aptAll != "" ]]; then
+                apt install $str_args $str_aptAll
             fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptDeveloper "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptGames != "" ]]; then
-            echo -e "Select games?"
-
-            if [[ $str_aptGames == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptGames | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptGames | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptGames"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptGames "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptInternet != "" ]]; then
-            echo -e "Select Internet software?"
-
-            if [[ $str_aptInternet == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptInternet | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptInternet | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptInternet"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptInternet "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptMedia != "" ]]; then
-            echo -e "Select multi-media software?"
-
-            if [[ $str_aptMedia == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptMedia | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptMedia | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptMedia"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptMedia "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptOffice != "" ]]; then
-            echo -e "Select office software?"
-
-            if [[ $str_aptOffice == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptOffice | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptOffice | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptOffice"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptOffice "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptPrismBreak != "" ]]; then
-            echo -e "Select recommended Prism break software?"
-
-            if [[ $str_aptPrismBreak == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptPrismBreak | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptPrismBreak | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptPrismBreak"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptPrismBreak "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptSecurity != "" ]]; then
-            echo -e "Select security tools?"
-
-            if [[ $str_aptSecurity == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptSecurity | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptSecurity | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptSecurity"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptSecurity "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptSuites != "" ]]; then
-            echo -e "Select software suites?"
-
-            if [[ $str_aptSuites == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptSuites | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptSuites | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptSuites"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptSuites "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptTools != "" ]]; then
-            echo -e "Select software tools?"
-
-            if [[ $str_aptTools == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptTools | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptTools | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptTools"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptTools "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptVGAdrivers != "" ]]; then
-            echo -e "Select VGA drivers?"
-
-            if [[ $str_aptVGAdrivers == *" "* ]]; then
-                declare -i int_i=1
-
-                while [[ $(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i) ]]; do
-                    echo -e "\t"$(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i)
-                    ((int_i++))     # counter
-                done
-
-            else
-                echo -e "\t$str_aptVGAdrivers"
-            fi
-
-            ReadInput
-
-            if [[ $str_input1 == "Y" ]]; then
-                str_aptAll+="$str_aptVGAdrivers "
-            fi
-
-            echo
-        fi
-
-        if [[ $str_aptAll != "" ]]; then
-            apt install $str_args $str_aptAll
-        fi
-
-        # clean up #
-        # apt autoremove $str_args
+        # </code>
+
+        # <summary>
+            # Clean up
+        # </summary>
+        apt autoremove $str_args
     }
 
     # <summary>
@@ -1208,12 +995,12 @@
         echo -e "Modifying $(lsb_release -is) $(uname -o) repositories..."
 
         # <parameters>
-        str_file1="/etc/apt/sources.list"
-        str_oldFile1="${str_file1}_old"
-        str_newFile1="${str_file1}_new"
-        str_releaseName=$(lsb_release -sc)
-        str_releaseVer=$(lsb_release -sr)
-        str_sources=""
+            str_file1="/etc/apt/sources.list"
+            str_oldFile1="${str_file1}_old"
+            str_newFile1="${str_file1}_new"
+            str_releaseName=$(lsb_release -sc)
+            str_releaseVer=$(lsb_release -sr)
+            str_sources=""
         # </parameters>
 
         # create backup or restore from backup
