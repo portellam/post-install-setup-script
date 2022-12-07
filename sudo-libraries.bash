@@ -184,8 +184,7 @@
     # <summary>
         # Checks if current user is sudo/root.
     # </summary>
-    function CheckIfUserIsRoot
-    {
+    function CheckIfUserIsRoot {
         if [[ $( whoami ) != "root" ]]; then
             local str_thisFile=$( echo ${0##/*} )
             CheckIfFileIsNull $str_thisFile &> /dev/null
@@ -203,8 +202,7 @@
     # <summary>
         # Output pass or fail statement given exit code.
     # </summary>
-    function EchoPassOrFailThisExitCode
-    {
+    function EchoPassOrFailThisExitCode {
         CheckIfVarIsNull $1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
@@ -224,8 +222,7 @@
     # <summary>
         # Output pass or fail test-case given exit code.
     # </summary>
-    function EchoPassOrFailThisTestCase
-    {
+    function EchoPassOrFailThisTestCase {
         str_testCaseName=$1
         CheckIfVarIsNull $str_testCaseName &> /dev/null
 
@@ -248,8 +245,7 @@
         # Change ownership of given file to current user.
         # NOTE: $UID is intelligent enough to differentiate between the two
     # </summary>
-    function ChangeOwnershipOfFileOrDir
-    {
+    function ChangeOwnershipOfFileOrDir {
         CheckIfVarIsNull $1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
@@ -261,8 +257,7 @@
     # <summary>
         # Checks if two given files are the same, in composition.
     # </summary>
-    function CheckIfTwoFilesAreSame
-    {
+    function CheckIfTwoFilesAreSame {
         echo -e "Verifying two files... "
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfVarIsNull $2 &> /dev/null
@@ -287,8 +282,7 @@
     # <summary>
         # Checks if two given files are the same, in composition.
     # </summary>
-    function CreateBackupFromFile
-    {
+    function CreateBackupFromFile {
         echo -en "Backing up file... "
         declare -lr str_file=$1
         CheckIfVarIsNull $str_file &> /dev/null
@@ -373,8 +367,7 @@
     # <summary>
         # Creates a file.
     # </summary>
-    function CreateFile
-    {
+    function CreateFile {
         echo -en "Creating file... "
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfFileIsNull $1 &> /dev/Null
@@ -389,8 +382,7 @@
     # <summary>
         # Deletes a file.
     # </summary>
-    function DeleteFile
-    {
+    function DeleteFile {
         echo -en "Deleting file... "
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfFileIsNull $1 &> /dev/null
@@ -405,8 +397,7 @@
     # <summary>
         # Reads a file.
     # </summary>
-    function ReadFile
-    {
+    function ReadFile {
         echo -en "Reading file... "
         CheckIfVarIsNull $1 &> /dev/null
         CheckIfFileIsNull $1 &> /dev/null
@@ -425,8 +416,7 @@
         # Default selection is N/false.
         # Aways returns bool.
     # </summary>
-    function ReadInput
-    {
+    function ReadInput {
         # <parameters> #
             declare -ir int_maxCount=3
             declare -ar arr_count=$( seq $int_maxCount )
@@ -466,8 +456,7 @@
         # Default selection is first choice.
         # Proper use always returns valid answer.
     # </summary>
-    function ReadInputFromMultipleChoiceIgnoreCase
-    {
+    function ReadInputFromMultipleChoiceIgnoreCase {
         CheckIfVarIsNull $2 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
@@ -518,8 +507,7 @@
         # Default selection is first choice.
         # Proper use always returns valid answer.
     # </summary>
-    function ReadInputFromMultipleChoiceUpperCase
-    {
+    function ReadInputFromMultipleChoiceUpperCase {
         CheckIfVarIsNull $2 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
@@ -570,8 +558,7 @@
         # Default selection is first choice.
         # Proper use always returns valid answer.
     # </summary>
-    function ReadInputFromRangeOfNums
-    {
+    function ReadInputFromRangeOfNums {
         # <parameters> #
         declare -ir int_maxCount=3
         declare -ar arr_count=$( seq $int_maxCount )
@@ -603,8 +590,7 @@
         # Test network connection to Internet.
         # Ping DNS servers by address and name.
     # </summary>
-    function TestNetwork
-    {
+    function TestNetwork {
         echo -en "Testing Internet connection... "
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
 
@@ -628,8 +614,7 @@
         # This may help with calling/parsing arrays.
         # When passing the var, write the name without " $ ".
     # </summary>
-    function WriteArrayToFile
-    {
+    function WriteArrayToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
         IFS=$'\n'      # Change IFS to newline char
         var_input=$2
@@ -660,8 +645,7 @@
         # This may help with calling/parsing arrays.
         # When passing the var, write the name without " $ ".
     # </summary>
-    function WriteVarToFile
-    {
+    function WriteVarToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
         IFS=$'\n'      # Change IFS to newline char
 
@@ -683,10 +667,21 @@
 ### executive functions ###
 # <code>
     # <summary>
+        # Check linux distro
+    # </summary>
+    function CheckCurrentDistro {
+        if [[ $(command -v apt) == "/usr/bin/apt" ]]; then
+            true; SaveThisExitCode
+        else
+            echo -e "\e[33mWARNING:\e[0m"" Unrecognized Linux distribution. Continuing with minimal setup."
+            false; SaveThisExitCode
+        fi
+    }
+
+    # <summary>
         # Clone remote or update local Git repositories.
     # </summary>
-    function CloneOrUpdateGitRepositories
-    {
+    function CloneOrUpdateGitRepositories {
         echo -en "Cloning Git repositories... "
         CheckIfVarIsNull $1; CheckIfVarIsNull $2
         CheckIfDirIsNull $1; CheckIfDirIsNull $2
@@ -736,23 +731,14 @@
 
         echo
     }
-
-    # <summary>
-        # Install given repository.
-    # </summary>
-    function SetupAutoXorg
-    {
-        echo -e "Installing Auto-Xorg... "
-        ( cd $( find -wholename Auto-Xorg | uniq | head -n1 ) && bash ./installer.bash ) || ( false && SaveThisExitCode)
-        cd $str_pwd
-        EchoPassOrFailThisExitCode; ParseThisExitCode; echo
-    }
 # </code>
 
 ### main functions ###
 # <code>
-    function Help
-    {
+    # <summary>
+        # Display Help to console.
+    # </summary>
+    function Help {
         declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
             \nwhere OPTIONS
             \n\t-h  --help\t\t\tPrint this prompt.
@@ -770,9 +756,10 @@
         ExitWithThisExitCode
     }
 
-
-    function ParseInputParamForOptions
-    {
+    # <summary>
+        # Parse input parameters for given options.
+    # </summary>
+    function ParseInputParamForOptions {
         if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
             while [[ "$1" =~ ^-  ]]; do
                 case $1 in
@@ -845,6 +832,214 @@
                 esac;;
         esac
     }
+
+    # <summary>
+        # Set software repositories for Debian Linux.
+    # </summary>
+    function ModifyDebianRepos {
+        echo -e "Modifying $(lsb_release -is) $(uname -o) repositories..."
+
+        # <parameters>
+        str_file1="/etc/apt/sources.list"
+        str_oldFile1="${str_file1}_old"
+        str_newFile1="${str_file1}_new"
+        str_releaseName=$(lsb_release -sc)
+        str_releaseVer=$(lsb_release -sr)
+        str_sources=""
+        # </parameters>
+
+        # create backup or restore from backup
+        if [ -z $str_file1 ]; then
+            cp $str_file1 $str_oldFile1
+        fi
+
+        # prompt user to change apt dependencies
+        while true; do
+
+            # prompt for alt sources
+            str_input1=""
+            ReadInput "Include 'contrib' sources?"
+
+            case $str_input1 in
+                "Y")
+                    str_sources="contrib";;
+
+                *)
+                    ;;
+            esac
+
+            str_input1=""
+            ReadInput "Include 'non-free' sources?"
+
+            case $str_input1 in
+                "Y")
+                    str_sources+=" non-free";;
+
+                *)
+                    ;;
+            esac
+
+            # manual prompt
+            if [[ $int_count -ge 3 ]]; then
+                echo -e "Exceeded max attempts!"
+                str_input2=stable     # default input     # NOTE: change here
+
+            else
+                echo -e "Repositories: Enter one valid option or none for default (Current branch: $str_releaseName)."
+                echo -e "\tWARNING: It is NOT possible to revert from a Non-stable branch back to a Stable or $str_releaseName branch."
+                echo -e "\tRelease branches:"
+                echo -e "\t\t'stable'\t== '$str_releaseName'"
+                echo -e "\t\t'testing'\t*more recent updates, slightly less stability"
+                echo -e "\t\t'unstable'\t*most recent updates, least stability. NOT recommended."
+                echo -e "\t\t'backports'\t== '$str_releaseName-backports'\t*optionally receive more recent updates."
+                echo -en "\tEnter option: "
+
+                read str_input2
+                str_input2=$(echo $str_input2 | tr '[:upper:]' '[:lower:]')   # string to lowercase
+            fi
+
+            # exit with no changes
+            if [[ $str_input2 == "stable" ]]; then
+                echo -e "No changes. Skipping."
+                break
+            fi
+
+            # apt sources
+            declare -a arr_sources=(
+                "# debian $str_input2"
+                "# See https://wiki.debian.org/SourcesList for more information."
+                "deb http://deb.debian.org/debian/ $str_input2 main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_input2 main $str_sources"
+                $'\n'
+                "deb http://deb.debian.org/debian/ $str_input2-updates main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_input2-updates main $str_sources"
+                $'\n'
+                "deb http://security.debian.org/debian-security/ $str_input2-security main $str_sources"
+                "deb-src http://security.debian.org/debian-security/ $str_input2-security main $str_sources"
+                "#"
+            )
+
+            # copy lines from original to temp file as comments
+            if [[ -e $str_newFile1 ]]; then
+                rm $str_newFile1
+            fi
+
+            touch $str_newFile1
+
+            while read str_line1; do
+                if [[ $str_line1 != "#"* ]]; then
+                    str_line1="#$str_line1"
+                fi
+
+                echo $str_line1 >> $str_newFile1
+            done < $str_file1
+
+            if [[ -e $str_file1 ]]; then
+                rm $str_file1
+            fi
+
+            mv $str_newFile1 $str_file1
+
+            # delete optional sources file, if it exists
+            if [ -e '/etc/apt/sources.list.d/'$str_input2'.list' ]; then
+                rm '/etc/apt/sources.list.d/'$str_input2'.list'
+            fi
+
+            # input prompt
+            case $str_input2 in
+
+                # valid choices
+                "testing"|"unstable")
+
+                    echo -e "\tSelected \"$str_input2\"."
+
+                    # write to file #
+                    int_line1=${#arr_sources[@]}
+
+                    for (( int_i=0; int_i<$int_line1; int_i++ )); do
+                        str_line1=${arr_sources[$int_i]}
+                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
+                    done
+
+                    break;;
+
+                # current branch with backports
+                "backports")
+
+                    echo -e "\tSelected \"$str_input2\"."
+
+                    # apt sources
+                    declare -a arr_sources=(
+        $'\n'
+        "# debian $str_releaseVer/$str_releaseName"
+        "# See https://wiki.debian.org/SourcesList for more information."
+        "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+        "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+        $'\n'
+        "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+        "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+        $'\n'
+        "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+        "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+        "#"
+        "# debian $str_releaseVer/$str_releaseName $str_input2"
+        "deb http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
+        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
+        "#"
+        )
+                    # write to file
+                    int_line1=${#arr_sources[@]}
+
+                    for (( int_i=0; int_i<$int_line1; int_i++ )); do
+                        str_line1=${arr_sources[$int_i]}
+                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
+                    done
+
+                    break;;
+
+                # invalid selection
+                *)
+                    echo -e "Invalid input."
+
+            esac
+            ((int_count++))     # counter
+        done
+
+        if [[ -e $str_newFile1 ]]; then
+                rm $str_newFile1
+        fi
+
+        sudo apt clean
+        sudo apt update
+        sudo apt full-upgrade
+
+        # clean up
+        # sudo apt autoremove -y
+    }
+
+    # <summary>
+        # Install system service from repository.
+        # Finds first available non-VFIO VGA/GPU and binds to Xorg.
+    # </summary>
+    function SetupAutoXorg {
+        echo -e "Installing Auto-Xorg... "
+        ( cd $( find -wholename Auto-Xorg | uniq | head -n1 ) && bash ./installer.bash ) || ( false && SaveThisExitCode)
+        cd $str_pwd
+        EchoPassOrFailThisExitCode; ParseThisExitCode; echo
+    }
+
+    # <summary>
+        # Executes deployment of a Debian Linux system.
+    # </summary>
+    function ExecuteSetupOfSoftwareSources {
+        CheckCurrentDistro
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            ModifyDebianRepos
+        fi
+
+        echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+    }
 # </code>
 
 ### main ###
@@ -853,17 +1048,7 @@
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
     IFS=$'\n'      # Change IFS to newline char
 
-    echo "Checking if null variable is null."
-    CheckIfVarIsNull
-    EchoPassOrFailThisExitCode
-    echo $int_thisExitCode
-
-    str="hello world"
-
-    echo "Checking if given variable is null."
-    CheckIfVarIsNull $str
-    EchoPassOrFailThisExitCode
-    echo $int_thisExitCode
-
+    CheckIfUserIsRoot
+    ExecuteSetupOfSoftwareSources
     ExitWithThisExitCode
 # </code>
