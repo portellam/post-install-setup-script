@@ -670,7 +670,7 @@
         # Check linux distro
     # </summary>
     function CheckCurrentDistro {
-        if [[ $(command -v apt) == "/usr/bin/apt" ]]; then
+        if [[ $( command -v apt ) == "/usr/bin/apt" ]]; then
             true; SaveThisExitCode
         else
             echo -e "\e[33mWARNING:\e[0m"" Unrecognized Linux distribution. Continuing with minimal setup."
@@ -876,7 +876,7 @@
         # Install from Debian repositories.
     # </summary>
     function InstallFromDebianRepos {
-        echo -e "Installing from $(lsb_release -is) $(uname -o) repositories..."
+        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
 
         # parameters #
         ReadInput "Auto-accept install prompts? "
@@ -1506,6 +1506,12 @@
         if [[ $int_thisExitCode -eq 0 ]]; then
             ModifyDebianRepos
         fi
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            InstallFromDebianRepos
+        fi
+
+        EnableAndInstallFromAltRepos
 
         echo -e "\nWARNING: If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
     }
