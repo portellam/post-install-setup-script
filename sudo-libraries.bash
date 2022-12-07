@@ -743,7 +743,7 @@
             0)
                 local str_args="-y";;
             *)
-                str_args="";;
+                local str_args="";;
         esac
 
         # <summary>
@@ -866,7 +866,7 @@
                 0)
                     local str_args="-y";;
                 *)
-                    str_args="";;
+                    local str_args="";;
             esac
 
             # <summary>
@@ -950,7 +950,7 @@
                 0)
                     local str_args="-y";;
                 *)
-                    str_args="";;
+                    local str_args="";;
             esac
 
             # <summary>
