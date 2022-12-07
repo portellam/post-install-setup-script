@@ -731,106 +731,474 @@
 
         echo
     }
-# </code>
 
-### main functions ###
-# <code>
     # <summary>
-        # Display Help to console.
+        # Install from alternative software repositories.
     # </summary>
-    function Help {
-        declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
-            \nwhere OPTIONS
-            \n\t-h  --help\t\t\tPrint this prompt.
-            \n\t-d  --delete\t\t\tDelete existing VFIO setup.
-            \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
-            \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
-            \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
-            \n\nwhere ARGUMENTS
-            \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
-            \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
-            \n"
+    function EnableAndInstallFromAltRepos {
+        echo -e "Installing from alternative $(uname -o) repositories..."
 
-        echo -e $str_helpPrompt
+        # flatpak #
+        if [[ $(command -v flatpak) != "/usr/bin/flatpak" ]]; then
+            echo -e "WARNING: Flatpak not installed. Skipping..."
 
-        ExitWithThisExitCode
+        else
+
+            # add remote repo #
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+            # parameters #
+            ReadInput "Auto-accept install prompts? "
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_args="-y"
+
+            else
+                str_args=""
+            fi
+
+            flatpak update $str_args
+
+            # apps #
+            # NOTE: update here!
+            str_flatpakAll=""
+            str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
+            str_flatpakPrismBreak="" # include from all, monero etc.
+
+            if [[ $str_flatpakUnsorted != "" ]]; then
+                echo -e "Select given Flatpak software?"
+
+                if [[ $str_flatpakUnsorted == *" "* ]]; then
+                    declare -i int_i=1
+
+                    while [[ $(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_flatpakUnsorted | cut -d ' ' -f$int_i)
+                        ((int_i++)) # counter
+                    done
+
+                else
+                    echo -e "\t$str_flatpakUnsorted"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_flatpakAll+="$str_flatpakUnsorted "
+                fi
+
+                echo
+            fi
+
+            if [[ $str_flatpakPrismBreak != "" ]]; then
+                echo -e "Select recommended Prism Break Flatpak software?"
+
+                if [[ $str_flatpakPrismBreak == *" "* ]]; then
+                    declare -i int_i=1
+
+                    while [[ $(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_flatpakPrismBreak | cut -d ' ' -f$int_i)
+                        ((int_i++)) # counter
+                    done
+
+                else
+                    echo -e "\t$str_flatpakPrismBreak"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_flatpakAll+="$str_flatpakPrismBreak "
+                fi
+
+                echo
+            fi
+
+            if [[ $str_flatpakAll != "" ]]; then
+                echo -e "Install selected Flatpak apps?"
+                flatpak install flathub $str_args $str_flatpakAll
+            fi
+        fi
+
+        # snap #
+        if [[ $(command -v snap) != "/usr/bin/snap" ]]; then
+            echo -e "WARNING: Snap not installed. Skipping..."
+
+        else
+
+            # parameters #
+            ReadInput "Auto-accept install prompts? "
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_args="-y"
+
+            else
+                str_args=""
+            fi
+
+            # apps #
+            # NOTE: update here!
+            str_snapAll=""
+            str_snapUnsorted=""
+
+            if [[ $str_snapUnsorted != "" ]]; then
+                echo -e "Select given Snap software?"
+
+                if [[ $str_snapUnsorted == *" "* ]]; then
+                    declare -i int_i=1
+
+                    while [[ $(echo $str_snapUnsorted | cut -d ' ' -f$int_i) ]]; do
+                        echo -e "\t"$(echo $str_snapUnsorted | cut -d ' ' -f$int_i)
+                        ((int_i++)) # counter
+                    done
+
+                else
+                    echo -e "\t$str_snapUnsorted"
+                fi
+
+                ReadInput
+
+                if [[ $str_input1 == "Y" ]]; then
+                    str_snapAll+="$str_snapUnsorted "
+                fi
+
+                echo
+
+                if [[ $str_snapAll != "" ]]; then
+                    echo -e "Install selected Snap apps?"
+                    snap install $str_args $str_snapAll
+                fi
+            fi
+
+        fi ## NOTE: I am currently at a loss for an explanation as to why I require a closing statement here.
     }
 
     # <summary>
-        # Parse input parameters for given options.
+        # Install from Debian repositories.
     # </summary>
-    function ParseInputParamForOptions {
-        if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
-            while [[ "$1" =~ ^-  ]]; do
-                case $1 in
-                    "")                                     # no option
-                        SetExitCodeOnError
-                        SaveThisExitCode
-                        break;;
+    function InstallFromDebianRepos {
+        echo -e "Installing from $(lsb_release -is) $(uname -o) repositories..."
 
-                    -h | --help )                           # options
-                        declare -lir int_aFlag=1
-                        break;;
-                    -d | --delete )
-                        declare -lir int_aFlag=2
-                        break;;
-                    -m | --multiboot )
-                        declare -lir int_aFlag=3;;
-                    -s | --static )
-                        declare -lir int_aFlag=4;;
-                    -w | --write )
-                        declare -lir int_aFlag=5;;
+        # parameters #
+        ReadInput "Auto-accept install prompts? "
 
-                    -f | --full )                           # arguments
-                        declare -lir int_bFlag=1;;
-                    -r | --read )
-                        declare -lir int_bFlag=2;;
-                esac
+        if [[ $str_input1 == "Y" ]]; then
+            str_args="-y"
 
-                shift
-            done
-        else                                                # invalid option
-            SetExitCodeOnError
-            SaveThisExitCode
-            ParseThisExitCode
-            Help
-            ExitWithThisExitCode
+        else
+            str_args=""
         fi
 
-        # if [[ "$1" == '--' ]]; then
-        #     shift
-        # fi
+        apt clean
+        apt update
+        apt full-upgrade $str_args
 
-        case $int_aFlag in                                  # execute second options before first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PreInstallSetup;;
-                    # 2)
-                    #     ReadIOMMU_FromFile;;
-                esac;;
-        esac
+        # Qt DE (KDE-plasma, LXQT)
+        str_aptCheck=""
+        str_aptCheck=$(apt list --installed plasma-desktop lxqt)
 
-        case $int_aFlag in                                  # execute first options
-            1)
-                Help;;
-            2)
-                DeleteSetup;;
-            3)
-                MultiBootSetup;;
-            4)
-                StaticSetup;;
-            # 5)
-            #     WriteIOMMU_ToFile;;
-        esac
+        if [[ $str_aptCheck != "" ]]; then
+            apt install -y plasma-discover-backend-flatpak
+        fi
 
-        case $int_aFlag in                                  # execute second options after first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PostInstallSetup;;
-                esac;;
-        esac
+        # GNOME DE (gnome, XFCE)
+        str_aptCheck=""
+        str_aptCheck=$(apt list --installed gnome xfwm4)
+
+        if [[ $str_aptCheck != "" ]]; then
+            apt install -y gnome-software-plugin-flatpak
+        fi
+
+        echo
+
+        # apps #
+        # NOTE: update here!
+
+        # parameters #
+        str_aptAll=""
+        str_aptDeveloper=""
+        str_aptDrivers="steam-devices"
+        str_aptGames=""
+        str_aptInternet="firefox-esr filezilla"
+        str_aptMedia="vlc"
+        str_aptOffice="libreoffice"
+        str_aptPrismBreak=""
+        str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+        str_aptSuites="debian-edu-install science-all"
+        str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        str_aptUnsorted=""
+        str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+
+        # install apps #
+        if [[ $str_aptUnsorted != "" ]]; then
+            echo -e "Select given software?"
+
+            if [[ $str_aptUnsorted == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptUnsorted | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptUnsorted | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptUnsorted"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptUnsorted "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptDeveloper != "" ]]; then
+            echo -e "Select Development software?"
+
+            if [[ $str_aptDeveloper == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptDeveloper | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptDeveloper | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptDeveloper"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptDeveloper "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptGames != "" ]]; then
+            echo -e "Select games?"
+
+            if [[ $str_aptGames == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptGames | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptGames | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptGames"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptGames "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptInternet != "" ]]; then
+            echo -e "Select Internet software?"
+
+            if [[ $str_aptInternet == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptInternet | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptInternet | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptInternet"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptInternet "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptMedia != "" ]]; then
+            echo -e "Select multi-media software?"
+
+            if [[ $str_aptMedia == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptMedia | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptMedia | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptMedia"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptMedia "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptOffice != "" ]]; then
+            echo -e "Select office software?"
+
+            if [[ $str_aptOffice == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptOffice | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptOffice | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptOffice"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptOffice "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptPrismBreak != "" ]]; then
+            echo -e "Select recommended Prism break software?"
+
+            if [[ $str_aptPrismBreak == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptPrismBreak | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptPrismBreak | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptPrismBreak"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptPrismBreak "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptSecurity != "" ]]; then
+            echo -e "Select security tools?"
+
+            if [[ $str_aptSecurity == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptSecurity | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptSecurity | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptSecurity"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptSecurity "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptSuites != "" ]]; then
+            echo -e "Select software suites?"
+
+            if [[ $str_aptSuites == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptSuites | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptSuites | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptSuites"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptSuites "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptTools != "" ]]; then
+            echo -e "Select software tools?"
+
+            if [[ $str_aptTools == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptTools | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptTools | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptTools"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptTools "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptVGAdrivers != "" ]]; then
+            echo -e "Select VGA drivers?"
+
+            if [[ $str_aptVGAdrivers == *" "* ]]; then
+                declare -i int_i=1
+
+                while [[ $(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i) ]]; do
+                    echo -e "\t"$(echo $str_aptVGAdrivers | cut -d ' ' -f$int_i)
+                    ((int_i++))     # counter
+                done
+
+            else
+                echo -e "\t$str_aptVGAdrivers"
+            fi
+
+            ReadInput
+
+            if [[ $str_input1 == "Y" ]]; then
+                str_aptAll+="$str_aptVGAdrivers "
+            fi
+
+            echo
+        fi
+
+        if [[ $str_aptAll != "" ]]; then
+            apt install $str_args $str_aptAll
+        fi
+
+        # clean up #
+        # apt autoremove $str_args
     }
 
     # <summary>
@@ -1027,9 +1395,110 @@
         cd $str_pwd
         EchoPassOrFailThisExitCode; ParseThisExitCode; echo
     }
+# </code>
+
+### main functions ###
+# <code>
+    # <summary>
+        # Display Help to console.
+    # </summary>
+    function Help {
+        declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
+            \nwhere OPTIONS
+            \n\t-h  --help\t\t\tPrint this prompt.
+            \n\t-d  --delete\t\t\tDelete existing VFIO setup.
+            \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
+            \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
+            \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
+            \n\nwhere ARGUMENTS
+            \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
+            \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
+            \n"
+
+        echo -e $str_helpPrompt
+
+        ExitWithThisExitCode
+    }
 
     # <summary>
-        # Executes deployment of a Debian Linux system.
+        # Parse input parameters for given options.
+    # </summary>
+    function ParseInputParamForOptions {
+        if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
+            while [[ "$1" =~ ^-  ]]; do
+                case $1 in
+                    "")                                     # no option
+                        SetExitCodeOnError
+                        SaveThisExitCode
+                        break;;
+
+                    -h | --help )                           # options
+                        declare -lir int_aFlag=1
+                        break;;
+                    -d | --delete )
+                        declare -lir int_aFlag=2
+                        break;;
+                    -m | --multiboot )
+                        declare -lir int_aFlag=3;;
+                    -s | --static )
+                        declare -lir int_aFlag=4;;
+                    -w | --write )
+                        declare -lir int_aFlag=5;;
+
+                    -f | --full )                           # arguments
+                        declare -lir int_bFlag=1;;
+                    -r | --read )
+                        declare -lir int_bFlag=2;;
+                esac
+
+                shift
+            done
+        else                                                # invalid option
+            SetExitCodeOnError
+            SaveThisExitCode
+            ParseThisExitCode
+            Help
+            ExitWithThisExitCode
+        fi
+
+        # if [[ "$1" == '--' ]]; then
+        #     shift
+        # fi
+
+        case $int_aFlag in                                  # execute second options before first options
+            3|4)
+                case $int_bFlag in
+                    1)
+                        PreInstallSetup;;
+                    # 2)
+                    #     ReadIOMMU_FromFile;;
+                esac;;
+        esac
+
+        case $int_aFlag in                                  # execute first options
+            1)
+                Help;;
+            2)
+                DeleteSetup;;
+            3)
+                MultiBootSetup;;
+            4)
+                StaticSetup;;
+            # 5)
+            #     WriteIOMMU_ToFile;;
+        esac
+
+        case $int_aFlag in                                  # execute second options after first options
+            3|4)
+                case $int_bFlag in
+                    1)
+                        PostInstallSetup;;
+                esac;;
+        esac
+    }
+
+    # <summary>
+        # Execute setup of Debian Linux APT repositories.
     # </summary>
     function ExecuteSetupOfSoftwareSources {
         CheckCurrentDistro
