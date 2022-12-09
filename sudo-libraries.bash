@@ -365,15 +365,36 @@
     }
 
     # <summary>
+    # Creates a directory.
+    # </summary>
+    function CreateDir {
+        echo -en "Creating directory... "
+        CheckIfVarIsNull $1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            CheckIfFileIsNull $1 &> /dev/null
+
+            if [[ $int_thisExitCode -ne 0 ]]; then
+                mkdir -p $1 &> /dev/null
+            fi
+        fi
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
+    }
+
+    # <summary>
     # Creates a file.
     # </summary>
     function CreateFile {
         echo -en "Creating file... "
         CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/Null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            touch $1 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+
+            if [[ $int_thisExitCode -ne 0 ]]; then
+                touch $1 &> /dev/null
+            fi
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -1325,6 +1346,164 @@
         InstallFromSnapRepos
 
         echo -e "\n\e[33mWARNING:\e[0m If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+    }
+
+    # <summary>
+    # Execute setup of Git repositories (of which that are executable and installable).
+    # </summary>
+    function ExecuteSetupOfGitRepos {
+        # clone repos #
+        function CloneGitRepos
+        {
+            echo "Cloning/Updating Git repos..."
+
+            # <parameters>
+            str_dir1="/root/source/"
+            # </parameters>
+
+            CreateDir $str_dir1
+
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                # here goes useful repos for system deployment
+                # list of git repos
+                # NOTE: update here!
+
+                # <summary>
+                # List of Git repositories.
+                # Example: "username/reponame"
+                # </summary>
+                # <parameters>
+                declare -a arr_repo=(
+                    "corna/me_cleaner"
+                    "dt-zero/me_cleaner"
+                    "foundObjects/zram-swap"
+                    "portellam/Auto-Xorg"
+                    "portellam/deploy-VFIO-setup"
+                    "pyllyukko/user.js"
+                    "StevenBlack/hosts"
+                )
+
+                for str_repo in ${arr_repo[@]}; do
+                    cd ~/
+
+                    str_userName=$( echo $str_repo | cut -d "/" -f1 )
+
+                    # create folder #
+                    if [[ -z $str_dir1$str_userName ]]; then
+                        mkdir -p $str_dir1$str_userName
+                    fi
+
+                    # update local repo #
+                    if [[ -e $str_dir1$str_repo ]]; then
+                        cd $str_dir1$str_repo
+                        git pull https://github.com/$str_repo
+
+                    else
+
+                        ReadInput "Clone repo '$str_repo'?"
+
+                        if [[ $str_input1 == "Y" ]]; then
+                            cd $str_dir1$str_userName
+                            git clone https://github.com/$str_repo
+                        fi
+
+                    fi
+                done
+            fi
+
+            
+        }
+
+    # install from git repos #
+        function InstallFromGitRepos
+        {
+            echo "Executing Git scripts..."
+
+            # parameters #
+            str_dir1="/root/git/"
+            str_input1=""
+            cd $str_dir1
+
+            # prompt user to execute script or do so automatically #
+            function ExecuteScript {
+                str_input1=""
+                ReadInput "Execute script '$str_repo'?"
+            }
+
+            # portellam/Auto-Xorg #
+            str_repo="portellam/Auto-Xorg"
+
+            if [[ -e $str_repo ]]; then
+                ExecuteScript $str_repo
+
+                if [[ $str_input1 == "Y" ]]; then
+                    cd $str_dir1$str_repo
+                    sudo bash ./installer.bash
+                    cd $str_dir1
+                fi
+            fi
+
+            # StevenBlack/hosts #
+            str_repo="StevenBlack/hosts"
+            if [[ -e $str_repo ]]; then
+                ExecuteScript $str_repo
+
+                if [[ $str_input1 == "Y" ]]; then
+                    cd $str_dir1$str_repo
+                    str_file1="/etc/hosts"
+                    str_oldFile1=$str_file1'_old'
+
+                    # backup hosts #
+                    if [[ ! -e $str_oldFile1 ]]; then
+                        if [[ -e $str_file1 ]]; then
+                            sudo cp $str_file1 $str_oldFile1
+                        fi
+
+                    else
+                        sudo cp $str_oldFile1 $str_file1
+                    fi
+
+                    echo $'\n#' >> $str_file1
+                    cat hosts >> $str_file1
+                    cd $str_dir1
+                fi
+            fi
+
+            # pyllyukko/user.js #
+            str_repo="pyllyukko/user.js"
+
+            if [[ -e $str_repo ]]; then
+                ExecuteScript $str_repo
+
+                if [[ $str_input1 == "Y" ]]; then
+                    cd $str_dir1$str_repo
+                    make debian_locked.js
+                    str_file1="/etc/firefox-esr/firefox-esr.js"
+
+                    # backup user.js #
+                    if [[ -e $str_file1'_old' ]]; then
+                        sudo cp $str_file1 $str_file1'_old'
+                    fi
+
+                    cp debian_locked.js $str_file1
+                    #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
+                    cd $str_dir1
+                fi
+            fi
+
+            # foundObjects/zram-swap #
+            str_repo="foundObjects/zram-swap"
+
+            if [[ -e $str_repo ]]; then
+                ExecuteScript $str_repo
+
+                if [[ $str_input1 == "Y" ]]; then
+                    cd $str_dir1$str_repo
+                    sudo sh ./install.sh
+                    cd $str_dir1
+                fi
+            fi
+        }
     }
 # </code>
 
