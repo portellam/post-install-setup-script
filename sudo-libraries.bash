@@ -9,7 +9,7 @@
     declare -r str_pwd=$( pwd )
 
     # <summary>
-        # Necessary for exit code preservation, for conditional statements.
+    # Necessary for exit code preservation, for conditional statements.
     # </summary>
     declare -i int_thisExitCode=$?
 # </code>
@@ -17,33 +17,33 @@
 ### exit code functions ###
 # <code>
     # <summary>
-        # This statement (function) must follow an exit code statement.
-        #   Exit Code   |   Description
-        #
-        #   0               True
-        #   1               False; Catch-all for general errors.
-        #   2               Misuse of shell built-ins.
-        #
-        #   126             Command invoked cannot execute.
-        #   127             Command not found.
-        #   128             Invalid argument to exit.
-        #   128 +n          Where 'n' is a number, '$?' returns '128 + n'.
-        #   130             Script terminated by 'CTRL+C'.
-        #
-        #   131-255         Unreserved
-        #
-        #   255             Unspecified error.
-        #   254             Input is null.
-        #   253             File/Dir is null.
-        #   252             File/Dir is not readable.
-        #   251             File/Dir is not writable.
-        #   250             File/Dir is not executable.
-        #   131             Neither pass or fail; Skipped execution.
-        #
+    # This statement (function) must follow an exit code statement.
+    #   Exit Code   |   Description
+    #
+    #   0               True
+    #   1               False; Catch-all for general errors.
+    #   2               Misuse of shell built-ins.
+    #
+    #   126             Command invoked cannot execute.
+    #   127             Command not found.
+    #   128             Invalid argument to exit.
+    #   128 + n         Where 'n' is a number, '$?' returns '128 + n'.
+    #   130             Script terminated by 'CTRL+C'.
+    #
+    #   131-255         Unreserved
+    #
+    #   255             Unspecified error.
+    #   254             Input is null.
+    #   253             File/Dir is null.
+    #   252             File/Dir is not readable.
+    #   251             File/Dir is not writable.
+    #   250             File/Dir is not executable.
+    #   131             Neither pass or fail; Skipped execution.
+    #
     # </summary>
 
     # <summary>
-        # Output error given exception.
+    # Output error given exception.
     # </summary>
     function ParseThisExitCode {
         case $int_thisExitCode in
@@ -72,7 +72,7 @@
     }
 
     # <summary>
-        # Exit bash session/script with current exit code.
+    # Exit bash session/script with current exit code.
     # </summary>
     function ExitWithThisExitCode
     {
@@ -81,7 +81,7 @@
     }
 
     # <summary>
-        # Updates main parameter.
+    # Updates main parameter.
     # </summary>
     function SaveThisExitCode {
         int_thisExitCode=$?
@@ -119,8 +119,8 @@
 ### exception functions ###
 # <code>
     # <summary>
-        # Checks if input parameter is null,
-        # and returns exit code given result.
+    # Checks if input parameter is null,
+    # and returns exit code given result.
     # </summary>
     function CheckIfVarIsNull {
         if [[ -z "$1" ]]; then
@@ -131,8 +131,8 @@
     }
 
     # <summary>
-        # Checks if file exists,
-        # and returns exit code if failed.
+    # Checks if file exists,
+    # and returns exit code if failed.
     # </summary>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
@@ -143,8 +143,8 @@
     }
 
     # <summary>
-        # Checks if directory exists,
-        # and returns exit code if failed.
+    # Checks if directory exists,
+    # and returns exit code if failed.
     # </summary>
     function CheckIfDirIsNull {
         if [[ ! -d $1 ]]; then
@@ -155,8 +155,8 @@
     }
 
     # <summary>
-        # Checks if file is readable,
-        # and returns exit code if failed.
+    # Checks if file is readable,
+    # and returns exit code if failed.
     # </summary>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
@@ -167,8 +167,8 @@
     }
 
     # <summary>
-        # Checks if file is writable,
-        # and returns exit code if failed.
+    # Checks if file is writable,
+    # and returns exit code if failed.
     # </summary>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
@@ -182,7 +182,7 @@
 ### special functions ###
 # <code>
     # <summary>
-        # Checks if current user is sudo/root.
+    # Checks if current user is sudo/root.
     # </summary>
     function CheckIfUserIsRoot {
         if [[ $( whoami ) != "root" ]]; then
@@ -200,7 +200,7 @@
     }
 
     # <summary>
-        # Output pass or fail statement given exit code.
+    # Output pass or fail statement given exit code.
     # </summary>
     function EchoPassOrFailThisExitCode {
         CheckIfVarIsNull $1 &> /dev/null
@@ -220,7 +220,7 @@
     }
 
     # <summary>
-        # Output pass or fail test-case given exit code.
+    # Output pass or fail test-case given exit code.
     # </summary>
     function EchoPassOrFailThisTestCase {
         str_testCaseName=$1
@@ -242,8 +242,8 @@
 ### general functions ###
 # <code>
     # <summary>
-        # Change ownership of given file to current user.
-        # NOTE: $UID is intelligent enough to differentiate between the two
+    # Change ownership of given file to current user.
+    # NOTE: $UID is intelligent enough to differentiate between the two
     # </summary>
     function ChangeOwnershipOfFileOrDir {
         CheckIfVarIsNull $1 &> /dev/null
@@ -255,7 +255,7 @@
     }
 
     # <summary>
-        # Checks if two given files are the same, in composition.
+    # Checks if two given files are the same, in composition.
     # </summary>
     function CheckIfTwoFilesAreSame {
         echo -e "Verifying two files... "
@@ -280,7 +280,7 @@
     }
 
     # <summary>
-        # Checks if two given files are the same, in composition.
+    # Checks if two given files are the same, in composition.
     # </summary>
     function CreateBackupFromFile {
         echo -en "Backing up file... "
@@ -365,7 +365,7 @@
     }
 
     # <summary>
-        # Creates a file.
+    # Creates a file.
     # </summary>
     function CreateFile {
         echo -en "Creating file... "
@@ -380,7 +380,7 @@
     }
 
     # <summary>
-        # Deletes a file.
+    # Deletes a file.
     # </summary>
     function DeleteFile {
         echo -en "Deleting file... "
@@ -395,7 +395,7 @@
     }
 
     # <summary>
-        # Reads a file.
+    # Reads a file.
     # </summary>
     function ReadFile {
         echo -en "Reading file... "
@@ -412,9 +412,9 @@
     }
 
     # <summary>
-        # Ask for Yes/No answer, return boolean,
-        # Default selection is N/false.
-        # Aways returns bool.
+    # Ask for Yes/No answer, return boolean,
+    # Default selection is N/false.
+    # Aways returns bool.
     # </summary>
     function ReadInput {
         # <parameters> #
@@ -452,9 +452,9 @@
     }
 
     # <summary>
-        # Ask for multiple choice, up to eight choices.
-        # Default selection is first choice.
-        # Proper use always returns valid answer.
+    # Ask for multiple choice, up to eight choices.
+    # Default selection is first choice.
+    # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromMultipleChoiceIgnoreCase {
         CheckIfVarIsNull $2 &> /dev/null
@@ -503,9 +503,9 @@
     }
 
     # <summary>
-        # Ask for multiple choice, up to eight choices.
-        # Default selection is first choice.
-        # Proper use always returns valid answer.
+    # Ask for multiple choice, up to eight choices.
+    # Default selection is first choice.
+    # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromMultipleChoiceUpperCase {
         CheckIfVarIsNull $2 &> /dev/null
@@ -554,9 +554,9 @@
     }
 
     # <summary>
-        # Ask for multiple choice, up to eight choices.
-        # Default selection is first choice.
-        # Proper use always returns valid answer.
+    # Ask for multiple choice, up to eight choices.
+    # Default selection is first choice.
+    # Proper use always returns valid answer.
     # </summary>
     function ReadInputFromRangeOfNums {
         # <parameters> #
@@ -587,8 +587,8 @@
     }
 
     # <summary>
-        # Test network connection to Internet.
-        # Ping DNS servers by address and name.
+    # Test network connection to Internet.
+    # Ping DNS servers by address and name.
     # </summary>
     function TestNetwork {
         echo -en "Testing Internet connection... "
@@ -609,10 +609,10 @@
     }
 
     # <summary>
-        # NOTE: not working!
-        # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
-        # This may help with calling/parsing arrays.
-        # When passing the var, write the name without " $ ".
+    # NOTE: not working!
+    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
+    # This may help with calling/parsing arrays.
+    # When passing the var, write the name without " $ ".
     # </summary>
     function WriteArrayToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
@@ -641,9 +641,9 @@
     }
 
     # <summary>
-        # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
-        # This may help with calling/parsing arrays.
-        # When passing the var, write the name without " $ ".
+    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
+    # This may help with calling/parsing arrays.
+    # When passing the var, write the name without " $ ".
     # </summary>
     function WriteVarToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
@@ -667,7 +667,7 @@
 ### executive functions ###
 # <code>
     # <summary>
-        # Check linux distro
+    # Check linux distro
     # </summary>
     function CheckCurrentDistro {
         if [[ $( command -v apt ) == "/usr/bin/apt" ]]; then
@@ -679,7 +679,7 @@
     }
 
     # <summary>
-        # Clone remote or update local Git repositories.
+    # Clone remote or update local Git repositories.
     # </summary>
     function CloneOrUpdateGitRepositories {
         echo -en "Cloning Git repositories... "
@@ -733,7 +733,7 @@
     }
 
     # <summary>
-        # Install from Debian repositories.
+    # Install from Debian repositories.
     # </summary>
     function InstallFromDebianRepos {
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
@@ -848,13 +848,13 @@
     }
 
     # <summary>
-        # Install from Flathub software repositories.
+    # Install from Flathub software repositories.
     # </summary>
     function InstallFromFlathubRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
         # <summary>
-            # Flatpak
+        # Flatpak
         # </summary>
         if [[ $( command -v flatpak ) != "/usr/bin/flatpak" ]]; then
             echo -e "WARNING: Flatpak not installed. Skipping..."
@@ -870,18 +870,18 @@
             esac
 
             # <summary>
-                # Add remote repository.
+            # Add remote repository.
             # </summary>
             flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
             # <summary>
-                # Update local packages.
+            # Update local packages.
             # </summary>
             flatpak update $str_args
             echo    # output padding
 
             # <summary>
-                # Flatpak packages sorted by type.
+            # Flatpak packages sorted by type.
             # </summary>
             # <parameters>
                 str_flatpakAll=""
@@ -890,7 +890,7 @@
             # </parameters>
 
             # <summary>
-                # Select and Install software sorted by type.
+            # Select and Install software sorted by type.
             # </summary>
             # <code>
                 function InstallFlatpakByType {
@@ -932,13 +932,13 @@
     }
 
     # <summary>
-        # Install from Snap software repositories.
+    # Install from Snap software repositories.
     # </summary>
     function InstallFromSnapRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
         # <summary>
-            # Snap
+        # Snap
         # </summary>
         if [[ $( command -v snap ) != "/usr/bin/snap" ]]; then
             echo -e "WARNING: Snap not installed. Skipping..."
@@ -954,13 +954,13 @@
             esac
 
             # <summary>
-                # Update local packages.
+            # Update local packages.
             # </summary>
             flatpak update $str_args
             echo    # output padding
 
             # <summary>
-                # Snap packages sorted by type.
+            # Snap packages sorted by type.
             # </summary>
             # <parameters>
                 str_snapAll=""
@@ -968,7 +968,7 @@
             # </parameters>
 
             # <summary>
-                # Select and Install software sorted by type.
+            # Select and Install software sorted by type.
             # </summary>
             # <code>
                 function InstallSnapByType {
@@ -1009,7 +1009,7 @@
     }
 
     # <summary>
-        # Set software repositories for Debian Linux.
+    # Set software repositories for Debian Linux.
     # </summary>
     function ModifyDebianRepos {
         echo -e "Modifying $(lsb_release -is) $(uname -o) repositories..."
@@ -1181,7 +1181,7 @@
         done
 
         if [[ -e $str_newFile1 ]]; then
-                rm $str_newFile1
+            rm $str_newFile1
         fi
 
         sudo apt clean
@@ -1193,8 +1193,8 @@
     }
 
     # <summary>
-        # Install system service from repository.
-        # Finds first available non-VFIO VGA/GPU and binds to Xorg.
+    # Install system service from repository.
+    # Finds first available non-VFIO VGA/GPU and binds to Xorg.
     # </summary>
     function SetupAutoXorg {
         echo -e "Installing Auto-Xorg... "
@@ -1209,7 +1209,7 @@
 
     ### NOTE: needs work.
     # <summary>
-        # Display Help to console.
+    # Display Help to console.
     # </summary>
     function Help {
         declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
@@ -1231,7 +1231,7 @@
 
     ### NOTE: needs work.
     # <summary>
-        # Parse input parameters for given options.
+    # Parse input parameters for given options.
     # </summary>
     function ParseInputParamForOptions {
         if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
@@ -1308,7 +1308,7 @@
     }
 
     # <summary>
-        # Execute setup of all software repositories.
+    # Execute setup of all software repositories.
     # </summary>
     function ExecuteSetupOfSoftwareSources {
         CheckCurrentDistro
