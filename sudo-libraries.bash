@@ -782,115 +782,120 @@
     # Install from Debian repositories.
     # </summary>
     function InstallFromDebianRepos {
-        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-        ReadInput "Auto-accept install prompts? "
+        if [[ $( command -v apt ) != "/usr/bin/apt" ]]; then
+            echo -e "WARNING: Apt not installed. Skipping..."
+            false; SaveThisExitCode
+        else
+            echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
+            ReadInput "Auto-accept install prompts? "
 
-        case "$int_thisExitCode" in
-            0)
-                local str_args="-y";;
-            *)
-                local str_args="";;
-        esac
+            case "$int_thisExitCode" in
+                0)
+                    local str_args="-y";;
+                *)
+                    local str_args="";;
+            esac
 
-        # <summary>
+            # <summary>
             # Update and upgrade local packages
-        # </summary>
-        # <code>
-            apt clean
-            apt update
-            apt full-upgrade $str_args
-        # </code>
+            # </summary>
+            # <code>
+                apt clean
+                apt update
+                apt full-upgrade $str_args
+            # </code>
 
-        # <summary>
+            # <summary>
             # Desktop environment checks
-        # </summary>
-        # <code>
-            str_aptCheck=""
-            str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
+            # </summary>
+            # <code>
+                str_aptCheck=""
+                str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
-            if [[ $str_aptCheck != "" ]]; then
-                apt install -y plasma-discover-backend-flatpak
-            fi
-
-            str_aptCheck=""
-            str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
-
-            if [[ $str_aptCheck != "" ]]; then
-                apt install -y gnome-software-plugin-flatpak
-            fi
-        # </code>
-
-        echo    # output padding
-
-        # <summary>
-            # APT packages sorted by type.
-        # </summary>
-        # <parameters>
-            str_aptAll=""
-            str_aptDeveloper=""
-            str_aptDrivers="steam-devices"
-            str_aptGames=""
-            str_aptInternet="firefox-esr filezilla"
-            str_aptMedia="vlc"
-            str_aptOffice="libreoffice"
-            str_aptPrismBreak=""
-            str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-            str_aptSuites="debian-edu-install science-all"
-            str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-            str_aptUnsorted=""
-            str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-        # </parameters>
-
-        # <summary>
-            # Select and Install software sorted by type.
-        # </summary>
-        # <code>
-            function InstallAptByType {
-                if [[ $1 != "" ]]; then
-                    echo -e $2
-
-                    if [[ $1 == *" "* ]]; then
-                        declare -il int_i=1
-
-                        while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                            echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                            (( int_i++ ))                                   # counter
-                        done
-                    else
-                        echo -e "\t$1"
-                    fi
-
-                    ReadInput
-
-                    if [[ $int_thisExitCode -eq 0 ]]; then
-                        str_aptAll+="$1 "
-                    fi
-
-                    echo    # output padding
+                if [[ $str_aptCheck != "" ]]; then
+                    apt install -y plasma-discover-backend-flatpak
                 fi
-            }
 
-            InstallAptByType $str_aptUnsorted "Select given software?"
-            InstallAptByType $str_aptDeveloper "Select Development software?"
-            InstallAptByType $str_aptGames "Select games?"
-            InstallAptByType $str_aptInternet "Select Internet software?"
-            InstallAptByType $str_aptMedia "Select multi-media software?"
-            InstallAptByType $str_aptOffice "Select office software?"
-            InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
-            InstallAptByType $str_aptSecurity "Select security tools?"
-            InstallAptByType $str_aptSuites "Select software suites?"
-            InstallAptByType $str_aptTools "Select software tools?"
-            InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+                str_aptCheck=""
+                str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
 
-            if [[ $str_aptAll != "" ]]; then
-                apt install $str_args $str_aptAll
-            fi
-        # </code>
+                if [[ $str_aptCheck != "" ]]; then
+                    apt install -y gnome-software-plugin-flatpak
+                fi
+            # </code>
 
-        # <summary>
+            echo    # output padding
+
+            # <summary>
+            # APT packages sorted by type.
+            # </summary>
+            # <parameters>
+                str_aptAll=""
+                str_aptDeveloper=""
+                str_aptDrivers="steam-devices"
+                str_aptGames=""
+                str_aptInternet="firefox-esr filezilla"
+                str_aptMedia="vlc"
+                str_aptOffice="libreoffice"
+                str_aptPrismBreak=""
+                str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+                str_aptSuites="debian-edu-install science-all"
+                str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+                str_aptUnsorted=""
+                str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+            # </parameters>
+
+            # <summary>
+            # Select and Install software sorted by type.
+            # </summary>
+            # <code>
+                function InstallAptByType {
+                    if [[ $1 != "" ]]; then
+                        echo -e $2
+
+                        if [[ $1 == *" "* ]]; then
+                            declare -il int_i=1
+
+                            while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                                echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                                (( int_i++ ))                                   # counter
+                            done
+                        else
+                            echo -e "\t$1"
+                        fi
+
+                        ReadInput
+
+                        if [[ $int_thisExitCode -eq 0 ]]; then
+                            str_aptAll+="$1 "
+                        fi
+
+                        echo    # output padding
+                    fi
+                }
+
+                InstallAptByType $str_aptUnsorted "Select given software?"
+                InstallAptByType $str_aptDeveloper "Select Development software?"
+                InstallAptByType $str_aptGames "Select games?"
+                InstallAptByType $str_aptInternet "Select Internet software?"
+                InstallAptByType $str_aptMedia "Select multi-media software?"
+                InstallAptByType $str_aptOffice "Select office software?"
+                InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+                InstallAptByType $str_aptSecurity "Select security tools?"
+                InstallAptByType $str_aptSuites "Select software suites?"
+                InstallAptByType $str_aptTools "Select software tools?"
+                InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+
+                if [[ $str_aptAll != "" ]]; then
+                    apt install $str_args $str_aptAll
+                fi
+            # </code>
+
+            # <summary>
             # Clean up
-        # </summary>
-        apt autoremove $str_args
+            # </summary>
+            apt autoremove $str_args
+        fi
     }
 
     # <summary>
@@ -1023,6 +1028,8 @@
         if [[ $int_thisExitCode -eq 0 ]]; then
             # <summary>
             # portellam/Auto-Xorg
+            # Install system service from repository.
+            # Finds first available non-VFIO VGA/GPU and binds to Xorg.
             # </summary>
             local str_scriptDir="portellam/Auto-Xorg/installer.bash"
             ExecuteScript $str_scriptDir
@@ -1068,6 +1075,8 @@
             local str_scriptDir="foundObjects/zram-swap/install.sh"
             ExecuteScript $str_scriptDir
         fi
+
+        ParseThisExitCode
     }
 
     # <summary>
@@ -1330,17 +1339,6 @@
         # clean up
         # sudo apt autoremove -y
     }
-
-    # <summary>
-    # Install system service from repository.
-    # Finds first available non-VFIO VGA/GPU and binds to Xorg.
-    # </summary>
-    function SetupAutoXorg {
-        echo -e "Installing Auto-Xorg... "
-        ( cd $( find -wholename Auto-Xorg | uniq | head -n1 ) && bash ./installer.bash ) || ( false && SaveThisExitCode)
-        cd $str_pwd
-        EchoPassOrFailThisExitCode; ParseThisExitCode; echo
-    }
 # </code>
 
 ### main functions ###
@@ -1470,8 +1468,12 @@
     # Execute setup of GitHub repositories (of which that are executable and installable).
     # </summary>
     function ExecuteSetupOfGitRepos {
-
-        
+        if [[ $( command -v git ) == "/usr/bin/git" ]]; then
+            CloneOrUpdateGitRepositories
+            InstallFromGitRepos
+        else
+            EchoPassOrFailThisExitCode "\n\e[33mWARNING:\e[0m Git is not installed on this system."
+        fi
     }
 # </code>
 
