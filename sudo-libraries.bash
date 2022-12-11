@@ -155,6 +155,18 @@
     }
 
     # <summary>
+    # Checks if file is executable,
+    # and returns exit code if failed.
+    # </summary>
+    function CheckIfFileIsExecutable {
+        if [[ ! -x $1 ]]; then
+            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
+        else
+            true; SaveThisExitCode
+        fi
+    }
+
+    # <summary>
     # Checks if file is readable,
     # and returns exit code if failed.
     # </summary>
@@ -700,57 +712,70 @@
     }
 
     # <summary>
-    # Clone remote or update local Git repositories.
+    # Clone given GitHub repositories.
     # </summary>
-    function CloneOrUpdateGitRepositories {
-        echo -en "Cloning Git repositories... "
-        CheckIfVarIsNull $1; CheckIfVarIsNull $2
-        CheckIfDirIsNull $1; CheckIfDirIsNull $2
-        CheckIfFileIsWritable $1; CheckIfFileIsWritable $2
+    function CloneOrUpdateGitRepositories
+    {
+        echo "Cloning/Updating Git repos..."
+
+        # <parameters>
+        declare -lr str_dir1="/root/source/repos"
+        # </parameters>
+
+        CreateDir $str_dir1 &> /dev/null
+        CheckIfFileIsWritable $str_dir1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            cd $1
+            # <summary>
+            # List of Git repositories.
+            # Example: "username/reponame"
+            # </summary>
+            # <parameters>
+            declare -alr arr_repo=(
+                "corna/me_cleaner"
+                "dt-zero/me_cleaner"
+                "foundObjects/zram-swap"
+                "portellam/Auto-Xorg"
+                "portellam/deploy-VFIO-setup"
+                "pyllyukko/user.js"
+                "StevenBlack/hosts"
+            )
+            # </parameters>
 
-            # if a given element is a string longer than one char, the var is an array #
-            for str_element in ${2}; do
-                if [[ ${#str_element} -gt 1 ]]; then
-                    bool_varIsAnArray=true
-                    break
+            for str_repo in ${arr_repo[@]}; do
+                cd $str_dir1
+
+                # <parameters>
+                local str_userName=$( basename $str_repo )
+                # </parameters>
+
+                CheckIfDirIsNull ${str_dir1}${str_userName} &> /dev/null
+
+                if [[ $int_thisExitCode -ne 0 ]]; then
+                    CreateDir ${str_dir1}${str_userName}  &> /dev/null
+                fi
+
+                CheckIfDirIsNull ${str_dir1}${str_repo} &> /dev/null
+
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    cd ${str_dir1}${str_repo}
+                    git pull https://github.com/$str_repo
+                else
+                    ReadInput "Clone repo '$str_repo'?"
+
+                    if [[ $int_thisExitCode -eq 0 ]]; then
+                        cd ${str_dir1}${str_userName}
+                        git clone https://github.com/$str_repo || SetExitCodeIfPassNorFail
+                    fi
                 fi
             done
-
-            declare -i int_count=1
-
-            if [[ $bool_varIsAnArray == true ]]; then       # git clone from array
-                for str_element in ${2}; do
-                    if [[ -e $( basename $1 ) ]]; then      # cd into repo, update, and back out
-                        cd $( basename $1 )
-                        git pull $str_element &> /dev/null || ( ((int_count++)) && SetExitCodeIfPassNorFail )
-                        cd ..
-
-                    else                                    # clone new repo
-                        git clone $str_element &> /dev/null || ( ((int_count++)) && SetExitCodeIfPassNorFail )
-                    fi
-
-                done
-
-                if [[ ${#2[@]} -eq $int_count ]]; then      # if all repos failed to clone, change exit code
-                    SetExitCodeOnError
-                fi
-
-            else                                            # git clone a repo
-                echo $2 >> $1 || SetExitCodeOnError
-            fi
         fi
 
         SaveThisExitCode; EchoPassOrFailThisExitCode; ParseThisExitCode
 
-        case $int_thisExitCode in
-            131)
-                echo -e "One or more Git repositories could not be cloned.";;
-        esac
-
-        echo
+        if [[ $int_thisExitCode -eq 131 ]]; then
+            echo -e "One or more Git repositories could not be cloned.";;
+        fi
     }
 
     # <summary>
@@ -950,6 +975,99 @@
         fi
 
         ParseThisExitCode
+    }
+
+    # <summary>
+    # Install from Git repositories.
+    # </summary>
+    function InstallFromGitRepos
+    {
+        echo "Executing Git scripts..."
+
+        # <summary>
+        # Prompt user to execute script or skip.
+        # </summary>
+        function ExecuteScript {
+            cd $str_dir1
+
+            # <parameters>
+            local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
+            local str_script=$( basename $str_dir2 )
+            # </parameters>
+
+            CheckIfDirIsNull $str_script &> /dev/null
+
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                ReadInput "Execute script '$str_script'?"
+
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    cd $str_dir2
+                    CheckIfFileIsExecutable $str_script &> /dev/null
+
+                    if [[ $int_thisExitCode -eq 0 ]]; then
+                        sudo bash $str_script || SetExitCodeIfPassNorFail
+                    fi
+
+                    cd $str_dir1
+                fi
+            fi
+        }
+
+        # <parameters>
+        declare -lr str_dir1="/root/source/repos"
+        # </parameters>
+
+        CreateDir $str_dir1 &> /dev/null
+        CheckIfFileIsWritable $str_dir1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <summary>
+            # portellam/Auto-Xorg
+            # </summary>
+            local str_scriptDir="portellam/Auto-Xorg/installer.bash"
+            ExecuteScript $str_scriptDir
+
+            # <summary>
+            # StevenBlack/hosts
+            # </summary>
+            local str_scriptDir="StevenBlack/hosts"
+            CheckIfDirIsNull $str_scriptDir
+
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                cd $str_scriptDir
+                CreateBackupFromFile "/etc/hosts" &> /dev/null
+
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    cp hosts "/etc/hosts" || SetExitCodeIfPassNorFail
+                fi
+
+                cd $str_dir1
+            fi
+
+            # <summary>
+            # pyllyukko/user.js
+            # </summary>
+            local str_scriptDir="pyllyukko/user.js"
+            CheckIfDirIsNull $str_scriptDir
+
+            if [[ $int_thisExitCode -eq 0]]; then
+                cd $str_scriptDir
+                make debian_locked.js && (
+                    CreateBackupFromFile "/etc/firefox-esr/firefox-esr.js" &> /dev/null
+
+                    if [[ $int_thisExitCode -eq 0]]; then
+                        cp debian_locked.js "/etc/firefox-esr/firefox-esr.js" &> /dev/null || SetExitCodeIfPassNorFail
+                    fi
+                )
+                cd $str_dir1
+            fi
+
+            # <summary>
+            # foundObjects/zram-swap
+            # </summary>
+            local str_scriptDir="foundObjects/zram-swap/install.sh"
+            ExecuteScript $str_scriptDir
+        fi
     }
 
     # <summary>
@@ -1349,161 +1467,11 @@
     }
 
     # <summary>
-    # Execute setup of Git repositories (of which that are executable and installable).
+    # Execute setup of GitHub repositories (of which that are executable and installable).
     # </summary>
     function ExecuteSetupOfGitRepos {
-        # clone repos #
-        function CloneGitRepos
-        {
-            echo "Cloning/Updating Git repos..."
 
-            # <parameters>
-            str_dir1="/root/source/"
-            # </parameters>
-
-            CreateDir $str_dir1
-
-            if [[ $int_thisExitCode -eq 0 ]]; then
-                # here goes useful repos for system deployment
-                # list of git repos
-                # NOTE: update here!
-
-                # <summary>
-                # List of Git repositories.
-                # Example: "username/reponame"
-                # </summary>
-                # <parameters>
-                declare -a arr_repo=(
-                    "corna/me_cleaner"
-                    "dt-zero/me_cleaner"
-                    "foundObjects/zram-swap"
-                    "portellam/Auto-Xorg"
-                    "portellam/deploy-VFIO-setup"
-                    "pyllyukko/user.js"
-                    "StevenBlack/hosts"
-                )
-
-                for str_repo in ${arr_repo[@]}; do
-                    cd ~/
-
-                    str_userName=$( echo $str_repo | cut -d "/" -f1 )
-
-                    # create folder #
-                    if [[ -z $str_dir1$str_userName ]]; then
-                        mkdir -p $str_dir1$str_userName
-                    fi
-
-                    # update local repo #
-                    if [[ -e $str_dir1$str_repo ]]; then
-                        cd $str_dir1$str_repo
-                        git pull https://github.com/$str_repo
-
-                    else
-
-                        ReadInput "Clone repo '$str_repo'?"
-
-                        if [[ $str_input1 == "Y" ]]; then
-                            cd $str_dir1$str_userName
-                            git clone https://github.com/$str_repo
-                        fi
-
-                    fi
-                done
-            fi
-
-            
-        }
-
-    # install from git repos #
-        function InstallFromGitRepos
-        {
-            echo "Executing Git scripts..."
-
-            # parameters #
-            str_dir1="/root/git/"
-            str_input1=""
-            cd $str_dir1
-
-            # prompt user to execute script or do so automatically #
-            function ExecuteScript {
-                str_input1=""
-                ReadInput "Execute script '$str_repo'?"
-            }
-
-            # portellam/Auto-Xorg #
-            str_repo="portellam/Auto-Xorg"
-
-            if [[ -e $str_repo ]]; then
-                ExecuteScript $str_repo
-
-                if [[ $str_input1 == "Y" ]]; then
-                    cd $str_dir1$str_repo
-                    sudo bash ./installer.bash
-                    cd $str_dir1
-                fi
-            fi
-
-            # StevenBlack/hosts #
-            str_repo="StevenBlack/hosts"
-            if [[ -e $str_repo ]]; then
-                ExecuteScript $str_repo
-
-                if [[ $str_input1 == "Y" ]]; then
-                    cd $str_dir1$str_repo
-                    str_file1="/etc/hosts"
-                    str_oldFile1=$str_file1'_old'
-
-                    # backup hosts #
-                    if [[ ! -e $str_oldFile1 ]]; then
-                        if [[ -e $str_file1 ]]; then
-                            sudo cp $str_file1 $str_oldFile1
-                        fi
-
-                    else
-                        sudo cp $str_oldFile1 $str_file1
-                    fi
-
-                    echo $'\n#' >> $str_file1
-                    cat hosts >> $str_file1
-                    cd $str_dir1
-                fi
-            fi
-
-            # pyllyukko/user.js #
-            str_repo="pyllyukko/user.js"
-
-            if [[ -e $str_repo ]]; then
-                ExecuteScript $str_repo
-
-                if [[ $str_input1 == "Y" ]]; then
-                    cd $str_dir1$str_repo
-                    make debian_locked.js
-                    str_file1="/etc/firefox-esr/firefox-esr.js"
-
-                    # backup user.js #
-                    if [[ -e $str_file1'_old' ]]; then
-                        sudo cp $str_file1 $str_file1'_old'
-                    fi
-
-                    cp debian_locked.js $str_file1
-                    #ln -s debian_locked.js /etc/firefox-esr/firefox-esr.js      # NOTE: unused
-                    cd $str_dir1
-                fi
-            fi
-
-            # foundObjects/zram-swap #
-            str_repo="foundObjects/zram-swap"
-
-            if [[ -e $str_repo ]]; then
-                ExecuteScript $str_repo
-
-                if [[ $str_input1 == "Y" ]]; then
-                    cd $str_dir1$str_repo
-                    sudo sh ./install.sh
-                    cd $str_dir1
-                fi
-            fi
-        }
+        
     }
 # </code>
 
