@@ -44,6 +44,7 @@
 
     # <summary>
     # Output error given exception.
+    # <return>exit code</return>
     # </summary>
     function ParseThisExitCode {
         case $int_thisExitCode in
@@ -73,6 +74,7 @@
 
     # <summary>
     # Exit bash session/script with current exit code.
+    # <return>exit code</return>
     # </summary>
     function ExitWithThisExitCode
     {
@@ -82,6 +84,7 @@
 
     # <summary>
     # Updates main parameter.
+    # <return>exit code</return>
     # </summary>
     function SaveThisExitCode {
         int_thisExitCode=$?
@@ -121,6 +124,7 @@
     # <summary>
     # Checks if input parameter is null,
     # and returns exit code given result.
+    # <return>exit code</return>
     # </summary>
     function CheckIfVarIsNull {
         if [[ -z "$1" ]]; then
@@ -133,6 +137,7 @@
     # <summary>
     # Checks if file exists,
     # and returns exit code if failed.
+    # <return>exit code</return>
     # </summary>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
@@ -145,6 +150,7 @@
     # <summary>
     # Checks if directory exists,
     # and returns exit code if failed.
+    # <return>exit code</return>
     # </summary>
     function CheckIfDirIsNull {
         if [[ ! -d $1 ]]; then
@@ -157,6 +163,7 @@
     # <summary>
     # Checks if file is executable,
     # and returns exit code if failed.
+    # <return>exit code</return>
     # </summary>
     function CheckIfFileIsExecutable {
         if [[ ! -x $1 ]]; then
@@ -169,6 +176,7 @@
     # <summary>
     # Checks if file is readable,
     # and returns exit code if failed.
+    # <return>exit code</return>
     # </summary>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
@@ -181,6 +189,7 @@
     # <summary>
     # Checks if file is writable,
     # and returns exit code if failed.
+    # <return>exit code</return>
     # </summary>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
@@ -195,6 +204,7 @@
 # <code>
     # <summary>
     # Checks if current user is sudo/root.
+    # <return>exit code</return>
     # </summary>
     function CheckIfUserIsRoot {
         if [[ $( whoami ) != "root" ]]; then
@@ -213,6 +223,7 @@
 
     # <summary>
     # Output pass or fail statement given exit code.
+    # <return>exit code</return>
     # </summary>
     function EchoPassOrFailThisExitCode {
         CheckIfVarIsNull $1 &> /dev/null
@@ -233,6 +244,7 @@
 
     # <summary>
     # Output pass or fail test-case given exit code.
+    # <return>exit code</return>
     # </summary>
     function EchoPassOrFailThisTestCase {
         str_testCaseName=$1
@@ -249,6 +261,18 @@
                 echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
         esac
     }
+
+    # <summary>
+    # Output variable given if valid.
+    # <return>exit code</return>
+    # </summary>
+    function EchoVarIfVarIsNotNull {
+        CheckIfVarIsNull $1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            echo $1
+        fi
+    }
 # </code>
 
 ### general functions ###
@@ -256,43 +280,52 @@
     # <summary>
     # Change ownership of given file to current user.
     # NOTE: $UID is intelligent enough to differentiate between the two
+    # <return>exit code</return>
     # </summary>
     function ChangeOwnershipOfFileOrDir {
         CheckIfVarIsNull $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            echo '$UID =='"'$UID'"
-            chown -f $UID $1
-        fi
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            # echo '$UID =='"'$UID'"
+            chown -f $UID $1 && ( true; SaveThisExitCode)
+            break
+        done
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
     # Checks if two given files are the same, in composition.
+    # <return>exit code</return>
     # </summary>
     function CheckIfTwoFilesAreSame {
         echo -e "Verifying two files... "
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfVarIsNull $2 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
-        CheckIfFileIsNull $2 &> /dev/null
-        CheckIfFileIsReadable $1 &> /dev/null
-        CheckIfFileIsReadable $2 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsNull $2 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+            CheckIfFileIsReadable $2 &> /dev/null
+
             if cmp -s "$1" "$2"; then
                 echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             else
                 echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
                 false; SaveThisExitCode
             fi
-        fi
 
-        EchoPassOrFailThisExitCode
-        ParseThisExitCode
+            break
+        done
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
     # Checks if two given files are the same, in composition.
+    # <return>exit code</return>
     # </summary>
     function CreateBackupFromFile {
         echo -en "Backing up file... "
@@ -378,260 +411,283 @@
 
     # <summary>
     # Creates a directory.
+    # <return>exit code</return>
     # </summary>
     function CreateDir {
         echo -en "Creating directory... "
-        CheckIfVarIsNull $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-
-            if [[ $int_thisExitCode -ne 0 ]]; then
-                mkdir -p $1 &> /dev/null
-            fi
-        fi
+            mkdir -p $1 &> /dev/null && ( true; SaveThisExitCode)
+            break
+        done
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
     # Creates a file.
+    # <return>exit code</return>
     # </summary>
     function CreateFile {
         echo -en "Creating file... "
-        CheckIfVarIsNull $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-
-            if [[ $int_thisExitCode -ne 0 ]]; then
-                touch $1 &> /dev/null
-            fi
-        fi
+            touch $1 &> /dev/null && ( true; SaveThisExitCode)
+            break
+        done
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
     # Deletes a file.
+    # <return>exit code</return>
     # </summary>
     function DeleteFile {
         echo -en "Deleting file... "
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            rm $1 &> /dev/null
-        fi
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            rm $1 &> /dev/null && ( true; SaveThisExitCode)
+            break
+        done
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
     # Reads a file.
+    # <return>array</return>
     # </summary>
     function ReadFile {
         echo -en "Reading file... "
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
-        CheckIfFileIsReadable $1 &> /dev/null
-        declare -la arr_file=()
+        declare -lar arr_file1=()
 
-        while read str_line; do
-            arr_file+=("$str_line") || ( (exit 249); SaveThisExitCode; arr_file=(); break )
-        done < $1
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+
+            while read str_line1; do
+                arr_file1+=("$str_line1") || ( (exit 249); SaveThisExitCode; arr_file1=(); break )  # refactor!
+            done < $1
+            break
+        done
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary>
-    # Ask for Yes/No answer, return boolean,
+    # Ask for Yes/No answer, return exit code.
     # Default selection is N/false.
-    # Aways returns bool.
+    # <return>exit code</return>
     # </summary>
     function ReadInput {
+        CheckIfVarIsNull $1 &> /dev/null
+
         # <parameters> #
-            declare -ir int_maxCount=3
-            declare -ar arr_count=$( seq $int_maxCount )
+        declare -il int_count=0
+        declare -lir int_maxCount=2
+        declare -lr str_output1=""
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            declare -lr str_output1=$1
+        fi
         # </parameters> #
 
-        for int_element in ${arr_count[@]}; do
+        true; SaveThisExitCode
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary>
+            # After given number of attempts, input is set to default: false.
+            # </summary>
+            if [[ $int_count -gt $int_maxCount ]]; then
+                str_input="N"
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
+                false; SaveThisExitCode; break
+            fi
+
             echo -en "$1 \e[30;43m[Y/n]:\e[0m "
-            read str_input
-            str_input=$( echo $str_input | tr '[:lower:]' '[:upper:]' )
+            read str_input1
+            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
+            # <summary>
+            # Check if string is a valid input.
+            # </summary>
             case $str_input in
-                "Y"|"N")
-                    break;;
-                *)
-                    if [[ $int_element -eq $int_maxCount ]]; then
-                        str_input="N"
-                        echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
-                        break
-                    fi
-
-                    echo -en "\e[33mInvalid input.\e[0m ";;
+                "Y")
+                    true; SaveThisExitCode; break;;
+                "N")
+                    false; SaveThisExitCode; break;;
             esac
+
+            # <summary>
+            # Input is invalid, increment counter.
+            # </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
         done
 
-        case $str_input in
-            "Y")
-                true;;
-            "N")
-                false;;
-        esac
-
-        SaveThisExitCode; echo
+        echo
     }
 
     # <summary>
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
-    # Proper use always returns valid answer.
+    # <return>string</return>
     # </summary>
     function ReadInputFromMultipleChoiceIgnoreCase {
-        CheckIfVarIsNull $2 &> /dev/null
+        # <parameters> #
+        declare -il int_count=0
+        declare -lir int_maxCount=2
+        declare -lr str_output1=""
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            # <parameters> #
-            declare -ir int_maxCount=3
-            declare -ar arr_count=$( seq $int_maxCount )
-            # </parameters> #
-
-            for int_element in ${arr_count[@]}; do
-                echo -en "$1 "
-                read str_input
-                # str_input=$( echo $str_input | tr '[:lower:]' '[:upper:]' )
-
-                if [[ -z $2 && $str_input == $2 ]]; then
-                    break
-                elif [[ -z $3 && $str_input == $3 ]]; then
-                    break
-                elif [[ -z $4 && $str_input == $4 ]]; then
-                    break
-                elif [[ -z $5 && $str_input == $5 ]]; then
-                    break
-                elif [[ -z $6 && $str_input == $6 ]]; then
-                    break
-                elif [[ -z $7 && $str_input == $7 ]]; then
-                    break
-                elif [[ -z $8 && $str_input == $8 ]]; then
-                    break
-                elif [[ -z $9 && $str_input == $9 ]]; then
-                    break
-                else
-                    if [[ $int_element -eq $int_maxCount ]]; then
-                        str_input=$2                       # default selection: first choice
-                        echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
-                        break
-                    fi
-
-                    echo -en "\e[33mInvalid input.\e[0m "
-                    SetExitCodeIfFileOrDirIsNull
-                fi
-            done
+            declare -lr str_output1=$1
         fi
+        # </parameters> #
 
-        SaveThisExitCode; ParseThisExitCode
+        CheckIfVarIsNull $2 &> /dev/null
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary>
+            # After given number of attempts, input is set to default: false.
+            # </summary>
+            if [[ $int_count -gt $int_maxCount ]]; then
+                str_input1="$2"
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                false; SaveThisExitCode; break
+            fi
+
+            echo -en "$str_output1 "
+            read str_input1
+
+            # <summary>
+            # Check if string is a valid input.
+            # </summary>
+            case $str_input1 in
+                $2|$3|$4|$5|$6|$7|$8|$9)
+                    true; SaveThisExitCode; break;
+            esac
+
+            # <summary>
+            # Input is invalid, increment counter.
+            # </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
+        done
+
+        EchoVarIfVarIsNotNull $str_input1
     }
 
     # <summary>
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
-    # Proper use always returns valid answer.
+    # <return>string</return>
     # </summary>
     function ReadInputFromMultipleChoiceUpperCase {
-        CheckIfVarIsNull $2 &> /dev/null
+        # <parameters> #
+        declare -il int_count=0
+        declare -lir int_maxCount=2
+        declare -lr str_output1=""
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            # <parameters> #
-            declare -ir int_maxCount=3
-            declare -ar arr_count=$( seq $int_maxCount )
-            # </parameters> #
-
-            for int_element in ${arr_count[@]}; do
-                echo -en "$1 "
-                read str_input
-                str_input=$( echo $str_input | tr '[:lower:]' '[:upper:]' )
-
-                if [[ ! -z $2 && $str_input == $2 ]]; then
-                    break
-                elif [[ ! -z $3 && $str_input == $3 ]]; then
-                    break
-                elif [[ ! -z $4 && $str_input == $4 ]]; then
-                    break
-                elif [[ ! -z $5 && $str_input == $5 ]]; then
-                    break
-                elif [[ ! -z $6 && $str_input == $6 ]]; then
-                    break
-                elif [[ ! -z $7 && $str_input == $7 ]]; then
-                    break
-                elif [[ ! -z $8 && $str_input == $8 ]]; then
-                    break
-                elif [[ ! -z $9 && $str_input == $9 ]]; then
-                    break
-                else
-                    if [[ $int_element -eq $int_maxCount ]]; then
-                        str_input=$2                       # default selection: first choice
-                        echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
-                        break
-                    fi
-
-                    echo -en "\e[33mInvalid input.\e[0m "
-                    SetExitCodeIfFileOrDirIsNull
-                fi
-            done
+            declare -lr str_output1=$1
         fi
+        # </parameters> #
 
-        SaveThisExitCode; ParseThisExitCode
+        CheckIfVarIsNull $2 &> /dev/null
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary>
+            # After given number of attempts, input is set to default: false.
+            # </summary>
+            if [[ $int_count -gt $int_maxCount ]]; then
+                str_input1="$2"
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                false; SaveThisExitCode; break
+            fi
+
+            echo -en "$str_output1 "
+            read str_input1
+            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
+
+            # <summary>
+            # Check if string is a valid input.
+            # </summary>
+            case $str_input1 in
+                $2|$3|$4|$5|$6|$7|$8|$9)
+                    true; SaveThisExitCode; break;
+            esac
+
+            # <summary>
+            # Input is invalid, increment counter.
+            # </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
+        done
+
+        EchoVarIfVarIsNotNull $str_input1
     }
 
     # <summary>
-    # Ask for multiple choice, up to eight choices.
+    # Ask for number, within a given range.
     # Default selection is first choice.
-    # Proper use always returns valid answer.
+    # <return>int</return>
     # </summary>
     function ReadInputFromRangeOfNums {
         # <parameters> #
-        declare -ir int_maxCount=3
-        declare -ar arr_count=$( seq $int_maxCount )
+        declare -il int_count=0
+        declare -lir int_maxCount=2
         # </parameters> #
 
-        for int_element in ${arr_count[@]}; do
-            echo -en "$1 "
-            read str_input
-
-            if [[ $str_input -ge $2 && $str_input -le $3 ]]; then     # valid input
-                break
-            else
-                if [[ $int_element -eq $int_maxCount ]]; then           # default input
-                    str_input=$2                                        # default selection: first choice
-                    echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
-                    break
-                fi
-
-                # if [[ ! ( "${str_input}" -ge "$(( ${str_input} ))" ) ]] 2> /dev/null; then  # check if string is a valid integer
-                #     echo -en "\e[33mInvalid input.\e[0m "
-                # fi
-
-                echo -en "\e[33mInvalid input.\e[0m "
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary>
+            # After given number of attempts, input is set to default: min value.
+            # </summary>
+            if [[ $int_count -gt $int_maxCount ]]; then
+                str_input1=$2
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                true; SaveThisExitCode; break
             fi
+
+            echo -en "$1 "
+            read str_input1
+
+            # <summary>
+            # Check if string is a valid integer and within given range.
+            # </summary>
+            if [[ $str_input1 -ge $2 && $str_input1 -le $3 && ( "${str_input1}" -ge "$(( ${str_input1} ))" ) ]] 2> /dev/null;; then
+                true; SaveThisExitCode; break
+            fi
+
+            # <summary>
+            # Input is invalid, increment counter.
+            # </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
         done
+
+        EchoVarIfVarIsNotNull $str_input1
     }
 
     # <summary>
     # Test network connection to Internet.
     # Ping DNS servers by address and name.
+    # <return>exit code</return>
     # </summary>
     function TestNetwork {
         echo -en "Testing Internet connection... "
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
-
         SaveThisExitCode; EchoPassOrFailThisExitCode
 
         echo -en "Testing connection to DNS... "
         ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || false
-
         SaveThisExitCode; EchoPassOrFailThisExitCode
 
         if [[ $int_thisExitCode -ne 0 ]]; then
@@ -653,22 +709,25 @@
         var_input=$2
 
         echo -en "Writing to file... "
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfVarIsNull $var_input &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
-        CheckIfFileIsReadable $1 &> /dev/null
-        CheckIfFileIsWritable $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $var_input &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+            CheckIfFileIsWritable $1 &> /dev/null
+
             case ${!var_input[@]} in                                                    # check number of key-value pairs
                 0)                                                                      # check if var is not an array
                     echo -e $var_input >> $1 || ( SetExitCodeOnError; SaveThisExitCode );;
                 *)                                                                      # check if var is an array
                     for str_element in ${var_input[@]}; do
-                        echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode; break )
+                        echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode )
                     done;;
             esac
-        fi
+
+            break
+        done
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
@@ -786,116 +845,115 @@
             echo -e "WARNING: Apt not installed. Skipping..."
             false; SaveThisExitCode
         else
-            echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-            ReadInput "Auto-accept install prompts? "
+        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
+        ReadInput "Auto-accept install prompts? "
 
-            case "$int_thisExitCode" in
-                0)
-                    local str_args="-y";;
-                *)
-                    local str_args="";;
-            esac
+        case "$int_thisExitCode" in
+            0)
+                local str_args="-y";;
+            *)
+                local str_args="";;
+        esac
 
-            # <summary>
-            # Update and upgrade local packages
-            # </summary>
-            # <code>
-                apt clean
-                apt update
-                apt full-upgrade $str_args
-            # </code>
+        # <summary>
+        # Update and upgrade local packages
+        # </summary>
+        # <code>
+            apt clean
+            apt update
+            apt full-upgrade $str_args
+        # </code>
 
-            # <summary>
-            # Desktop environment checks
-            # </summary>
-            # <code>
-                str_aptCheck=""
-                str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
+        # <summary>
+        # Desktop environment checks
+        # </summary>
+        # <code>
+            str_aptCheck=""
+            str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
-                if [[ $str_aptCheck != "" ]]; then
-                    apt install -y plasma-discover-backend-flatpak
-                fi
+            if [[ $str_aptCheck != "" ]]; then
+                apt install -y plasma-discover-backend-flatpak
+            fi
 
-                str_aptCheck=""
-                str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
+            str_aptCheck=""
+            str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
 
-                if [[ $str_aptCheck != "" ]]; then
-                    apt install -y gnome-software-plugin-flatpak
-                fi
-            # </code>
+            if [[ $str_aptCheck != "" ]]; then
+                apt install -y gnome-software-plugin-flatpak
+            fi
+        # </code>
 
-            echo    # output padding
+        echo    # output padding
 
-            # <summary>
-            # APT packages sorted by type.
-            # </summary>
-            # <parameters>
-                str_aptAll=""
-                str_aptDeveloper=""
-                str_aptDrivers="steam-devices"
-                str_aptGames=""
-                str_aptInternet="firefox-esr filezilla"
-                str_aptMedia="vlc"
-                str_aptOffice="libreoffice"
-                str_aptPrismBreak=""
-                str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-                str_aptSuites="debian-edu-install science-all"
-                str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-                str_aptUnsorted=""
-                str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-            # </parameters>
+        # <summary>
+        # APT packages sorted by type.
+        # </summary>
+        # <parameters>
+            str_aptAll=""
+            str_aptDeveloper=""
+            str_aptDrivers="steam-devices"
+            str_aptGames=""
+            str_aptInternet="firefox-esr filezilla"
+            str_aptMedia="vlc"
+            str_aptOffice="libreoffice"
+            str_aptPrismBreak=""
+            str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+            str_aptSuites="debian-edu-install science-all"
+            str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+            str_aptUnsorted=""
+            str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        # </parameters>
 
-            # <summary>
-            # Select and Install software sorted by type.
-            # </summary>
-            # <code>
-                function InstallAptByType {
-                    if [[ $1 != "" ]]; then
-                        echo -e $2
+        # <summary>
+        # Select and Install software sorted by type.
+        # </summary>
+        # <code>
+            function InstallAptByType {
+                if [[ $1 != "" ]]; then
+                    echo -e $2
 
-                        if [[ $1 == *" "* ]]; then
-                            declare -il int_i=1
+                    if [[ $1 == *" "* ]]; then
+                        declare -il int_i=1
 
-                            while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                                echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                                (( int_i++ ))                                   # counter
-                            done
-                        else
-                            echo -e "\t$1"
-                        fi
-
-                        ReadInput
-
-                        if [[ $int_thisExitCode -eq 0 ]]; then
-                            str_aptAll+="$1 "
-                        fi
-
-                        echo    # output padding
+                        while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                            echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                            (( int_i++ ))                                   # counter
+                        done
+                    else
+                        echo -e "\t$1"
                     fi
-                }
 
-                InstallAptByType $str_aptUnsorted "Select given software?"
-                InstallAptByType $str_aptDeveloper "Select Development software?"
-                InstallAptByType $str_aptGames "Select games?"
-                InstallAptByType $str_aptInternet "Select Internet software?"
-                InstallAptByType $str_aptMedia "Select multi-media software?"
-                InstallAptByType $str_aptOffice "Select office software?"
-                InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
-                InstallAptByType $str_aptSecurity "Select security tools?"
-                InstallAptByType $str_aptSuites "Select software suites?"
-                InstallAptByType $str_aptTools "Select software tools?"
-                InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+                    ReadInput
 
-                if [[ $str_aptAll != "" ]]; then
-                    apt install $str_args $str_aptAll
+                    if [[ $int_thisExitCode -eq 0 ]]; then
+                        str_aptAll+="$1 "
+                    fi
+
+                    echo    # output padding
                 fi
-            # </code>
+            }
 
-            # <summary>
-            # Clean up
-            # </summary>
-            apt autoremove $str_args
-        fi
+            InstallAptByType $str_aptUnsorted "Select given software?"
+            InstallAptByType $str_aptDeveloper "Select Development software?"
+            InstallAptByType $str_aptGames "Select games?"
+            InstallAptByType $str_aptInternet "Select Internet software?"
+            InstallAptByType $str_aptMedia "Select multi-media software?"
+            InstallAptByType $str_aptOffice "Select office software?"
+            InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+            InstallAptByType $str_aptSecurity "Select security tools?"
+            InstallAptByType $str_aptSuites "Select software suites?"
+            InstallAptByType $str_aptTools "Select software tools?"
+            InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+
+            if [[ $str_aptAll != "" ]]; then
+                apt install $str_args $str_aptAll
+            fi
+        # </code>
+
+        # <summary>
+        # Clean up
+        # </summary>
+        apt autoremove $str_args
     }
 
     # <summary>
