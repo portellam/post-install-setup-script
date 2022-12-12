@@ -765,11 +765,12 @@
     # <summary>
     # Check linux distro
     # </summary>
+    # <return>exit code</return>
     function CheckCurrentDistro {
         if [[ $( command -v apt ) == "/usr/bin/apt" ]]; then
             true; SaveThisExitCode
         else
-            echo -e "\e[33mWARNING:\e[0m"" Unrecognized Linux distribution. Continuing with minimal setup."
+            echo -e "\e[33mWARNING:\e[0m"" Unrecognized Linux distribution; Apt not installed. Skipping..."
             false; SaveThisExitCode
         fi
     }
@@ -777,6 +778,7 @@
     # <summary>
     # Clone given GitHub repositories.
     # </summary>
+    # <return>exit code</return>
     function CloneOrUpdateGitRepositories
     {
         echo "Cloning/Updating Git repos..."
@@ -815,7 +817,7 @@
                 CheckIfDirIsNull ${str_dir1}${str_userName} &> /dev/null
 
                 if [[ $int_thisExitCode -ne 0 ]]; then
-                    CreateDir ${str_dir1}${str_userName}  &> /dev/null
+                    CreateDir ${str_dir1}${str_userName} &> /dev/null
                 fi
 
                 CheckIfDirIsNull ${str_dir1}${str_repo} &> /dev/null
@@ -844,11 +846,8 @@
     # <summary>
     # Install from Debian repositories.
     # </summary>
+    # <return>exit code</return>
     function InstallFromDebianRepos {
-        if [[ $( command -v apt ) != "/usr/bin/apt" ]]; then
-            echo -e "WARNING: Apt not installed. Skipping..."
-            false; SaveThisExitCode
-        else
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         ReadInput "Auto-accept install prompts? "
 
@@ -906,48 +905,46 @@
         # <summary>
         # Select and Install software sorted by type.
         # </summary>
-        # <code>
-            function InstallAptByType {
-                if [[ $1 != "" ]]; then
-                    echo -e $2
+        function InstallAptByType {
+            if [[ $1 != "" ]]; then
+                echo -e $2
 
-                    if [[ $1 == *" "* ]]; then
-                        declare -il int_i=1
+                if [[ $1 == *" "* ]]; then
+                    declare -il int_i=1
 
-                        while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                            echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                            (( int_i++ ))                                   # counter
-                        done
-                    else
-                        echo -e "\t$1"
-                    fi
-
-                    ReadInput
-
-                    if [[ $int_thisExitCode -eq 0 ]]; then
-                        str_aptAll+="$1 "
-                    fi
-
-                    echo    # output padding
+                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                        (( int_i++ ))                                   # counter
+                    done
+                else
+                    echo -e "\t$1"
                 fi
-            }
 
-            InstallAptByType $str_aptUnsorted "Select given software?"
-            InstallAptByType $str_aptDeveloper "Select Development software?"
-            InstallAptByType $str_aptGames "Select games?"
-            InstallAptByType $str_aptInternet "Select Internet software?"
-            InstallAptByType $str_aptMedia "Select multi-media software?"
-            InstallAptByType $str_aptOffice "Select office software?"
-            InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
-            InstallAptByType $str_aptSecurity "Select security tools?"
-            InstallAptByType $str_aptSuites "Select software suites?"
-            InstallAptByType $str_aptTools "Select software tools?"
-            InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+                ReadInput
 
-            if [[ $str_aptAll != "" ]]; then
-                apt install $str_args $str_aptAll
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    str_aptAll+="$1 "
+                fi
+
+                echo    # output padding
             fi
-        # </code>
+        }
+
+        InstallAptByType $str_aptUnsorted "Select given software?"
+        InstallAptByType $str_aptDeveloper "Select Development software?"
+        InstallAptByType $str_aptGames "Select games?"
+        InstallAptByType $str_aptInternet "Select Internet software?"
+        InstallAptByType $str_aptMedia "Select multi-media software?"
+        InstallAptByType $str_aptOffice "Select office software?"
+        InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+        InstallAptByType $str_aptSecurity "Select security tools?"
+        InstallAptByType $str_aptSuites "Select software suites?"
+        InstallAptByType $str_aptTools "Select software tools?"
+        InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+
+        if [[ $str_aptAll != "" ]]; then
+            apt install $str_args $str_aptAll
+        fi
 
         # <summary>
         # Clean up
@@ -958,6 +955,7 @@
     # <summary>
     # Install from Flathub software repositories.
     # </summary>
+    # <return>exit code</return>
     function InstallFromFlathubRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
@@ -1042,6 +1040,7 @@
     # <summary>
     # Install from Git repositories.
     # </summary>
+    # <return>exit code</return>
     function InstallFromGitRepos
     {
         echo "Executing Git scripts..."
@@ -1139,6 +1138,7 @@
     # <summary>
     # Install from Snap software repositories.
     # </summary>
+    # <return>exit code</return>
     function InstallFromSnapRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
@@ -1216,185 +1216,157 @@
     # <summary>
     # Set software repositories for Debian Linux.
     # </summary>
+    # <return>exit code</return>
     function ModifyDebianRepos {
-        echo -e "Modifying $(lsb_release -is) $(uname -o) repositories..."
+        echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
         # <parameters>
-            str_file1="/etc/apt/sources.list"
-            str_oldFile1="${str_file1}_old"
-            str_newFile1="${str_file1}_new"
-            str_releaseName=$(lsb_release -sc)
-            str_releaseVer=$(lsb_release -sr)
-            str_sources=""
+        declare -lr str_file1="/etc/apt/sources.list"
+        local str_sources=""
+        declare -lr str_newFile1="${str_file1}_new"
+        declare -lr str_releaseName=$( lsb_release -sc )
+        declare -lr str_releaseVer=$( lsb_release -sr )
         # </parameters>
 
-        # create backup or restore from backup
-        if [ -z $str_file1 ]; then
-            cp $str_file1 $str_oldFile1
+        # <summary>
+        # Create backup or restore from backup.
+        # </summary>
+        CheckIfFileIsNull $str_file1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            CreateBackupFromFile $str_file1
         fi
 
-        # prompt user to change apt dependencies
+        # <summary>
+        # Setup optional sources.
+        # </summary>
         while true; do
-
-            # prompt for alt sources
-            str_input1=""
             ReadInput "Include 'contrib' sources?"
 
-            case $str_input1 in
-                "Y")
-                    str_sources="contrib";;
-
+            case $int_thisExitCode in
+                0)
+                    str_sources+="contrib";;
                 *)
-                    ;;
+                    break;;
             esac
 
-            str_input1=""
             ReadInput "Include 'non-free' sources?"
 
-            case $str_input1 in
-                "Y")
+            case $int_thisExitCode in
+                0)
                     str_sources+=" non-free";;
-
                 *)
-                    ;;
+                    break;;
             esac
 
-            # manual prompt
-            if [[ $int_count -ge 3 ]]; then
-                echo -e "Exceeded max attempts!"
-                str_input12=stable     # default input     # NOTE: change here
+            break
+        done
 
-            else
-                echo -e "Repositories: Enter one valid option or none for default (Current branch: $str_releaseName)."
-                echo -e "\tWARNING: It is NOT possible to revert from a Non-stable branch back to a Stable or $str_releaseName branch."
-                echo -e "\tRelease branches:"
-                echo -e "\t\t'stable'\t== '$str_releaseName'"
-                echo -e "\t\t'testing'\t*more recent updates, slightly less stability"
-                echo -e "\t\t'unstable'\t*most recent updates, least stability. NOT recommended."
-                echo -e "\t\t'backports'\t== '$str_releaseName-backports'\t*optionally receive more recent updates."
-                echo -en "\tEnter option: "
+        # <summary>
+        # Setup mandatory sources.
+        # </summary>
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            echo -e "Repositories: Enter one valid option or none for default (Current branch: $str_releaseName)."
+            echo -e "\t\n\e[33mWARNING:\e[0m: It is NOT possible to revert from a Non-stable branch back to a Stable or $str_releaseName branch."
+            echo -e "\tRelease branches:"
+            echo -e "\t\t'stable'\t== '$str_releaseName'"
+            echo -e "\t\t'testing'\t*more recent updates, slightly less stability"
+            echo -e "\t\t'unstable'\t*most recent updates, least stability. NOT recommended."
+            echo -e "\t\t'backports'\t== '$str_releaseName-backports'\t*optionally receive more recent updates."
 
-                read str_input12
-                str_input12=$(echo $str_input12 | tr '[:upper:]' '[:lower:]')   # string to lowercase
-            fi
-
-            # exit with no changes
-            if [[ $str_input12 == "stable" ]]; then
-                echo -e "No changes. Skipping."
-                break
-            fi
-
-            # apt sources
-            declare -a arr_sources=(
-                "# debian $str_input12"
+            # <summary>
+            # Apt sources
+            # </summary>
+            # <parameters>
+            declare -lr str_branchName=$( ReadInputFromMultipleChoiceIgnoreCase "\tEnter option: " "stable" "testing" "unstable" "backports" )
+            declare -al arr_sources=(
+                "# debian $str_branchName"
                 "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ $str_input12 main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_input12 main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_branchName main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_branchName main $str_sources"
                 $'\n'
-                "deb http://deb.debian.org/debian/ $str_input12-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_input12-updates main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
                 $'\n'
-                "deb http://security.debian.org/debian-security/ $str_input12-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ $str_input12-security main $str_sources"
+                "deb http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
+                "deb-src http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
                 "#"
             )
+            # </parameters>
 
-            # copy lines from original to temp file as comments
-            if [[ -e $str_newFile1 ]]; then
-                rm $str_newFile1
-            fi
-
-            touch $str_newFile1
+            # <summary>
+            # Copy lines from original to temp file as comments.
+            # </summary>
+            DeleteFile $str_newFile1 &> /dev/null
+            CreateFile $str_newFile1 &> /dev/null
 
             while read str_line1; do
                 if [[ $str_line1 != "#"* ]]; then
                     str_line1="#$str_line1"
                 fi
 
-                echo $str_line1 >> $str_newFile1
+                WriteVarToFile $str_newFile1 $str_line1
             done < $str_file1
 
-            if [[ -e $str_file1 ]]; then
-                rm $str_file1
-            fi
+            DeleteFile $str_newFile1 &> /dev/null
+            mv $str_newFile1 $str_file1 &> /dev/null || false && SaveThisExitCode
 
-            mv $str_newFile1 $str_file1
-
-            # delete optional sources file, if it exists
-            if [ -e '/etc/apt/sources.list.d/'$str_input12'.list' ]; then
-                rm '/etc/apt/sources.list.d/'$str_input12'.list'
-            fi
-
-            # input prompt
-            case $str_input12 in
-
-                # valid choices
-                "testing"|"unstable")
-
-                    echo -e "\tSelected \"$str_input12\"."
-
-                    # write to file #
-                    int_line1=${#arr_sources[@]}
-
-                    for (( int_i=0; int_i<$int_line1; int_i++ )); do
-                        str_line1=${arr_sources[$int_i]}
-                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input12'.list'
-                    done
-
-                    break;;
-
-                # current branch with backports
+            # <summary>
+            # Append to output.
+            # </summary>
+            case $str_branchName in
+                # <summary>
+                # Current branch with backports.
+                # </summary>
                 "backports")
-
-                    echo -e "\tSelected \"$str_input12\"."
-
-                    # apt sources
-                    declare -a arr_sources=(
-        $'\n'
-        "# debian $str_releaseVer/$str_releaseName"
-        "# See https://wiki.debian.org/SourcesList for more information."
-        "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
-        "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
-        $'\n'
-        "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
-        "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
-        $'\n'
-        "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
-        "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
-        "#"
-        "# debian $str_releaseVer/$str_releaseName $str_input12"
-        "deb http://deb.debian.org/debian $str_releaseName-$str_input12 main contrib non-free"
-        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input12 main contrib non-free"
-        "#"
-        )
-                    # write to file
-                    int_line1=${#arr_sources[@]}
-
-                    for (( int_i=0; int_i<$int_line1; int_i++ )); do
-                        str_line1=${arr_sources[$int_i]}
-                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input12'.list'
-                    done
+                    declare -al arr_sources=(
+                        $'\n'
+                        "# debian $str_releaseVer/$str_releaseName"
+                        "# See https://wiki.debian.org/SourcesList for more information."
+                        "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+                        $'\n'
+                        "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+                        $'\n'
+                        "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+                        "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+                        "#"
+                        "# debian $str_releaseVer/$str_releaseName $str_input2"
+                        "deb http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
+                        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
+                        "#"
+                    )
 
                     break;;
-
-                # invalid selection
-                *)
-                    echo -e "Invalid input."
-
             esac
-            ((int_count++))     # counter
+
+            # <summary>
+            # Output to sources file.
+            # </summary>
+            case $str_branchName in
+                "backports"|"testing"|"unstable")
+                    while read str_line1; do
+                        str_line1=${arr_sources[$int_i]}
+                        WriteVarToFile "/etc/apt/sources.list.d/'$str_input2'.list" $str_line1
+                    done < $str_file1;;
+                *)
+                    echo -e "\e[33mInvalid input.\e[0m";;
+            esac
+
+            DeleteFile $str_newFile1 &> /dev/null
+            break
         done
 
-        if [[ -e $str_newFile1 ]]; then
-            rm $str_newFile1
-        fi
+        EchoPassOrFailThisExitCode; ParseThisExitCode
 
-        sudo apt clean
-        sudo apt update
-        sudo apt full-upgrade
-
-        # clean up
-        # sudo apt autoremove -y
+        # <summary>
+        # Update packages on system.
+        # </summary>
+        apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+        apt update || ( SetExitCodeOnError; SaveThisExitCode )
+        apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 # </code>
 
@@ -1405,6 +1377,7 @@
     # <summary>
     # Display Help to console.
     # </summary>
+    # <return>exit code</return>
     function Help {
         declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
             \nwhere OPTIONS
@@ -1427,6 +1400,7 @@
     # <summary>
     # Parse input parameters for given options.
     # </summary>
+    # <return>exit code</return>
     function ParseInputParamForOptions {
         if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
             while [[ "$1" =~ ^-  ]]; do
@@ -1504,14 +1478,12 @@
     # <summary>
     # Execute setup of all software repositories.
     # </summary>
+    # <return>exit code</return>
     function ExecuteSetupOfSoftwareSources {
         CheckCurrentDistro
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             ModifyDebianRepos
-        fi
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
             InstallFromDebianRepos
         fi
 
@@ -1524,6 +1496,7 @@
     # <summary>
     # Execute setup of GitHub repositories (of which that are executable and installable).
     # </summary>
+    # <return>exit code</return>
     function ExecuteSetupOfGitRepos {
         if [[ $( command -v git ) == "/usr/bin/git" ]]; then
             CloneOrUpdateGitRepositories
@@ -1531,6 +1504,343 @@
         else
             EchoPassOrFailThisExitCode "\n\e[33mWARNING:\e[0m Git is not installed on this system."
         fi
+    }
+
+    # systemd #
+    function AppendServices
+    {
+        echo -e "Appending files to Systemd..."
+
+        # parameters #
+        str_dir1="$(pwd)/$( basename $(find . -name services | uniq | head -n1 ))"
+        str_pattern=".service"
+        cd ${str_dir1}
+
+        declare -a arr1=( $( ls | uniq | grep -Ev ${str_pattern} ))
+
+        for str_inFile1 in ${arr1[@]}; do
+            str_outFile1="/usr/sbin/${str_inFile1}"
+            cp ${str_inFile1} ${str_outFile1}
+            chown root ${str_outFile1}
+            chmod +x ${str_outFile1}
+        done
+
+        declare -a arr1=( $( ls | uniq | grep ${str_pattern} ))
+
+        for str_inFile1 in ${arr1[@]}; do
+            declare -i int_fileNameLength=$((${#str_inFile1} - ${#str_pattern}))
+            str_outFile1="/etc/systemd/system/${str_inFile1}"
+
+            cp ${str_dir1}"/"${str_inFile1} ${str_outFile1}
+            chown root ${str_outFile1}
+            chmod +x ${str_outFile1}
+
+            systemctl daemon-reload
+            str_input1=""
+            ReadInput "Enable/disable '${str_inFile1}'?"
+
+            case ${str_input1} in
+                "Y")
+                    systemctl enable ${str_inFile1};;
+
+                "N")
+                    systemctl disable ${str_inFile1};;
+            esac
+        done
+
+        systemctl daemon-reload
+        echo -e "Appending files to Systemd... Complete."
+    }
+
+    # crontab #
+    function AppendCron
+    {
+        # parameters #
+        declare -a arr1=()
+        str_outDir1="/etc/cron.d/"
+        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+
+        # list of packages that have cron files (see below) #
+        # NOTE: may change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm")
+        # NOTE: update here!
+        declare -a arr_requiredPackages=(
+            "flatpak"
+            "ntpdate"
+            "rsync"
+            "snap"
+        )
+
+        if [[ $(command -v unattended-upgrades) == "" ]]; then
+            arr_requiredPackages+=("apt")
+        fi
+
+        if [[ ${str_dir1} != "" ]]; then
+            cd ${str_dir1}
+
+            # list of cron files #
+            arr1=$(ls *-cron)
+        fi
+
+        # how do i get the file name after the last delimiter "/" ? check other repos or check for pattern regex
+        if [[ ${#arr1[@]} -gt 0 ]]; then
+            echo -e "Appending cron entries..."
+
+            for str_line1 in ${arr1}; do
+
+                # update parameters #
+                str_input1=""
+
+                ReadInput "Append '${str_line1}'?"
+                echo
+
+                if [[ ${str_input1} == "Y" ]]; then
+
+                    # parse list of packages that have cron files #
+                    for str_line2 in ${arr_requiredPackages[@]}; do
+
+                        # match given cron file, append only if package exists in system #
+                        if [[ ${str_line1} == *"${str_line2}"* ]]; then
+                            if [[ $(command -v ${str_line2}) != "" ]]; then
+                                cp ${str_dir1}${str_line1} ${str_outDir1}${str_line1}
+                                # echo -e "Appended file '${str_line1}'."
+
+                            else
+                                echo -e "WARNING: Missing required package '${str_line2}'. Skipping..."
+                            fi
+                        fi
+                    done
+                fi
+            done
+
+            echo -e "Review changes made. "
+
+        else
+            echo -e "WARNING: Missing files. Skipping..."
+        fi
+
+        # restart service #
+        systemctl restart cron
+    }
+
+    # SSH #
+    function ModifySSH
+    {
+        # parameters #
+        str_input1=""
+        ReadInput "Modify SSH?"
+
+        if [[ $str_input1 = "Y" ]]; then
+            if [[ $( command -v ssh ) != "" ]]; then
+                declare -i int_count=0
+                str_output1=""
+
+                # prompt #
+                while [[ ${int_count} -le 3 ]]; do
+
+                    # default input #
+                    if [ ${int_count} -gt 2 ]; then
+                        str_sshAlt=22
+                        echo -en "Exceeded max attempts! "
+
+                    # read input #
+                    else
+                        echo -en "\tEnter a new IP Port number for SSH (leave blank for default): "
+                        read str_sshAlt
+                    fi
+
+                    # match string with valid integer #
+                    if [ "${str_sshAlt}" -eq "$(( ${str_sshAlt} ))" ] 2> /dev/null; then
+                        declare -i int_result="${str_sshAlt}"
+
+                        if [[ ${int_result} -gt 0 && ${int_result} -lt 65536 ]]; then
+                            if [[ ${int_result} -gt 1000 ]]; then
+                                if [[ ${int_result} == 22 ]]; then
+                                    echo -e "Default value."
+
+                                # append to output #
+                                else
+                                    str_output1+="\n#\nPort ${str_sshAlt}"
+                                    break
+                                fi
+
+                            else
+                                echo -e "Invalid selection. Available port range: 1000-65535"
+                            fi
+
+                        else
+                            echo -e "Invalid integer. Valid port range: 1-65535."
+                        fi
+
+                    # false match string with valid integer #
+                    else
+                        echo -e "Invalid input."
+                    fi
+
+                    ((int_count++))
+                done
+
+                # backup and write to file #
+                    str_file1="/etc/ssh/ssh_config"
+                    str_oldFile1=${str_file1}"_old"
+
+                    if [ -e ${str_file1} ]; then
+                        cp ${str_file1} ${str_oldFile1}
+                    fi
+
+                    echo -e ${str_output} >> ${str_file1}
+
+                # backup and write to file #
+                    str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"    # append to output
+                    str_file1="/etc/ssh/ssh_config"
+                    str_oldFile1=${str_file1}"_old"
+
+                    if [ -e ${str_file1} ]; then
+                        cp ${str_file1} ${str_oldFile1}
+                    fi
+
+                    echo -e ${str_output1} >> ${str_file1}
+
+                systemctl restart ssh sshd  # restart services
+
+            else
+                echo -e "WARNING: SSH not installed! Skipping..."
+            fi
+        fi
+
+        echo
+    }
+
+    # security #
+    function ModifySecurity
+    {
+        echo -e "Configuring system security..."
+
+        # parameters #
+        bool_runOperationIfFileExists=false
+        str_input1=""
+        # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
+        str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+
+        # echo -e "Remove given apt packages?"
+        # apt remove ${str_packagesToRemove}
+
+        str_input1=""
+        ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+
+        case ${str_input1} in
+            "Y")
+                echo 'install usb-storage /bin/true' > /etc/modprobe.d/disable-usb-storage.conf
+                echo "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
+                echo "blacklist thunderbolt" >> /etc/modprobe.d/disable-thunderbolt.conf
+                update-initramfs -u -k all
+                ;;
+
+            "N")
+                if [[ -e /etc/modprobe.d/disable-usb-storage.conf ]]; then
+                    rm /etc/modprobe.d/disable-usb-storage.conf
+                    bool_runOperationIfFileExists=true
+                fi
+
+                if [[ -e /etc/modprobe.d/disable-firewire.conf ]]; then
+                    rm /etc/modprobe.d/disable-firewire.conf
+                    bool_runOperationIfFileExists=true
+                fi
+
+                if [[ -e /etc/modprobe.d/disable-thunderbolt.conf ]]; then
+                    rm /etc/modprobe.d/disable-thunderbolt.conf
+                    bool_runOperationIfFileExists=true
+                fi
+
+                if [[ $bool_runOperationIfFileExists == true ]]; then
+                    update-initramfs -u -k all
+                fi
+                ;;
+        esac
+
+        echo
+
+        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+
+        if [[ ${str_dir1} != "" ]]; then
+            cd ${str_dir1}
+            str_inFile1="./sysctl.conf"
+            str_file1="/etc/sysctl.conf"
+            str_oldFile1="/etc/sysctl.conf_old"
+        else
+            str_inFile1=""
+        fi
+
+        if [[ -e ${str_inFile1} ]]; then
+            str_input1=""
+            ReadInput "Setup /etc/sysctl.conf with defaults?"
+
+            if [[ ${str_input1} == "Y" && ${str_inFile1} != "" ]]; then
+                cp ${str_file1} ${str_oldFile1}
+                cat ${str_inFile1} >> ${str_file1}
+            fi
+
+        else
+            echo -e "WARNING: '/etc/sysctl.conf' missing. Skipping..."
+        fi
+
+        echo
+
+        str_input1=""
+        ReadInput "Setup firewall with UFW?"
+
+        if [[ ${str_input1} == "Y" ]]; then
+            if [[ $(command -v ufw) != "" ]]; then
+                # NOTE: change here!
+                # basic #
+                ufw reset
+                ufw default allow outgoing
+                ufw default deny incoming
+
+                # NOTE: default LAN subnets may be 192.168.1.0/24
+
+                # secure-shell on local lan #
+                if [[ $(command -v ssh) != "" ]]; then
+                    if [[ ${str_sshAlt} != "" ]]; then
+                        ufw deny ssh comment 'deny default ssh'
+                        ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh'
+
+                    else
+                        ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh'
+                    fi
+
+                    ufw deny ssh comment 'deny default ssh'
+                fi
+
+                # services a desktop uses #
+                ufw allow DNS comment 'dns'
+                ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server'
+                ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server'
+
+                ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
+                ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
+                ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server'
+                ufw allow VNC comment 'VNC, local remote desktop server'
+
+                # services a server may use #
+                # ufw allow http comment 'HTTP, local Web server'
+                # ufw allow https comment 'HTTPS, local Web server'
+
+                # ufw allow 25 comment 'SMTPD, local mail server'
+                # ufw allow 110 comment 'POP3, local mail server'
+                # ufw allow 995 comment 'POP3S, local mail server'
+                # ufw allow 1194/udp 'SMTPD, local VPN server'
+                ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server'
+
+                # save changes #
+                ufw enable
+                ufw reload
+
+            else
+                echo -e "WARNING: UFW is not installed. Skipping..."
+            fi
+        fi
+
+        # edit hosts file here?
     }
 # </code>
 
