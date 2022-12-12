@@ -44,8 +44,8 @@
 
     # <summary>
     # Output error given exception.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function ParseThisExitCode {
         case $int_thisExitCode in
             ### script agnostic ###
@@ -74,8 +74,8 @@
 
     # <summary>
     # Exit bash session/script with current exit code.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function ExitWithThisExitCode
     {
         echo -e "Exiting."
@@ -84,8 +84,8 @@
 
     # <summary>
     # Updates main parameter.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function SaveThisExitCode {
         int_thisExitCode=$?
     }
@@ -124,8 +124,8 @@
     # <summary>
     # Checks if input parameter is null,
     # and returns exit code given result.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfVarIsNull {
         if [[ -z "$1" ]]; then
             SetExitCodeIfVarIsNull; SaveThisExitCode
@@ -137,8 +137,8 @@
     # <summary>
     # Checks if file exists,
     # and returns exit code if failed.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
@@ -150,8 +150,8 @@
     # <summary>
     # Checks if directory exists,
     # and returns exit code if failed.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfDirIsNull {
         if [[ ! -d $1 ]]; then
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
@@ -163,8 +163,8 @@
     # <summary>
     # Checks if file is executable,
     # and returns exit code if failed.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfFileIsExecutable {
         if [[ ! -x $1 ]]; then
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
@@ -176,8 +176,8 @@
     # <summary>
     # Checks if file is readable,
     # and returns exit code if failed.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
@@ -189,8 +189,8 @@
     # <summary>
     # Checks if file is writable,
     # and returns exit code if failed.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
             SetExitCodeIfFileIsNotWritable; SaveThisExitCode
@@ -204,8 +204,8 @@
 # <code>
     # <summary>
     # Checks if current user is sudo/root.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfUserIsRoot {
         if [[ $( whoami ) != "root" ]]; then
             local str_thisFile=$( echo ${0##/*} )
@@ -223,8 +223,8 @@
 
     # <summary>
     # Output pass or fail statement given exit code.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function EchoPassOrFailThisExitCode {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -244,8 +244,8 @@
 
     # <summary>
     # Output pass or fail test-case given exit code.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function EchoPassOrFailThisTestCase {
         str_testCaseName=$1
         CheckIfVarIsNull $str_testCaseName &> /dev/null
@@ -264,8 +264,8 @@
 
     # <summary>
     # Output variable given if valid.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function EchoVarIfVarIsNotNull {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -280,8 +280,8 @@
     # <summary>
     # Change ownership of given file to current user.
     # NOTE: $UID is intelligent enough to differentiate between the two
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function ChangeOwnershipOfFileOrDir {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -297,8 +297,8 @@
 
     # <summary>
     # Checks if two given files are the same, in composition.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CheckIfTwoFilesAreSame {
         echo -e "Verifying two files... "
 
@@ -325,8 +325,8 @@
 
     # <summary>
     # Checks if two given files are the same, in composition.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CreateBackupFromFile {
         echo -en "Backing up file... "
         declare -lr str_file=$1
@@ -411,8 +411,8 @@
 
     # <summary>
     # Creates a directory.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CreateDir {
         echo -en "Creating directory... "
 
@@ -428,8 +428,8 @@
 
     # <summary>
     # Creates a file.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function CreateFile {
         echo -en "Creating file... "
 
@@ -445,8 +445,8 @@
 
     # <summary>
     # Deletes a file.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function DeleteFile {
         echo -en "Deleting file... "
 
@@ -462,11 +462,10 @@
 
     # <summary>
     # Reads a file.
-    # <return>array</return>
     # </summary>
+    # <return>string array</return>
     function ReadFile {
         echo -en "Reading file... "
-        declare -lar arr_file1=()
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -474,7 +473,7 @@
             CheckIfFileIsReadable $1 &> /dev/null
 
             while read str_line1; do
-                arr_file1+=("$str_line1") || ( (exit 249); SaveThisExitCode; arr_file1=(); break )  # refactor!
+                echo $str_line1 || ( SetExitCodeIfFileIsNotReadable; break )
             done < $1
             break
         done
@@ -485,8 +484,8 @@
     # <summary>
     # Ask for Yes/No answer, return exit code.
     # Default selection is N/false.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function ReadInput {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -507,8 +506,8 @@
             # After given number of attempts, input is set to default: false.
             # </summary>
             if [[ $int_count -gt $int_maxCount ]]; then
-                str_input="N"
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input\e[0m"
+                str_input1="N"
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
                 false; SaveThisExitCode; break
             fi
 
@@ -519,7 +518,7 @@
             # <summary>
             # Check if string is a valid input.
             # </summary>
-            case $str_input in
+            case $str_input1 in
                 "Y")
                     true; SaveThisExitCode; break;;
                 "N")
@@ -539,8 +538,8 @@
     # <summary>
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
-    # <return>string</return>
     # </summary>
+    # <return>string</return>
     function ReadInputFromMultipleChoiceIgnoreCase {
         # <parameters> #
         declare -il int_count=0
@@ -588,8 +587,8 @@
     # <summary>
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
-    # <return>string</return>
     # </summary>
+    # <return>string</return>
     function ReadInputFromMultipleChoiceUpperCase {
         # <parameters> #
         declare -il int_count=0
@@ -638,8 +637,8 @@
     # <summary>
     # Ask for number, within a given range.
     # Default selection is first choice.
-    # <return>int</return>
     # </summary>
+    # <return>int</return>
     function ReadInputFromRangeOfNums {
         # <parameters> #
         declare -il int_count=0
@@ -679,8 +678,8 @@
     # <summary>
     # Test network connection to Internet.
     # Ping DNS servers by address and name.
-    # <return>exit code</return>
     # </summary>
+    # <return>exit code</return>
     function TestNetwork {
         echo -en "Testing Internet connection... "
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
@@ -703,55 +702,60 @@
     # This may help with calling/parsing arrays.
     # When passing the var, write the name without " $ ".
     # </summary>
-    function WriteArrayToFile {
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
-        IFS=$'\n'      # Change IFS to newline char
-        var_input=$2
+    # <return>exit code</return>
+    # function WriteArrayToFile {
+    #     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
+    #     IFS=$'\n'      # Change IFS to newline char
+    #     var_input=$2
 
-        echo -en "Writing to file... "
+    #     echo -en "Writing to file... "
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $var_input &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-            CheckIfFileIsWritable $1 &> /dev/null
+    #     while [[ $int_thisExitCode -eq 0 ]]; do
+    #         CheckIfVarIsNull $1 &> /dev/null
+    #         CheckIfVarIsNull $var_input &> /dev/null
+    #         CheckIfFileIsNull $1 &> /dev/null
+    #         CheckIfFileIsReadable $1 &> /dev/null
+    #         CheckIfFileIsWritable $1 &> /dev/null
 
-            case ${!var_input[@]} in                                                    # check number of key-value pairs
-                0)                                                                      # check if var is not an array
-                    echo -e $var_input >> $1 || ( SetExitCodeOnError; SaveThisExitCode );;
-                *)                                                                      # check if var is an array
-                    for str_element in ${var_input[@]}; do
-                        echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode )
-                    done;;
-            esac
+    #         case ${!var_input[@]} in                                                    # check number of key-value pairs
+    #             0)                                                                      # check if var is not an array
+    #                 echo -e $var_input >> $1 || ( SetExitCodeOnError; SaveThisExitCode );;
+    #             *)                                                                      # check if var is an array
+    #                 for str_element in ${var_input[@]}; do
+    #                     echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode )
+    #                 done;;
+    #         esac
 
-            break
-        done
+    #         break
+    #     done
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
-    }
+    #     IFS=$SAVEIFS
+    #     EchoPassOrFailThisExitCode; ParseThisExitCode
+    # }
 
     # <summary>
     # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
     # This may help with calling/parsing arrays.
     # When passing the var, write the name without " $ ".
     # </summary>
+    # <return>exit code</return>
     function WriteVarToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
         IFS=$'\n'      # Change IFS to newline char
 
         echo -en "Writing to file... "
-        CheckIfVarIsNull $1 &> /dev/null
-        CheckIfVarIsNull $2 &> /dev/null
-        CheckIfFileIsNull $1 &> /dev/null
-        CheckIfFileIsReadable $1 &> /dev/null
-        CheckIfFileIsWritable $1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            echo -e $2 >> $1 || false; SaveThisExitCode
-        fi
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+            CheckIfFileIsWritable $1 &> /dev/null
+            echo -e $2 >> $1 &> /dev/null || false; SaveThisExitCode
+            break
+        done
 
+        IFS=$SAVEIFS
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 # </code>
@@ -858,30 +862,25 @@
         # <summary>
         # Update and upgrade local packages
         # </summary>
-        # <code>
-            apt clean
-            apt update
-            apt full-upgrade $str_args
-        # </code>
+        apt clean
+        apt update
 
         # <summary>
         # Desktop environment checks
         # </summary>
-        # <code>
-            str_aptCheck=""
-            str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
+        str_aptCheck=""
+        str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
-            if [[ $str_aptCheck != "" ]]; then
-                apt install -y plasma-discover-backend-flatpak
-            fi
+        if [[ $str_aptCheck != "" ]]; then
+            apt install -y plasma-discover-backend-flatpak
+        fi
 
-            str_aptCheck=""
-            str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
+        str_aptCheck=""
+        str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
 
-            if [[ $str_aptCheck != "" ]]; then
-                apt install -y gnome-software-plugin-flatpak
-            fi
-        # </code>
+        if [[ $str_aptCheck != "" ]]; then
+            apt install -y gnome-software-plugin-flatpak
+        fi
 
         echo    # output padding
 
@@ -889,19 +888,19 @@
         # APT packages sorted by type.
         # </summary>
         # <parameters>
-            str_aptAll=""
-            str_aptDeveloper=""
-            str_aptDrivers="steam-devices"
-            str_aptGames=""
-            str_aptInternet="firefox-esr filezilla"
-            str_aptMedia="vlc"
-            str_aptOffice="libreoffice"
-            str_aptPrismBreak=""
-            str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-            str_aptSuites="debian-edu-install science-all"
-            str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-            str_aptUnsorted=""
-            str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        str_aptAll=""
+        str_aptDeveloper=""
+        str_aptDrivers="steam-devices"
+        str_aptGames=""
+        str_aptInternet="firefox-esr filezilla"
+        str_aptMedia="vlc"
+        str_aptOffice="libreoffice"
+        str_aptPrismBreak=""
+        str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+        str_aptSuites="debian-edu-install science-all"
+        str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        str_aptUnsorted=""
+        str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
 
         # <summary>
@@ -1263,7 +1262,7 @@
             # manual prompt
             if [[ $int_count -ge 3 ]]; then
                 echo -e "Exceeded max attempts!"
-                str_input2=stable     # default input     # NOTE: change here
+                str_input12=stable     # default input     # NOTE: change here
 
             else
                 echo -e "Repositories: Enter one valid option or none for default (Current branch: $str_releaseName)."
@@ -1275,28 +1274,28 @@
                 echo -e "\t\t'backports'\t== '$str_releaseName-backports'\t*optionally receive more recent updates."
                 echo -en "\tEnter option: "
 
-                read str_input2
-                str_input2=$(echo $str_input2 | tr '[:upper:]' '[:lower:]')   # string to lowercase
+                read str_input12
+                str_input12=$(echo $str_input12 | tr '[:upper:]' '[:lower:]')   # string to lowercase
             fi
 
             # exit with no changes
-            if [[ $str_input2 == "stable" ]]; then
+            if [[ $str_input12 == "stable" ]]; then
                 echo -e "No changes. Skipping."
                 break
             fi
 
             # apt sources
             declare -a arr_sources=(
-                "# debian $str_input2"
+                "# debian $str_input12"
                 "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ $str_input2 main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_input2 main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_input12 main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_input12 main $str_sources"
                 $'\n'
-                "deb http://deb.debian.org/debian/ $str_input2-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_input2-updates main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_input12-updates main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_input12-updates main $str_sources"
                 $'\n'
-                "deb http://security.debian.org/debian-security/ $str_input2-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ $str_input2-security main $str_sources"
+                "deb http://security.debian.org/debian-security/ $str_input12-security main $str_sources"
+                "deb-src http://security.debian.org/debian-security/ $str_input12-security main $str_sources"
                 "#"
             )
 
@@ -1322,24 +1321,24 @@
             mv $str_newFile1 $str_file1
 
             # delete optional sources file, if it exists
-            if [ -e '/etc/apt/sources.list.d/'$str_input2'.list' ]; then
-                rm '/etc/apt/sources.list.d/'$str_input2'.list'
+            if [ -e '/etc/apt/sources.list.d/'$str_input12'.list' ]; then
+                rm '/etc/apt/sources.list.d/'$str_input12'.list'
             fi
 
             # input prompt
-            case $str_input2 in
+            case $str_input12 in
 
                 # valid choices
                 "testing"|"unstable")
 
-                    echo -e "\tSelected \"$str_input2\"."
+                    echo -e "\tSelected \"$str_input12\"."
 
                     # write to file #
                     int_line1=${#arr_sources[@]}
 
                     for (( int_i=0; int_i<$int_line1; int_i++ )); do
                         str_line1=${arr_sources[$int_i]}
-                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
+                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input12'.list'
                     done
 
                     break;;
@@ -1347,7 +1346,7 @@
                 # current branch with backports
                 "backports")
 
-                    echo -e "\tSelected \"$str_input2\"."
+                    echo -e "\tSelected \"$str_input12\"."
 
                     # apt sources
                     declare -a arr_sources=(
@@ -1363,9 +1362,9 @@
         "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
         "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
         "#"
-        "# debian $str_releaseVer/$str_releaseName $str_input2"
-        "deb http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
-        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
+        "# debian $str_releaseVer/$str_releaseName $str_input12"
+        "deb http://deb.debian.org/debian $str_releaseName-$str_input12 main contrib non-free"
+        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input12 main contrib non-free"
         "#"
         )
                     # write to file
@@ -1373,7 +1372,7 @@
 
                     for (( int_i=0; int_i<$int_line1; int_i++ )); do
                         str_line1=${arr_sources[$int_i]}
-                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input2'.list'
+                        echo $str_line1 >> '/etc/apt/sources.list.d/'$str_input12'.list'
                     done
 
                     break;;
@@ -1544,4 +1543,5 @@
     CheckIfUserIsRoot
     ExecuteSetupOfSoftwareSources
     ExitWithThisExitCode
+    IFS=$SAVEIFS
 # </code>
