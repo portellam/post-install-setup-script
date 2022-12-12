@@ -369,8 +369,8 @@
                     false; SaveThisExitCode                                         # NOTE: redundant?
                 fi
 
-                for str_element in ${arr_dir[@]}; do
-                    if cmp -s $str_thisFile $str_element; then
+                for str_element1 in ${arr_dir[@]}; do
+                    if cmp -s $str_thisFile $str_element1; then
                         false; SaveThisExitCode
                         break
                     fi
