@@ -2,13 +2,13 @@
 Post-install changes to a Debian Linux system.
 
 ## How-to
-* To install root scripts, execute:
+* To execute setup as sudo/root, execute:
 
-        sudo bash sudo-install.bash
+        sudo bash installer.bash
 
-* To install user scripts, execute:
+* To execute setup as user, execute:
 
-        bash user-install.bash
+        bash installer.bash
 
 ## Features
 * Distro-specific
