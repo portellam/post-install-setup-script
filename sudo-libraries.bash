@@ -300,7 +300,7 @@
     # </summary>
     # <return>exit code</return>
     function CheckIfTwoFilesAreSame {
-        echo -e "Verifying two files... "
+        echo -en "Verifying two files... "
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -320,7 +320,7 @@
             break
         done
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        ParseThisExitCode
     }
 
     # <summary>
@@ -693,45 +693,8 @@
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
         fi
 
-        echo
+        EchoPassOrFailThisExitCode; echo
     }
-
-    # <summary>
-    # NOTE: not working!
-    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
-    # This may help with calling/parsing arrays.
-    # When passing the var, write the name without " $ ".
-    # </summary>
-    # <return>exit code</return>
-    # function WriteArrayToFile {
-    #     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
-    #     IFS=$'\n'      # Change IFS to newline char
-    #     var_input=$2
-
-    #     echo -en "Writing to file... "
-
-    #     while [[ $int_thisExitCode -eq 0 ]]; do
-    #         CheckIfVarIsNull $1 &> /dev/null
-    #         CheckIfVarIsNull $var_input &> /dev/null
-    #         CheckIfFileIsNull $1 &> /dev/null
-    #         CheckIfFileIsReadable $1 &> /dev/null
-    #         CheckIfFileIsWritable $1 &> /dev/null
-
-    #         case ${!var_input[@]} in                                                    # check number of key-value pairs
-    #             0)                                                                      # check if var is not an array
-    #                 echo -e $var_input >> $1 || ( SetExitCodeOnError; SaveThisExitCode );;
-    #             *)                                                                      # check if var is an array
-    #                 for str_element in ${var_input[@]}; do
-    #                     echo -e $str_element >> $1 || ( SetExitCodeOnError; SaveThisExitCode )
-    #                 done;;
-    #         esac
-
-    #         break
-    #     done
-
-    #     IFS=$SAVEIFS
-    #     EchoPassOrFailThisExitCode; ParseThisExitCode
-    # }
 
     # <summary>
     # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
@@ -781,7 +744,7 @@
     # <return>exit code</return>
     function CloneOrUpdateGitRepositories
     {
-        echo "Cloning/Updating Git repos..."
+        echo -e "Cloning/Updating Git repos..."
 
         # <parameters>
         declare -lr str_dir1="/root/source/repos"
@@ -836,7 +799,7 @@
             done
         fi
 
-        SaveThisExitCode; EchoPassOrFailThisExitCode; ParseThisExitCode
+        SaveThisExitCode; EchoPassOrFailThisExitCode "Cloning/Updating Git repos..."; ParseThisExitCode
 
         if [[ $int_thisExitCode -eq 131 ]]; then
             echo -e "One or more Git repositories could not be cloned.";;
@@ -950,6 +913,7 @@
         # Clean up
         # </summary>
         apt autoremove $str_args
+        EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 
     # <summary>
@@ -1034,7 +998,7 @@
             # </code>
         fi
 
-        ParseThisExitCode
+        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode
     }
 
     # <summary>
@@ -1043,7 +1007,7 @@
     # <return>exit code</return>
     function InstallFromGitRepos
     {
-        echo "Executing Git scripts..."
+        echo -e "Executing Git scripts..."
 
         # <summary>
         # Prompt user to execute script or skip.
@@ -1132,7 +1096,7 @@
             ExecuteScript $str_scriptDir
         fi
 
-        ParseThisExitCode
+        EchoPassOrFailThisExitCode "Executing Git scripts..."; ParseThisExitCode
     }
 
     # <summary>
@@ -1210,7 +1174,7 @@
             # </code>
         fi
 
-        ParseThisExitCode
+        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode
     }
 
     # <summary>
@@ -1358,15 +1322,13 @@
             break
         done
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
-
         # <summary>
         # Update packages on system.
         # </summary>
         apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
         apt update || ( SetExitCodeOnError; SaveThisExitCode )
         apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 # </code>
 
@@ -1502,54 +1464,63 @@
             CloneOrUpdateGitRepositories
             InstallFromGitRepos
         else
-            EchoPassOrFailThisExitCode "\n\e[33mWARNING:\e[0m Git is not installed on this system."
+            echo -e "\n\e[33mWARNING:\e[0m Git is not installed on this system."
         fi
     }
 
-    # systemd #
+    # <summary>
+    # Append SystemD services to host.
+    # </summary>
     function AppendServices
     {
         echo -e "Appending files to Systemd..."
 
-        # parameters #
-        str_dir1="$(pwd)/$( basename $(find . -name services | uniq | head -n1 ))"
-        str_pattern=".service"
+        # <parameters>
+        declare -lr str_dir1="$( pwd )/$( basename $( find . -name services | uniq | head -n1 ))"
+        declare -lr str_pattern=".service"
         cd ${str_dir1}
+        declare -al arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        # </parameters>
 
-        declare -a arr1=( $( ls | uniq | grep -Ev ${str_pattern} ))
-
-        for str_inFile1 in ${arr1[@]}; do
-            str_outFile1="/usr/sbin/${str_inFile1}"
-            cp ${str_inFile1} ${str_outFile1}
+        # <summary>
+        # Copy binaries to system.
+        # </summary>
+        for str_element1 in ${arr_dir1[@]}; do
+            local str_outFile1="/usr/sbin/${str_element1}"
+            cp ${str_element1} ${str_outFile1}
             chown root ${str_outFile1}
             chmod +x ${str_outFile1}
         done
 
-        declare -a arr1=( $( ls | uniq | grep ${str_pattern} ))
+        arr_dir1=( $( ls | uniq | grep ${str_pattern} ))
 
-        for str_inFile1 in ${arr1[@]}; do
-            declare -i int_fileNameLength=$((${#str_inFile1} - ${#str_pattern}))
-            str_outFile1="/etc/systemd/system/${str_inFile1}"
+        # <summary>
+        # Copy services to system.
+        # </summary>
+        for str_element1 in ${arr_dir1[@]}; do
+            # <parameters>
+            declare -i int_fileNameLength=$(( ${#str_element1} - ${#str_pattern} ))
+            str_outFile1="/etc/systemd/system/${str_element1}"
+            # </parameters>
 
-            cp ${str_dir1}"/"${str_inFile1} ${str_outFile1}
-            chown root ${str_outFile1}
-            chmod +x ${str_outFile1}
+            cp ${str_dir1}"/"${str_element1} ${str_outFile1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            chown root ${str_outFile1} &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+            chmod +x ${str_outFile1} &> /dev/null || ( SetExitCodeIfFileIsNotExecutable; SaveThisExitCode )
 
-            systemctl daemon-reload
-            str_input1=""
-            ReadInput "Enable/disable '${str_inFile1}'?"
+            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+            ReadInput "Enable/disable '${str_element1}'?"
 
-            case ${str_input1} in
-                "Y")
-                    systemctl enable ${str_inFile1};;
-
-                "N")
-                    systemctl disable ${str_inFile1};;
+            case $int_thisExitCode in
+                0)
+                    systemctl enable ${str_element1};;
+                *)
+                    systemctl disable ${str_element1};;
             esac
         done
 
-        systemctl daemon-reload
-        echo -e "Appending files to Systemd... Complete."
+        systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+
+        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
     }
 
     # crontab #
