@@ -4,6 +4,19 @@
 # Author(s):    Alex Portell <github.com/portellam>
 #
 
+### notes ###
+# <summary>
+#
+# -de-nest code:
+#   -place nested conditionals in functions
+#   -use while loops, watch for changes in exit code
+# -use consistent vocabulary in names, comments, etc
+# -refactor code
+#
+#
+# </summary>
+
+
 ### main parameters ###
 # <code>
     declare -r str_pwd=$( pwd )
@@ -207,6 +220,8 @@
     # </summary>
     # <return>exit code</return>
     function CheckIfUserIsRoot {
+        true; SaveThisExitCode
+
         if [[ $( whoami ) != "root" ]]; then
             local str_thisFile=$( echo ${0##/*} )
             CheckIfFileIsNull $str_thisFile &> /dev/null
@@ -217,7 +232,8 @@
                 echo -e " In terminal, run:\n\t'sudo bash $str_thisFile'"
             fi
 
-            ExitWithThisExitCode
+            false; SaveThisExitCode
+            # ExitWithThisExitCode
         fi
     }
 
@@ -279,7 +295,7 @@
 # <code>
     # <summary>
     # Change ownership of given file to current user.
-    # NOTE: $UID is intelligent enough to differentiate between the two
+    # $UID is intelligent enough to differentiate between the two
     # </summary>
     # <return>exit code</return>
     function ChangeOwnershipOfFileOrDir {
@@ -726,6 +742,61 @@
 ### executive functions ###
 # <code>
     # <summary>
+    # Append SystemD services to host.
+    # </summary>
+    function AppendServices
+    {
+        echo -e "Appending files to Systemd..."
+
+        # <parameters>
+        declare -lr str_dir1="$( pwd )/$( basename $( find . -name services | uniq | head -n1 ))"
+        declare -lr str_pattern=".service"
+        cd ${str_dir1}
+        declare -al arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        # </parameters>
+
+        # <summary>
+        # Copy binaries to system.
+        # </summary>
+        for str_element1 in ${arr_dir1[@]}; do
+            local str_outFile1="/usr/sbin/${str_element1}"
+            cp ${str_element1} ${str_outFile1}
+            chown root ${str_outFile1}
+            chmod +x ${str_outFile1}
+        done
+
+        arr_dir1=( $( ls | uniq | grep ${str_pattern} ))
+
+        # <summary>
+        # Copy services to system.
+        # </summary>
+        for str_element1 in ${arr_dir1[@]}; do
+            # <parameters>
+            declare -i int_fileNameLength=$(( ${#str_element1} - ${#str_pattern} ))
+            str_outFile1="/etc/systemd/system/${str_element1}"
+            # </parameters>
+
+            cp ${str_dir1}"/"${str_element1} ${str_outFile1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            chown root ${str_outFile1} &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+            chmod +x ${str_outFile1} &> /dev/null || ( SetExitCodeIfFileIsNotExecutable; SaveThisExitCode )
+
+            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+            ReadInput "Enable/disable '${str_element1}'?"
+
+            case $int_thisExitCode in
+                0)
+                    systemctl enable ${str_element1};;
+                *)
+                    systemctl disable ${str_element1};;
+            esac
+        done
+
+        systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+
+        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
+    }
+
+    # <summary>
     # Check linux distro
     # </summary>
     # <return>exit code</return>
@@ -746,19 +817,18 @@
     {
         echo -e "Cloning/Updating Git repos..."
 
+        # <summary>
+        # Sudo/root v. user.
+        # </summary>
+        CheckIfUserIsRoot
+
+        # <summary>
+        # List of useful Git repositories.
+        # Example: "username/reponame"
+        # </summary>
         # <parameters>
-        declare -lr str_dir1="/root/source/repos"
-        # </parameters>
-
-        CreateDir $str_dir1 &> /dev/null
-        CheckIfFileIsWritable $str_dir1 &> /dev/null
-
         if [[ $int_thisExitCode -eq 0 ]]; then
-            # <summary>
-            # List of Git repositories.
-            # Example: "username/reponame"
-            # </summary>
-            # <parameters>
+            declare -lr str_dir1="/root/source/repos"
             declare -alr arr_repo=(
                 "corna/me_cleaner"
                 "dt-zero/me_cleaner"
@@ -768,8 +838,22 @@
                 "pyllyukko/user.js"
                 "StevenBlack/hosts"
             )
-            # </parameters>
+        else
+            declare -lr str_dir1=$( echo ~/ )"source/repos"
+            declare -alr arr_repo=(
+                "awilliam/rom-parser"
+                #"pixelplanetdev/4chan-flag-filter"
+                "pyllyukko/user.js"
+                "SpaceinvaderOne/Dump_GPU_vBIOS"
+                "spheenik/vfio-isolate"
+            )
+        fi
+        # </parameters>
 
+        CreateDir $str_dir1 &> /dev/null
+        CheckIfFileIsWritable $str_dir1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             for str_repo in ${arr_repo[@]}; do
                 cd $str_dir1
 
@@ -954,9 +1038,9 @@
             # Flatpak packages sorted by type.
             # </summary>
             # <parameters>
-                str_flatpakAll=""
-                str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-                str_flatpakPrismBreak="" # include from all, monero etc.
+            str_flatpakAll=""
+            str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
+            str_flatpakPrismBreak="" # include from all, monero etc.
             # </parameters>
 
             # <summary>
@@ -1330,206 +1414,16 @@
         apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
         EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
-# </code>
 
-### main functions ###
-# <code>
-
-    ### NOTE: needs work.
     # <summary>
-    # Display Help to console.
+    # Crontab
     # </summary>
     # <return>exit code</return>
-    function Help {
-        declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
-            \nwhere OPTIONS
-            \n\t-h  --help\t\t\tPrint this prompt.
-            \n\t-d  --delete\t\t\tDelete existing VFIO setup.
-            \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
-            \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
-            \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
-            \n\nwhere ARGUMENTS
-            \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
-            \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
-            \n"
-
-        echo -e $str_helpPrompt
-
-        ExitWithThisExitCode
-    }
-
-    ### NOTE: needs work.
-    # <summary>
-    # Parse input parameters for given options.
-    # </summary>
-    # <return>exit code</return>
-    function ParseInputParamForOptions {
-        if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
-            while [[ "$1" =~ ^-  ]]; do
-                case $1 in
-                    "")                                     # no option
-                        SetExitCodeOnError
-                        SaveThisExitCode
-                        break;;
-
-                    -h | --help )                           # options
-                        declare -lir int_aFlag=1
-                        break;;
-                    -d | --delete )
-                        declare -lir int_aFlag=2
-                        break;;
-                    -m | --multiboot )
-                        declare -lir int_aFlag=3;;
-                    -s | --static )
-                        declare -lir int_aFlag=4;;
-                    -w | --write )
-                        declare -lir int_aFlag=5;;
-
-                    -f | --full )                           # arguments
-                        declare -lir int_bFlag=1;;
-                    -r | --read )
-                        declare -lir int_bFlag=2;;
-                esac
-
-                shift
-            done
-        else                                                # invalid option
-            SetExitCodeOnError
-            SaveThisExitCode
-            ParseThisExitCode
-            Help
-            ExitWithThisExitCode
-        fi
-
-        # if [[ "$1" == '--' ]]; then
-        #     shift
-        # fi
-
-        case $int_aFlag in                                  # execute second options before first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PreInstallSetup;;
-                    # 2)
-                    #     ReadIOMMU_FromFile;;
-                esac;;
-        esac
-
-        case $int_aFlag in                                  # execute first options
-            1)
-                Help;;
-            2)
-                DeleteSetup;;
-            3)
-                MultiBootSetup;;
-            4)
-                StaticSetup;;
-            # 5)
-            #     WriteIOMMU_ToFile;;
-        esac
-
-        case $int_aFlag in                                  # execute second options after first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PostInstallSetup;;
-                esac;;
-        esac
-    }
-
-    # <summary>
-    # Execute setup of all software repositories.
-    # </summary>
-    # <return>exit code</return>
-    function ExecuteSetupOfSoftwareSources {
-        CheckCurrentDistro
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            ModifyDebianRepos
-            InstallFromDebianRepos
-        fi
-
-        InstallFromFlathubRepos
-        InstallFromSnapRepos
-
-        echo -e "\n\e[33mWARNING:\e[0m If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
-    }
-
-    # <summary>
-    # Execute setup of GitHub repositories (of which that are executable and installable).
-    # </summary>
-    # <return>exit code</return>
-    function ExecuteSetupOfGitRepos {
-        if [[ $( command -v git ) == "/usr/bin/git" ]]; then
-            CloneOrUpdateGitRepositories
-            InstallFromGitRepos
-        else
-            echo -e "\n\e[33mWARNING:\e[0m Git is not installed on this system."
-        fi
-    }
-
-    # <summary>
-    # Append SystemD services to host.
-    # </summary>
-    function AppendServices
-    {
-        echo -e "Appending files to Systemd..."
-
-        # <parameters>
-        declare -lr str_dir1="$( pwd )/$( basename $( find . -name services | uniq | head -n1 ))"
-        declare -lr str_pattern=".service"
-        cd ${str_dir1}
-        declare -al arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
-        # </parameters>
-
-        # <summary>
-        # Copy binaries to system.
-        # </summary>
-        for str_element1 in ${arr_dir1[@]}; do
-            local str_outFile1="/usr/sbin/${str_element1}"
-            cp ${str_element1} ${str_outFile1}
-            chown root ${str_outFile1}
-            chmod +x ${str_outFile1}
-        done
-
-        arr_dir1=( $( ls | uniq | grep ${str_pattern} ))
-
-        # <summary>
-        # Copy services to system.
-        # </summary>
-        for str_element1 in ${arr_dir1[@]}; do
-            # <parameters>
-            declare -i int_fileNameLength=$(( ${#str_element1} - ${#str_pattern} ))
-            str_outFile1="/etc/systemd/system/${str_element1}"
-            # </parameters>
-
-            cp ${str_dir1}"/"${str_element1} ${str_outFile1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            chown root ${str_outFile1} &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-            chmod +x ${str_outFile1} &> /dev/null || ( SetExitCodeIfFileIsNotExecutable; SaveThisExitCode )
-
-            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-            ReadInput "Enable/disable '${str_element1}'?"
-
-            case $int_thisExitCode in
-                0)
-                    systemctl enable ${str_element1};;
-                *)
-                    systemctl disable ${str_element1};;
-            esac
-        done
-
-        systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-
-        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
-    }
-
-    # crontab #
-    function AppendCron
-    {
+    function AppendCron {               # NOTE: needs work.
         # parameters #
         declare -a arr1=()
         str_outDir1="/etc/cron.d/"
-        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+        str_dir1=$( find .. -name files | uniq | head -n1 )"/"
 
         # list of packages that have cron files (see below) #
         # NOTE: may change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm")
@@ -1541,7 +1435,7 @@
             "snap"
         )
 
-        if [[ $(command -v unattended-upgrades) == "" ]]; then
+        if [[ $( command -v unattended-upgrades ) == "" ]]; then
             arr_requiredPackages+=("apt")
         fi
 
@@ -1593,9 +1487,11 @@
         systemctl restart cron
     }
 
-    # SSH #
-    function ModifySSH
-    {
+    # <summary>
+    # SSH
+    # </summary>
+    # <return>exit code</return>
+    function ModifySSH {                # NOTE: needs work.
         # parameters #
         str_input1=""
         ReadInput "Modify SSH?"
@@ -1681,9 +1577,11 @@
         echo
     }
 
-    # security #
-    function ModifySecurity
-    {
+    # <summary>
+    # Recommended host security changes
+    # </summary>
+    # <return>exit code</return>
+    function ModifySecurity {           # NOTE: needs work.
         echo -e "Configuring system security..."
 
         # parameters #
@@ -1760,7 +1658,7 @@
         ReadInput "Setup firewall with UFW?"
 
         if [[ ${str_input1} == "Y" ]]; then
-            if [[ $(command -v ufw) != "" ]]; then
+            if [[ $( command -v ufw ) != "" ]]; then
                 # NOTE: change here!
                 # basic #
                 ufw reset
@@ -1770,7 +1668,7 @@
                 # NOTE: default LAN subnets may be 192.168.1.0/24
 
                 # secure-shell on local lan #
-                if [[ $(command -v ssh) != "" ]]; then
+                if [[ $( command -v ssh ) != "" ]]; then
                     if [[ ${str_sshAlt} != "" ]]; then
                         ufw deny ssh comment 'deny default ssh'
                         ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh'
@@ -1815,14 +1713,179 @@
     }
 # </code>
 
+### main functions ###
+# <code>
+    # <summary>
+    # Display Help to console.
+    # </summary>
+    # <return>exit code</return>
+    function Help {                                 # NOTE: needs work.
+        declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
+            \nwhere OPTIONS
+            \n\t-h  --help\t\t\tPrint this prompt.
+            \n\t-d  --delete\t\t\tDelete existing VFIO setup.
+            \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
+            \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
+            \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
+            \n\nwhere ARGUMENTS
+            \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
+            \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
+            \n"
+
+        echo -e $str_helpPrompt
+
+        ExitWithThisExitCode
+    }
+
+    # <summary>
+    # Parse input parameters for given options.
+    # </summary>
+    # <return>exit code</return>
+    function ParseInputParamForOptions {            # NOTE: needs work.
+        if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
+            while [[ "$1" =~ ^-  ]]; do
+                case $1 in
+                    "")                                     # no option
+                        SetExitCodeOnError
+                        SaveThisExitCode
+                        break;;
+
+                    -h | --help )                           # options
+                        declare -lir int_aFlag=1
+                        break;;
+                    -d | --delete )
+                        declare -lir int_aFlag=2
+                        break;;
+                    -m | --multiboot )
+                        declare -lir int_aFlag=3;;
+                    -s | --static )
+                        declare -lir int_aFlag=4;;
+                    -w | --write )
+                        declare -lir int_aFlag=5;;
+
+                    -f | --full )                           # arguments
+                        declare -lir int_bFlag=1;;
+                    -r | --read )
+                        declare -lir int_bFlag=2;;
+                esac
+
+                shift
+            done
+        else                                                # invalid option
+            SetExitCodeOnError
+            SaveThisExitCode
+            ParseThisExitCode
+            Help
+            ExitWithThisExitCode
+        fi
+
+        # if [[ "$1" == '--' ]]; then
+        #     shift
+        # fi
+
+        case $int_aFlag in                                  # execute second options before first options
+            3|4)
+                case $int_bFlag in
+                    1)
+                        PreInstallSetup;;
+                    # 2)
+                    #     ReadIOMMU_FromFile;;
+                esac;;
+        esac
+
+        case $int_aFlag in                                  # execute first options
+            1)
+                Help;;
+            2)
+                DeleteSetup;;
+            3)
+                MultiBootSetup;;
+            4)
+                StaticSetup;;
+            # 5)
+            #     WriteIOMMU_ToFile;;
+        esac
+
+        case $int_aFlag in                                  # execute second options after first options
+            3|4)
+                case $int_bFlag in
+                    1)
+                        PostInstallSetup;;
+                esac;;
+        esac
+    }
+
+    # <summary>
+    # Execute setup of recommended and optional system changes.
+    # </summary>
+    # <return>exit code</return>
+    function ExecuteSystemSetup {
+        ModifySecurity
+        ModifySSH
+        AppendServices
+        AppendCron
+    }
+
+    # <summary>
+    # Execute setup of all software repositories.
+    # </summary>
+    # <return>exit code</return>
+    function ExecuteSetupOfSoftwareSources {
+        CheckCurrentDistro
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            ModifyDebianRepos
+        fi
+
+        TestNetwork
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            InstallFromDebianRepos
+            InstallFromFlathubRepos
+            InstallFromSnapRepos
+        fi
+
+        echo -e "\n\e[33mWARNING:\e[0m If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+    }
+
+    # <summary>
+    # Execute setup of GitHub repositories (of which that are executable and installable).
+    # </summary>
+    # <return>exit code</return>
+    function ExecuteSetupOfGitRepos {
+        if [[ $( command -v git ) == "/usr/bin/git" ]]; then
+            TestNetwork
+
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                CloneOrUpdateGitRepositories
+            fi
+
+            InstallFromGitRepos
+        else
+            echo -e "\n\e[33mWARNING:\e[0m Git is not installed on this system."
+        fi
+    }
+# </code>
+
 ### main ###
 # <code>
     # NOTE: necessary for newline preservation in arrays and files
     SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
     IFS=$'\n'      # Change IFS to newline char
 
+    # <summary>
+    # Execute specific functions if user is sudo/root or not.
+    # </summary>
     CheckIfUserIsRoot
-    ExecuteSetupOfSoftwareSources
+
+    if [[ $int_thisExitCode -eq 0 ]]; then
+        ExecuteSetupOfSoftwareSources
+        ExecuteSetupOfGitRepos
+        # ExecuteSystemSetup
+    else
+        ExecuteSetupOfGitRepos
+    fi
+
     ExitWithThisExitCode
     IFS=$SAVEIFS
 # </code>
