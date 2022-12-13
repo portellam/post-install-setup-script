@@ -6,6 +6,8 @@
 
 ### notes ###
 # <summary>
+# -refactor *return statements* of functions with first input variable
+#   -set $1 as return string/var, and push back other input vars ($1 will be $2, and so on...)
 #
 # -de-nest code:
 #   -place nested conditionals in functions
@@ -58,7 +60,7 @@
     # <summary>
     # Output error given exception.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ParseThisExitCode {
         case $int_thisExitCode in
             ### script agnostic ###
@@ -74,6 +76,8 @@
                 echo -e "\e[33mException:\e[0m File/Dir is not readable.";;
             251)
                 echo -e "\e[33mException:\e[0m File/Dir is not writable.";;
+            250)
+                echo -e "\e[33mException:\e[0m File/Dir is not executable.";;
             249)
                 echo -e "\e[33mException:\e[0m Invalid input.";;
 
@@ -88,7 +92,7 @@
     # <summary>
     # Exit bash session/script with current exit code.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ExitWithThisExitCode
     {
         echo -e "Exiting."
@@ -98,7 +102,7 @@
     # <summary>
     # Updates main parameter.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function SaveThisExitCode {
         int_thisExitCode=$?
     }
@@ -127,6 +131,10 @@
         (exit 250)
     }
 
+    function SetExitCodeIfInputIsInvalid {
+        (exit 250)
+    }
+
     function SetExitCodeIfPassNorFail {
         (exit 131)
     }
@@ -138,7 +146,7 @@
     # Checks if input parameter is null,
     # and returns exit code given result.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfVarIsNull {
         if [[ -z "$1" ]]; then
             SetExitCodeIfVarIsNull; SaveThisExitCode
@@ -151,10 +159,11 @@
     # Checks if file exists,
     # and returns exit code if failed.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfFileIsNull {
         if [[ ! -e $1 ]]; then
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
+            echo -e "File not found: '$1'"
         else
             true; SaveThisExitCode
         fi
@@ -164,7 +173,7 @@
     # Checks if directory exists,
     # and returns exit code if failed.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfDirIsNull {
         if [[ ! -d $1 ]]; then
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
@@ -177,7 +186,7 @@
     # Checks if file is executable,
     # and returns exit code if failed.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfFileIsExecutable {
         if [[ ! -x $1 ]]; then
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
@@ -190,7 +199,7 @@
     # Checks if file is readable,
     # and returns exit code if failed.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfFileIsReadable {
         if [[ ! -r $1 ]]; then
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
@@ -203,7 +212,7 @@
     # Checks if file is writable,
     # and returns exit code if failed.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfFileIsWritable {
         if [[ ! -w $1 ]]; then
             SetExitCodeIfFileIsNotWritable; SaveThisExitCode
@@ -218,7 +227,7 @@
     # <summary>
     # Checks if current user is sudo/root.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfUserIsRoot {
         true; SaveThisExitCode
 
@@ -240,7 +249,7 @@
     # <summary>
     # Output pass or fail statement given exit code.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function EchoPassOrFailThisExitCode {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -261,7 +270,7 @@
     # <summary>
     # Output pass or fail test-case given exit code.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function EchoPassOrFailThisTestCase {
         str_testCaseName=$1
         CheckIfVarIsNull $str_testCaseName &> /dev/null
@@ -279,9 +288,9 @@
     }
 
     # <summary>
-    # Output variable given if valid.
+    # Return input variable if valid.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function EchoVarIfVarIsNotNull {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -297,7 +306,7 @@
     # Change ownership of given file to current user.
     # $UID is intelligent enough to differentiate between the two
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ChangeOwnershipOfFileOrDir {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -314,7 +323,7 @@
     # <summary>
     # Checks if two given files are the same, in composition.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckIfTwoFilesAreSame {
         echo -en "Verifying two files... "
 
@@ -342,7 +351,7 @@
     # <summary>
     # Checks if two given files are the same, in composition.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CreateBackupFromFile {
         echo -en "Backing up file... "
         declare -lr str_file=$1
@@ -357,10 +366,10 @@
 
             if [[ "${#arr_dir[@]}" -ge 1 ]]; then           # positive non-zero count
                 # <parameters>
-                    declare -ir int_maxCount=5
-                    str_line=${arr_dir[0]}
-                    str_line=${str_line%"${str_suffix}"}    # substitution
-                    str_line=${str_line##*.}                # ditto
+                declare -ir int_maxCount=5
+                str_line=${arr_dir[0]}
+                str_line=${str_line%"${str_suffix}"}        # substitution
+                str_line=${str_line##*.}                    # ditto
                 # </parameters>
 
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
@@ -392,8 +401,8 @@
                 fi
 
                 # <parameters>
-                    str_line=${arr_dir[-1]%"${str_suffix}"}         # substitution
-                    str_line=${str_line##*.}                        # ditto
+                str_line=${arr_dir[-1]%"${str_suffix}"}             # substitution
+                str_line=${str_line##*.}                            # ditto
                 # </parameters>
 
                 if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
@@ -428,7 +437,7 @@
     # <summary>
     # Creates a directory.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CreateDir {
         echo -en "Creating directory... "
 
@@ -445,7 +454,7 @@
     # <summary>
     # Creates a file.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CreateFile {
         echo -en "Creating file... "
 
@@ -462,7 +471,7 @@
     # <summary>
     # Deletes a file.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function DeleteFile {
         echo -en "Deleting file... "
 
@@ -479,7 +488,7 @@
     # <summary>
     # Reads a file.
     # </summary>
-    # <return>string array</return>
+    # <returns>string array</returns>
     function ReadFile {
         echo -en "Reading file... "
 
@@ -501,7 +510,7 @@
     # Ask for Yes/No answer, return exit code.
     # Default selection is N/false.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ReadInput {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -555,7 +564,7 @@
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
     # </summary>
-    # <return>string</return>
+    # <returns>string</returns>
     function ReadInputFromMultipleChoiceIgnoreCase {
         # <parameters> #
         declare -il int_count=0
@@ -597,14 +606,18 @@
             (( int_count++ ))
         done
 
-        EchoVarIfVarIsNotNull $str_input1
+        # <summary>
+        # Return value with stdout.
+        # </summary>
+        $1=$str_input1
+        EchoVarIfVarIsNotNull $1
     }
 
     # <summary>
     # Ask for multiple choice, up to eight choices.
     # Default selection is first choice.
     # </summary>
-    # <return>string</return>
+    # <returns>string</returns>
     function ReadInputFromMultipleChoiceUpperCase {
         # <parameters> #
         declare -il int_count=0
@@ -647,14 +660,18 @@
             (( int_count++ ))
         done
 
-        EchoVarIfVarIsNotNull $str_input1
+        # <summary>
+        # Return value with stdout.
+        # </summary>
+        $1=$str_input1
+        EchoVarIfVarIsNotNull $1
     }
 
     # <summary>
     # Ask for number, within a given range.
     # Default selection is first choice.
     # </summary>
-    # <return>int</return>
+    # <returns>int</returns>
     function ReadInputFromRangeOfNums {
         # <parameters> #
         declare -il int_count=0
@@ -688,14 +705,18 @@
             (( int_count++ ))
         done
 
-        EchoVarIfVarIsNotNull $str_input1
+        # <summary>
+        # Return value with stdout.
+        # </summary>
+        $1=$str_input1
+        EchoVarIfVarIsNotNull $1
     }
 
     # <summary>
     # Test network connection to Internet.
     # Ping DNS servers by address and name.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function TestNetwork {
         echo -en "Testing Internet connection... "
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
@@ -717,7 +738,7 @@
     # This may help with calling/parsing arrays.
     # When passing the var, write the name without " $ ".
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function WriteVarToFile {
         SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
         IFS=$'\n'      # Change IFS to newline char
@@ -792,14 +813,13 @@
         done
 
         systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-
         EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
     }
 
     # <summary>
     # Check linux distro
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CheckCurrentDistro {
         if [[ $( command -v apt ) == "/usr/bin/apt" ]]; then
             true; SaveThisExitCode
@@ -812,7 +832,7 @@
     # <summary>
     # Clone given GitHub repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function CloneOrUpdateGitRepositories
     {
         echo -e "Cloning/Updating Git repos..."
@@ -893,7 +913,7 @@
     # <summary>
     # Install from Debian repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function InstallFromDebianRepos {
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         ReadInput "Auto-accept install prompts? "
@@ -1003,7 +1023,7 @@
     # <summary>
     # Install from Flathub software repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function InstallFromFlathubRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
@@ -1088,7 +1108,7 @@
     # <summary>
     # Install from Git repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function InstallFromGitRepos
     {
         echo -e "Executing Git scripts..."
@@ -1186,7 +1206,7 @@
     # <summary>
     # Install from Snap software repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function InstallFromSnapRepos {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
@@ -1264,7 +1284,7 @@
     # <summary>
     # Set software repositories for Debian Linux.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ModifyDebianRepos {
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
@@ -1418,22 +1438,24 @@
     # <summary>
     # Crontab
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function AppendCron {               # NOTE: needs work.
-        # parameters #
-        declare -a arr1=()
+        # <parameters>
+        declare -a arr_dir1=()
+        declare -lr str_dir1=$( find .. -name files | uniq | head -n1 )"/"
         str_outDir1="/etc/cron.d/"
-        str_dir1=$( find .. -name files | uniq | head -n1 )"/"
 
-        # list of packages that have cron files (see below) #
-        # NOTE: may change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm")
-        # NOTE: update here!
+        # List of packages that have cron files (see below).
+        # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
+        # <summary>
         declare -a arr_requiredPackages=(
             "flatpak"
             "ntpdate"
             "rsync"
             "snap"
         )
+        # </summary>
+        # </parameters>
 
         if [[ $( command -v unattended-upgrades ) == "" ]]; then
             arr_requiredPackages+=("apt")
@@ -1470,7 +1492,7 @@
                                 # echo -e "Appended file '${str_line1}'."
 
                             else
-                                echo -e "WARNING: Missing required package '${str_line2}'. Skipping..."
+                                echo -e "\e[33mWARNING:\e[0m: Missing required package '${str_line2}'. Skipping..."
                             fi
                         fi
                     done
@@ -1480,7 +1502,7 @@
             echo -e "Review changes made. "
 
         else
-            echo -e "WARNING: Missing files. Skipping..."
+            echo -e "\e[33mWARNING:\e[0m: Missing files. Skipping..."
         fi
 
         # restart service #
@@ -1490,88 +1512,58 @@
     # <summary>
     # SSH
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ModifySSH {                # NOTE: needs work.
-        # parameters #
-        str_input1=""
-        ReadInput "Modify SSH?"
+        if [[ $( command -v ssh ) == "" ]]; then
+            false; SaveThisExitCode
+            echo -e "\e[33mWARNING:\e[0m: SSH not installed! Skipping..."
+        fi
 
-        if [[ $str_input1 = "Y" ]]; then
-            if [[ $( command -v ssh ) != "" ]]; then
-                declare -i int_count=0
-                str_output1=""
+        while true; do
+            ReadInput "Modify SSH?"
 
-                # prompt #
-                while [[ ${int_count} -le 3 ]]; do
-
-                    # default input #
-                    if [ ${int_count} -gt 2 ]; then
-                        str_sshAlt=22
-                        echo -en "Exceeded max attempts! "
-
-                    # read input #
-                    else
-                        echo -en "\tEnter a new IP Port number for SSH (leave blank for default): "
-                        read str_sshAlt
-                    fi
-
-                    # match string with valid integer #
-                    if [ "${str_sshAlt}" -eq "$(( ${str_sshAlt} ))" ] 2> /dev/null; then
-                        declare -i int_result="${str_sshAlt}"
-
-                        if [[ ${int_result} -gt 0 && ${int_result} -lt 65536 ]]; then
-                            if [[ ${int_result} -gt 1000 ]]; then
-                                if [[ ${int_result} == 22 ]]; then
-                                    echo -e "Default value."
-
-                                # append to output #
-                                else
-                                    str_output1+="\n#\nPort ${str_sshAlt}"
-                                    break
-                                fi
-
-                            else
-                                echo -e "Invalid selection. Available port range: 1000-65535"
-                            fi
-
-                        else
-                            echo -e "Invalid integer. Valid port range: 1-65535."
-                        fi
-
-                    # false match string with valid integer #
-                    else
-                        echo -e "Invalid input."
-                    fi
-
-                    ((int_count++))
-                done
-
-                # backup and write to file #
-                    str_file1="/etc/ssh/ssh_config"
-                    str_oldFile1=${str_file1}"_old"
-
-                    if [ -e ${str_file1} ]; then
-                        cp ${str_file1} ${str_oldFile1}
-                    fi
-
-                    echo -e ${str_output} >> ${str_file1}
-
-                # backup and write to file #
-                    str_output1+="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"    # append to output
-                    str_file1="/etc/ssh/ssh_config"
-                    str_oldFile1=${str_file1}"_old"
-
-                    if [ -e ${str_file1} ]; then
-                        cp ${str_file1} ${str_oldFile1}
-                    fi
-
-                    echo -e ${str_output1} >> ${str_file1}
-
-                systemctl restart ssh sshd  # restart services
-
-            else
-                echo -e "WARNING: SSH not installed! Skipping..."
+            if [[ $int_thisExitCode -ne 0 ]]; then
+                break
             fi
+
+            declare -i int_count=0
+
+            while [[ $int_count -lt 3 ]]; do
+                local str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
+                declare -i int_altSSH="${str_altSSH}"
+
+                if [[ $int_altSSH -eq 22 || $int_altSSH -gt 10000 ]]; then
+                    break
+                fi
+
+                SetExitCodeIfInputIsInvalid; SaveThisExitCode
+                echo -e "\e[33mWARNING:\e[0m: Available port range: 1000-65535"
+                ((int_count++))
+            done
+
+            break
+        done
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <parameters>
+            declare -lr str_file1="/etc/ssh/ssh_config"
+            # declare -lr str_file2="/etc/ssh/sshd_config"
+            declare -lr str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
+            # </parameters>
+
+            while [[ $int_thisExitCode -eq 0 ]]; do
+                CheckIfFileIsNull $str_file1
+                CreateBackupFromFile $str_file1
+                WriteVarToFile $str_file1 $str_output1
+                systemctl restart ssh || ( false; SaveThisExitCode )
+            done
+
+            # while [[ $int_thisExitCode -eq 0 ]]; do
+            #     CheckIfFileIsNull $str_file2
+            #     CreateBackupFromFile $str_file2
+            #     WriteVarToFile $str_file1 $str_output1
+            #     systemctl restart sshd || ( false; SaveThisExitCode )
+            # done
         fi
 
         echo
@@ -1580,7 +1572,7 @@
     # <summary>
     # Recommended host security changes
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ModifySecurity {           # NOTE: needs work.
         echo -e "Configuring system security..."
 
@@ -1718,7 +1710,7 @@
     # <summary>
     # Display Help to console.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function Help {                                 # NOTE: needs work.
         declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
             \nwhere OPTIONS
@@ -1740,7 +1732,7 @@
     # <summary>
     # Parse input parameters for given options.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ParseInputParamForOptions {            # NOTE: needs work.
         if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
             while [[ "$1" =~ ^-  ]]; do
@@ -1818,7 +1810,7 @@
     # <summary>
     # Execute setup of recommended and optional system changes.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ExecuteSystemSetup {
         ModifySecurity
         ModifySSH
@@ -1829,7 +1821,7 @@
     # <summary>
     # Execute setup of all software repositories.
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ExecuteSetupOfSoftwareSources {
         CheckCurrentDistro
 
@@ -1851,7 +1843,7 @@
     # <summary>
     # Execute setup of GitHub repositories (of which that are executable and installable).
     # </summary>
-    # <return>exit code</return>
+    # <returns>exit code</returns>
     function ExecuteSetupOfGitRepos {
         if [[ $( command -v git ) == "/usr/bin/git" ]]; then
             TestNetwork
