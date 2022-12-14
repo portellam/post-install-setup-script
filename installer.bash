@@ -18,8 +18,7 @@
 #
 # </summary>
 
-
-### main parameters ###
+### global parameters ###
 # <code>
     declare -r str_pwd=$( pwd )
 
@@ -56,6 +55,52 @@
     #   131             Neither pass or fail; Skipped execution.
     #
     # </summary>
+
+    # <summary>
+    # Output pass or fail statement given exit code.
+    # </summary>
+    # <returns>exit code</returns>
+    function EchoPassOrFailThisExitCode
+    {
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            echo -en "$1 "
+            break
+        done
+
+        case "$int_thisExitCode" in
+            0)
+                echo -e "\e[32mSuccessful. \e[0m";;
+            131)
+                echo -e "\e[33mSkipped. \e[0m";;
+            *)
+                echo -e "\e[31mFailed. \e[0m";;
+        esac
+    }
+
+    # <summary>
+    # Output pass or fail test-case given exit code.
+    # </summary>
+    # <returns>exit code</returns>
+    function EchoPassOrFailThisTestCase
+    {
+        CheckIfVarIsNull $1 &> /dev/null
+        local str_testCaseName="TestCase"
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            str_testCaseName=$1
+        fi
+
+        readonly str_testCaseName
+        echo -en "$str_testCaseName "
+
+        case "$int_thisExitCode" in
+            0)
+                echo -e "\e[32mPASS:\e[0m""\t$str_testCaseName";;
+            *)
+                echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
+        esac
+    }
 
     # <summary>
     # Exit bash session/script with current exit code.
@@ -150,8 +195,31 @@
     }
 # </code>
 
-### exception functions ###
+### validation functions ###
 # <code>
+    # <summary>
+    # Checks if current user is sudo/root.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfUserIsRoot
+    {
+        if [[ $( whoami ) != "root" ]]; then
+            local str_file1=$( echo ${0##/*} )
+
+            while [[ $int_thisExitCode -eq 0 ]]; do
+                CheckIfFileIsNull $str_file1 &> /dev/null
+                readonly str_file1=$( echo $str_file1 | cut -d '/' -f2 )
+                echo -e " In terminal, run:\n\t'sudo bash $str_file1'"
+                break
+            done
+
+            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root. "
+
+            false; SaveThisExitCode
+            # ExitWithThisExitCode
+        fi
+    }
+
     # <summary>
     # Checks if input parameter is null,
     # and returns exit code given result.
@@ -235,91 +303,6 @@
         else
             true; SaveThisExitCode
         fi
-    }
-# </code>
-
-### special functions ###
-# <code>
-    # <summary>
-    # Checks if current user is sudo/root.
-    # </summary>
-    # <returns>exit code</returns>
-    function CheckIfUserIsRoot
-    {
-        if [[ $( whoami ) != "root" ]]; then
-            local str_file1=$( echo ${0##/*} )
-
-            while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileIsNull $str_file1 &> /dev/null
-                readonly str_file1=$( echo $str_file1 | cut -d '/' -f2 )
-                echo -e " In terminal, run:\n\t'sudo bash $str_file1'"
-                break
-            done
-
-            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root. "
-
-            false; SaveThisExitCode
-            # ExitWithThisExitCode
-        fi
-    }
-
-    # <summary>
-    # Output pass or fail statement given exit code.
-    # </summary>
-    # <returns>exit code</returns>
-    function EchoPassOrFailThisExitCode
-    {
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            echo -en "$1 "
-            break
-        done
-
-        case "$int_thisExitCode" in
-            0)
-                echo -e "\e[32mSuccessful. \e[0m";;
-            131)
-                echo -e "\e[33mSkipped. \e[0m";;
-            *)
-                echo -e "\e[31mFailed. \e[0m";;
-        esac
-    }
-
-    # <summary>
-    # Output pass or fail test-case given exit code.
-    # </summary>
-    # <returns>exit code</returns>
-    function EchoPassOrFailThisTestCase
-    {
-        CheckIfVarIsNull $1 &> /dev/null
-        local str_testCaseName="TestCase"
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            str_testCaseName=$1
-        fi
-
-        readonly str_testCaseName
-        echo -en "$str_testCaseName "
-
-        case "$int_thisExitCode" in
-            0)
-                echo -e "\e[32mPASS:\e[0m""\t$str_testCaseName";;
-            *)
-                echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
-        esac
-    }
-
-    # <summary>
-    # Return input variable if valid.
-    # </summary>
-    # <returns>exit code</returns>
-    function EchoVarIfVarIsNotNull
-    {
-        true; SaveThisExitCode                          # review if this conflicts as a nested function with other functions
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            echo $1
-        done
     }
 # </code>
 
@@ -796,7 +779,7 @@
     }
 # </code>
 
-### executive functions ###
+### program functions ###
 # <code>
     # <summary>
     # Append SystemD services to host.
