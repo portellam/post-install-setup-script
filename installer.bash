@@ -15,12 +15,14 @@
 # -use consistent vocabulary in names, comments, etc
 # -refactor code
 #
-#
+# -cat EOF
 # </summary>
 
 ### global parameters ###
 # <code>
+    var_IFS=$IFS
     declare -r str_pwd=$( pwd )
+    declare -r str_warning="\e[33mWARNING:\e[0m"" "
 
     # <summary>
     # Necessary for exit code preservation, for conditional statements.
@@ -198,12 +200,74 @@
 ### validation functions ###
 # <code>
     # <summary>
+    # Checks if directory exists,
+    # and returns exit code if failed.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfDirIsNull
+    {
+        if [[ ! -d $1 ]]; then
+            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
+        fi
+    }
+
+    # <summary>
+    # Checks if file is executable,
+    # and returns exit code if failed.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfFileIsExecutable
+    {
+        if [[ ! -x $1 ]]; then
+            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
+        fi
+    }
+
+    # <summary>
+    # Checks if file exists,
+    # and returns exit code if failed.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfFileIsNull
+    {
+        if [[ ! -e $1 ]]; then
+            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
+            echo -e "File not found: '$1'"
+        fi
+    }
+
+    # <summary>
+    # Checks if file is readable,
+    # and returns exit code if failed.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfFileIsReadable
+    {
+        if [[ ! -r $1 ]]; then
+            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
+        fi
+    }
+
+    # <summary>
+    # Checks if file is writable,
+    # and returns exit code if failed.
+    # </summary>
+    # <returns>exit code</returns>
+    function CheckIfFileIsWritable
+    {
+        if [[ ! -w $1 ]]; then
+            SetExitCodeIfFileIsNotWritable; SaveThisExitCode
+        fi
+    }
+
+        # <summary>
     # Checks if current user is sudo/root.
     # </summary>
     # <returns>exit code</returns>
     function CheckIfUserIsRoot
     {
         if [[ $( whoami ) != "root" ]]; then
+            echo -en "${str_warning}Script must execute as root."
             local str_file1=$( echo ${0##/*} )
 
             while [[ $int_thisExitCode -eq 0 ]]; do
@@ -212,8 +276,6 @@
                 echo -e " In terminal, run:\n\t'sudo bash $str_file1'"
                 break
             done
-
-            echo -en "\e[33mWARNING:\e[0m"" Script must execute as root. "
 
             false; SaveThisExitCode
             # ExitWithThisExitCode
@@ -229,79 +291,18 @@
     {
         if [[ -z "$1" ]]; then
             SetExitCodeIfVarIsNull; SaveThisExitCode
-        else
-            true; SaveThisExitCode
         fi
     }
 
     # <summary>
-    # Checks if directory exists,
-    # and returns exit code if failed.
+    # Checks if input parameter is a valid number,
+    # and returns exit code given result.
     # </summary>
     # <returns>exit code</returns>
-    function CheckIfDirIsNull
+    function CheckIfVarIsValidNum
     {
-        if [[ ! -d $1 ]]; then
-            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
-        else
-            true; SaveThisExitCode
-        fi
-    }
-
-    # <summary>
-    # Checks if file is executable,
-    # and returns exit code if failed.
-    # </summary>
-    # <returns>exit code</returns>
-    function CheckIfFileIsExecutable
-    {
-        if [[ ! -x $1 ]]; then
-            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
-        else
-            true; SaveThisExitCode
-        fi
-    }
-
-    # <summary>
-    # Checks if file exists,
-    # and returns exit code if failed.
-    # </summary>
-    # <returns>exit code</returns>
-    function CheckIfFileIsNull
-    {
-        if [[ ! -e $1 ]]; then
-            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
-            echo -e "File not found: '$1'"
-        else
-            true; SaveThisExitCode
-        fi
-    }
-
-    # <summary>
-    # Checks if file is readable,
-    # and returns exit code if failed.
-    # </summary>
-    # <returns>exit code</returns>
-    function CheckIfFileIsReadable
-    {
-        if [[ ! -r $1 ]]; then
-            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
-        else
-            true; SaveThisExitCode
-        fi
-    }
-
-    # <summary>
-    # Checks if file is writable,
-    # and returns exit code if failed.
-    # </summary>
-    # <returns>exit code</returns>
-    function CheckIfFileIsWritable
-    {
-        if [[ ! -w $1 ]]; then
-            SetExitCodeIfFileIsNotWritable; SaveThisExitCode
-        else
-            true; SaveThisExitCode
+        if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
+            SetExitCodeIfInputIsInvalid; SaveThisExitCode
         fi
     }
 # </code>
@@ -319,8 +320,7 @@
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
-            # echo '$UID =='"'$UID'"
-            chown -f $UID $1 && ( true; SaveThisExitCode)
+            chown -f $UID $1 || ( false; SaveThisExitCode )
             break
         done
 
@@ -342,16 +342,19 @@
             CheckIfFileIsNull $2 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsReadable $2 &> /dev/null
+            break
+        done
 
+        EchoPassOrFailThisExitCode
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             if cmp -s "$1" "$2"; then
                 echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             else
                 echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
                 false; SaveThisExitCode
             fi
-
-            break
-        done
+        fi
 
         ParseThisExitCode
     }
@@ -363,80 +366,74 @@
     function CreateBackupFromFile
     {
         echo -en "Backing up file... "
-        declare -lr str_file=$1
-        CheckIfVarIsNull $str_file &> /dev/null
-        CheckIfFileIsNull $str_file &> /dev/null
-        CheckIfFileIsReadable $str_file &> /dev/null
+        declare -lr str_file1=$1
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            declare -r str_suffix=".old"
-            declare -r str_dir=$( dirname $1 )
-            declare -ar arr_dir=( $( ls -1v $str_dir | grep $str_file | grep $str_suffix | uniq ) )
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $str_file1 &> /dev/null
+            CheckIfFileIsNull $str_file1 &> /dev/null
+            CheckIfFileIsReadable $str_file1 &> /dev/null
 
-            if [[ "${#arr_dir[@]}" -ge 1 ]]; then           # positive non-zero count
+            # <parameters>
+            declare -lr str_suffix=".old"
+            declare -lr str_dir1=$( dirname $1 )
+            declare -alr arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
+            # </parameters>
+
+            if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
+                cp $str_file1 "${str_file1}.0${str_suffix}" &> /dev/null || ( false; SaveThisExitCode )
+            else
                 # <parameters>
                 declare -ir int_maxCount=5
-                str_line=${arr_dir[0]}
-                str_line=${str_line%"${str_suffix}"}        # substitution
-                str_line=${str_line##*.}                    # ditto
+                local str_line1=${arr_dir1[0]}
+                str_line1=${str_line1%"${str_suffix}"}              # substitution
+                str_line1=${str_line1##*.}                          # ditto
                 # </parameters>
 
-                if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
-                    declare -ir int_firstIndex="${str_line}"
-                else
-                    false; SaveThisExitCode                                         # NOTE: redundant?
-                fi
+                CheckIfVarIsValidNum $str_line1 &> /dev/null
 
-                for str_element1 in ${arr_dir[@]}; do
-                    if cmp -s $str_thisFile $str_element1; then
-                        false; SaveThisExitCode
+                for str_element1 in ${arr_dir1[@]}; do
+                    CheckIfTwoFilesAreSame $str_file1 $str_element1 &> /dev/null
+                done
+
+                # <summary>
+                # Before backup, delete all but some number of backup files.
+                # </summary>
+                while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
+                    if [[ -e ${arr_dir1[0]} ]]; then
+                        DeleteFile ${arr_dir1[0]} &> /dev/null
                         break
                     fi
                 done
 
-                # if cmp -s $str_thisFile ${arr_dir[-1]}; then        # if latest backup is same as original file, exit
-                #     true; SaveThisExitCode
-                # fi
-
-                while [[ ${#arr_dir[@]} -ge $int_maxCount ]]; do    # before backup, delete all but some number of backup files
-                    if [[ -e ${arr_dir[0]} ]]; then
-                        rm ${arr_dir[0]}
-                        break
-                    fi
-                done
-
-                if cmp -s $str_file ${arr_dir[0]}; then             # if *first* backup is same as original file, exit
+                # <summary>
+                # If *first* backup is same as original file, exit.
+                # </summary>
+                if cmp -s $1 ${arr_dir[0]}; then
                     false; SaveThisExitCode
                 fi
 
                 # <parameters>
-                str_line=${arr_dir[-1]%"${str_suffix}"}             # substitution
-                str_line=${str_line##*.}                            # ditto
+                str_line1=${arr_dir1[-1]%"${str_suffix}"}             # substitution
+                str_line1=${str_line1##*.}                            # ditto
+                declare -il int_lastIndex=0
                 # </parameters>
 
-                if [[ "${str_line}" -eq "$(( ${str_line} ))" ]] 2> /dev/null; then  # check if string is a valid integer
-                    declare -i int_lastIndex="${str_line}"
-                else
-                    false; SaveThisExitCode
-                fi
+                CheckIfVarIsValidNum $str_line1 &> /dev/null
+                declare -i int_lastIndex="${str_line1}"
+                (( int_lastIndex++ ))                                # counter
 
-                (( int_lastIndex++ ))                                               # counter
-
-                if [[ $str_file -nt ${arr_dir[-1]} && ! ( $str_file -ef ${arr_dir[-1]} ) ]]; then       # source file is newer and different than backup, add to backups
-                    cp $str_file "${str_file}.${int_lastIndex}${str_suffix}"
-                # elif [[ $str_file -ot ${arr_dir[-1]} && ! ( $str_file -ef ${arr_dir[-1]} ) ]]; then
-                #     false; SaveThisExitCode
-                else
-                    false; SaveThisExitCode
+                # <summary>
+                # Source file is newer and different than backup, add to backups.
+                # </summary>
+                if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
+                    cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" &> /dev/null || ( false; SaveThisExitCode )
                 fi
-            else
-                cp $str_file "${str_file}.0${str_suffix}"           # no backups, create backup
-                SaveThisExitCode                                    # NOTE: redundant?
             fi
-        fi
 
-        EchoPassOrFailThisExitCode
-        ParseThisExitCode
+            break
+        done
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
 
         if [[ $int_thisExitCode -ne 0 ]]; then
             echo -e "No changes from most recent backup."
@@ -454,7 +451,7 @@
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-            mkdir -p $1 &> /dev/null && ( true; SaveThisExitCode)
+            mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
             break
         done
 
@@ -490,7 +487,7 @@
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-            rm $1 &> /dev/null && ( true; SaveThisExitCode)
+            rm $1 &> /dev/null || (  break )
             break
         done
 
@@ -511,7 +508,7 @@
             CheckIfFileIsReadable $1 &> /dev/null
 
             while read str_line1; do
-                echo $str_line1 || ( SetExitCodeIfFileIsNotReadable; break )
+                echo $str_line1 &> /dev/null || ( SetExitCodeIfFileIsNotReadable; break )
             done < $1
             break
         done
@@ -730,6 +727,24 @@
     }
 
     # <summary>
+    # Reset IFS.
+    # </summary>
+    function SetInternalFieldSeparatorToDefault
+    {
+        IFS=$var_IFS
+    }
+
+    # <summary>
+    # Backup IFS and Set IFS to newline char.
+    # NOTE: necessary for newline preservation in arrays and files.
+    # </summary>
+    function SetInternalFieldSeparatorToNewline
+    {
+        var_IFS=$IFS
+        IFS=$'\n'
+    }
+
+    # <summary>
     # Test network connection to Internet.
     # Ping DNS servers by address and name.
     # </summary>
@@ -759,9 +774,7 @@
     # <returns>exit code</returns>
     function WriteVarToFile
     {
-        SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)    # NOTE: necessary for newline preservation in arrays and files
-        IFS=$'\n'      # Change IFS to newline char
-
+        SetInternalFieldSeparatorToNewline
         echo -en "Writing to file... "
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -774,8 +787,7 @@
             break
         done
 
-        IFS=$SAVEIFS
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 # </code>
 
@@ -841,10 +853,8 @@
     # <returns>exit code</returns>
     function CheckCurrentDistro
     {
-        if [[ $( command -v apt ) == "/usr/bin/apt" ]]; then
-            true; SaveThisExitCode
-        else
-            echo -e "\e[33mWARNING:\e[0m"" Unrecognized Linux distribution; Apt not installed. Skipping..."
+        if [[ $( command -v apt ) != "/usr/bin/apt" ]]; then
+            echo -e "${str_warning}Unrecognized Linux distribution; Apt not installed. Skipping..."
             false; SaveThisExitCode
         fi
     }
@@ -955,7 +965,7 @@
         # <summary>
         # Desktop environment checks
         # </summary>
-        str_aptCheck=""
+        local str_aptCheck=""
         str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
         if [[ $str_aptCheck != "" ]]; then
@@ -975,26 +985,26 @@
         # APT packages sorted by type.
         # </summary>
         # <parameters>
-        str_aptAll=""
-        str_aptDeveloper=""
-        str_aptDrivers="steam-devices"
-        str_aptGames=""
-        str_aptInternet="firefox-esr filezilla"
-        str_aptMedia="vlc"
-        str_aptOffice="libreoffice"
-        str_aptPrismBreak=""
-        str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-        str_aptSuites="debian-edu-install science-all"
-        str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-        str_aptUnsorted=""
-        str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        local str_aptAll=""
+        declare -lr str_aptDeveloper=""
+        declare -lr str_aptDrivers="steam-devices"
+        declare -lr str_aptGames=""
+        declare -lr str_aptInternet="firefox-esr filezilla"
+        declare -lr str_aptMedia="vlc"
+        declare -lr str_aptOffice="libreoffice"
+        declare -lr str_aptPrismBreak=""
+        declare -lr str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+        declare -lr str_aptSuites="debian-edu-install science-all"
+        declare -lr declare -lr str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        declare -lr str_aptUnsorted=""
+        declare -lr str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
 
         # <summary>
         # Select and Install software sorted by type.
         # </summary>
         function InstallAptByType
-    {
+        {
             if [[ $1 != "" ]]; then
                 echo -e $2
 
@@ -1054,7 +1064,7 @@
         # Flatpak
         # </summary>
         if [[ $( command -v flatpak ) != "/usr/bin/flatpak" ]]; then
-            echo -e "WARNING: Flatpak not installed. Skipping..."
+            echo -e "${str_warning}Flatpak not installed. Skipping..."
             false; SaveThisExitCode
         else
             ReadInput "Auto-accept install prompts? "
@@ -1081,9 +1091,9 @@
             # Flatpak packages sorted by type.
             # </summary>
             # <parameters>
-            str_flatpakAll=""
-            str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-            str_flatpakPrismBreak="" # include from all, monero etc.
+            local str_flatpakAll=""
+            declare -lr str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
+            declare -lr str_flatpakPrismBreak="" # include from all, monero etc.
             # </parameters>
 
             # <summary>
@@ -1091,7 +1101,7 @@
             # </summary>
             # <code>
                 function InstallFlatpakByType
-    {
+                {
                     if [[ $1 != "" ]]; then
                         echo -e $2
 
@@ -1141,7 +1151,7 @@
         # Prompt user to execute script or skip.
         # </summary>
         function ExecuteScript
-    {
+        {
             cd $str_dir1
 
             # <parameters>
@@ -1240,7 +1250,7 @@
         # Snap
         # </summary>
         if [[ $( command -v snap ) != "/usr/bin/snap" ]]; then
-            echo -e "WARNING: Snap not installed. Skipping..."
+            echo -e "${str_warning}Snap not installed. Skipping..."
             false; SaveThisExitCode
         else
             ReadInput "Auto-accept install prompts? "
@@ -1262,8 +1272,8 @@
             # Snap packages sorted by type.
             # </summary>
             # <parameters>
-                str_snapAll=""
-                str_snapUnsorted=""
+            local str_snapAll=""
+            declare -lr str_snapUnsorted=""
             # </parameters>
 
             # <summary>
@@ -1271,7 +1281,7 @@
             # </summary>
             # <code>
                 function InstallSnapByType
-    {
+                {
                     if [[ $1 != "" ]]; then
                         echo -e $2
 
@@ -1319,7 +1329,7 @@
         # <parameters>
         declare -lr str_file1="/etc/apt/sources.list"
         local str_sources=""
-        declare -lr str_newFile1="${str_file1}_new"
+        declare -lr str_newFile1="${str_file1}.new"
         declare -lr str_releaseName=$( lsb_release -sc )
         declare -lr str_releaseVer=$( lsb_release -sr )
         # </parameters>
@@ -1363,7 +1373,7 @@
         # </summary>
         while [[ $int_thisExitCode -eq 0 ]]; do
             echo -e "Repositories: Enter one valid option or none for default (Current branch: $str_releaseName)."
-            echo -e "\t\n\e[33mWARNING:\e[0m: It is NOT possible to revert from a Non-stable branch back to a Stable or $str_releaseName branch."
+            echo -e "\t\n${str_warning}It is NOT possible to revert from a Non-stable branch back to a Stable or $str_releaseName branch."
             echo -e "\tRelease branches:"
             echo -e "\t\t'stable'\t== '$str_releaseName'"
             echo -e "\t\t'testing'\t*more recent updates, slightly less stability"
@@ -1521,7 +1531,7 @@
                                 # echo -e "Appended file '${str_line1}'."
 
                             else
-                                echo -e "\e[33mWARNING:\e[0m: Missing required package '${str_line2}'. Skipping..."
+                                echo -e "\e${str_warning}Missing required package '${str_line2}'. Skipping..."
                             fi
                         fi
                     done
@@ -1531,7 +1541,7 @@
             echo -e "Review changes made. "
 
         else
-            echo -e "\e[33mWARNING:\e[0m: Missing files. Skipping..."
+            echo -e "${str_warning}Missing files. Skipping..."
         fi
 
         # restart service #
@@ -1543,10 +1553,10 @@
     # </summary>
     # <returns>exit code</returns>
     function ModifySSH
-    {                # NOTE: needs work.
+    {
         if [[ $( command -v ssh ) == "" ]]; then
             false; SaveThisExitCode
-            echo -e "\e[33mWARNING:\e[0m: SSH not installed! Skipping..."
+            echo -e "${str_warning}SSH not installed! Skipping..."
         fi
 
         while true; do
@@ -1567,7 +1577,7 @@
                 fi
 
                 SetExitCodeIfInputIsInvalid; SaveThisExitCode
-                echo -e "\e[33mWARNING:\e[0m: Available port range: 1000-65535"
+                echo -e "${str_warning}Available port range: 1000-65535"
                 ((int_count++))
             done
 
@@ -1672,7 +1682,7 @@
             fi
 
         else
-            echo -e "WARNING: '/etc/sysctl.conf' missing. Skipping..."
+            echo -e "${str_warning}'/etc/sysctl.conf' missing. Skipping..."
         fi
 
         echo
@@ -1728,7 +1738,7 @@
                 ufw reload
 
             else
-                echo -e "WARNING: UFW is not installed. Skipping..."
+                echo -e "${str_warning}UFW is not installed. Skipping..."
             fi
         fi
 
@@ -1872,7 +1882,7 @@
             InstallFromSnapRepos
         fi
 
-        echo -e "\n\e[33mWARNING:\e[0m If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+        echo -e "\n${str_warning}If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
     }
 
     # <summary>
@@ -1890,7 +1900,7 @@
 
             InstallFromGitRepos
         else
-            echo -e "\n\e[33mWARNING:\e[0m Git is not installed on this system."
+            echo -e "\n${str_warning}Git is not installed on this system."
         fi
     }
 # </code>
@@ -1898,8 +1908,7 @@
 ### main ###
 # <code>
     # NOTE: necessary for newline preservation in arrays and files
-    SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-    IFS=$'\n'      # Change IFS to newline char
+    SetInternalFieldSeparatorToNewline
 
     # <summary>
     # Execute specific functions if user is sudo/root or not.
@@ -1914,6 +1923,5 @@
         ExecuteSetupOfGitRepos
     fi
 
-    ExitWithThisExitCode
-    IFS=$SAVEIFS
+    SetInternalFieldSeparatorToDefault; ExitWithThisExitCode
 # </code>
