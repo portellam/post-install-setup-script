@@ -1856,10 +1856,10 @@
     # <returns>exit code</returns>
     function ExecuteSystemSetup
     {
-        ModifySecurity
-        ModifySSH
+        # ModifySecurity
+        # ModifySSH
         AppendServices
-        AppendCron
+        # AppendCron
     }
 
     # <summary>
