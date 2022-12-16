@@ -25,6 +25,7 @@
 # <code>
     var_IFS=$IFS
     declare -r str_thisDir=$( dirname $0 )
+    declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
     declare -r str_pwd=$( pwd )
     declare -r str_warning="\e[33mWARNING:\e[0m"" "
 
@@ -404,8 +405,8 @@
 
                 CheckIfVarIsValidNum $str_line1 &> /dev/null
 
-                for str_element1 in ${arr_dir1[@]}; do
-                    CheckIfTwoFilesAreSame $str_file1 $str_element1 &> /dev/null
+                for var_element1 in ${arr_dir1[@]}; do
+                    CheckIfTwoFilesAreSame $str_file1 $var_element1 &> /dev/null
                 done
 
                 # <summary>
@@ -800,7 +801,31 @@
     # When passing the var, write the name without " $ ".
     # </summary>
     # <returns>exit code</returns>
-    function WriteVarToFile
+    function AppendVarToFile
+    {
+        SetInternalFieldSeparatorToNewline
+        echo -en "Writing to file... "
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+            CheckIfFileIsWritable $1 &> /dev/null
+            echo -e $2 >> $1 &> /dev/null || false; SaveThisExitCode
+            break
+        done
+
+        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+    }
+
+    # <summary>
+    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
+    # This may help with calling/parsing arrays.
+    # When passing the var, write the name without " $ ".
+    # </summary>
+    # <returns>exit code</returns>
+    function OverwriteVarToFile
     {
         SetInternalFieldSeparatorToNewline
         echo -en "Writing to file... "
@@ -833,8 +858,7 @@
         echo -e "Appending cron entries... "
 
         # <parameters>
-        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
-        declare -lr str_dir2="/etc/cron.d/"
+        declare -lr str_dir1="/etc/cron.d/"
 
         # <summary>
         # List of packages that have cron files (see below).
@@ -853,26 +877,25 @@
         # </parameters>
 
         GoToScriptDirectory &> /dev/null
-        CheckIfDirIsNull $str_dir1 &> /dev/null
+        CheckIfDirIsNull $str_filesDir &> /dev/null
+        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            cd $str_dir1 &> /dev/null
-
-            for str_element1 in $( ls *-cron ); do
-                ReadInput "Append '${str_element1}'?"
+            for var_element1 in $( ls *-cron ); do
+                ReadInput "Append '${var_element1}'?"
 
                 if [[ $int_thisExitCode -eq 0 ]]; then
-                    for str_element2 in ${arr_requiredPackages[@]}; do
+                    for var_element2 in ${arr_requiredPackages[@]}; do
 
                         # <summary>
                         # Match given cron file, append only if package exists in system.
                         # </summary>
-                        if [[ ${str_element1} == *"${str_element2}"* ]]; then
-                            if [[ $( command -v ${str_element2} ) != "" ]]; then
-                                cp $str_element1 ${str_dir2}${str_element1}
-                                # echo -e "Appended file '${str_element1}'."
+                        if [[ ${var_element1} == *"${var_element2}"* ]]; then
+                            if [[ $( command -v ${var_element2} ) != "" ]]; then
+                                cp $var_element1 ${str_dir1}${var_element1}
+                                # echo -e "Appended file '${var_element1}'."
                             else
-                                echo -e "\e${str_warning}Missing required package '${str_element2}'. Skipping..."
+                                echo -e "\e${str_warning}Missing required package '${var_element2}'. Skipping..."
                             fi
                         fi
                     done
@@ -898,9 +921,7 @@
         echo -e "Appending files to Systemd..."
 
         # <parameters>
-        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
         declare -lr str_pattern=".service"
-        cd ${str_dir1}
         declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
         declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
         # </parameters>
@@ -919,38 +940,44 @@
             done
         }
 
-        # <summary>
-        # Copy binaries to system.
-        # </summary>
-        for str_element1 in ${arr_dir1[@]}; do
-            local str_file1="/usr/sbin/${str_element1}"
-            AppendServices_AppendFile $str_element1 $str_file1
-        done
+        CheckIfDirIsNull $str_filesDir &> /dev/null
+        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
 
-        # <summary>
-        # Copy services to system.
-        # </summary>
-        for str_element1 in ${arr_dir2[@]}; do
-            # <parameters>
-            local str_file1="/etc/systemd/system/${str_element1}"
-            # </parameters>
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <summary>
+            # Copy binaries to system.
+            # </summary>
+            for var_element1 in ${arr_dir1[@]}; do
+                local str_file1="/usr/sbin/${var_element1}"
+                AppendServices_AppendFile $var_element1 $str_file1
+            done
 
-            AppendServices_AppendFile $str_element1 $str_file1
+            # <summary>
+            # Copy services to system.
+            # </summary>
+            for var_element1 in ${arr_dir2[@]}; do
+                # <parameters>
+                local str_file1="/etc/systemd/system/${var_element1}"
+                # </parameters>
 
-            if [[ $int_thisExitCode -eq 0 ]]; then
-                systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-                ReadInput "Enable/disable '${str_element1}'?"
+                AppendServices_AppendFile $var_element1 $str_file1
 
-                case $int_thisExitCode in
-                    0)
-                        systemctl enable ${str_element1};;
-                    *)
-                        systemctl disable ${str_element1};;
-                esac
-            fi
-        done
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+                    ReadInput "Enable/disable '${var_element1}'?"
 
-        systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+                    case $int_thisExitCode in
+                        0)
+                            systemctl enable ${var_element1};;
+                        *)
+                            systemctl disable ${var_element1};;
+                    esac
+                fi
+            done
+
+            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+        fi
+
         EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
     }
 
@@ -1518,7 +1545,7 @@
                     str_line1="#$str_line1"
                 fi
 
-                WriteVarToFile $str_newFile1 $str_line1
+                AppendVarToFile $str_newFile1 $str_line1
             done < $str_file1
 
             DeleteFile $str_newFile1 &> /dev/null
@@ -1561,7 +1588,7 @@
                 "backports"|"testing"|"unstable")
                     while read str_line1; do
                         str_line1=${arr_sources[$int_i]}
-                        WriteVarToFile "/etc/apt/sources.list.d/'$str_input2'.list" $str_line1
+                        AppendVarToFile "/etc/apt/sources.list.d/'$str_input2'.list" $str_line1
                     done < $str_file1;;
                 *)
                     echo -e "\e[33mInvalid input.\e[0m";;
@@ -1626,14 +1653,14 @@
             while [[ $int_thisExitCode -eq 0 ]]; do
                 CheckIfFileIsNull $str_file1
                 CreateBackupFromFile $str_file1
-                WriteVarToFile $str_file1 $str_output1
+                AppendVarToFile $str_file1 $str_output1
                 systemctl restart ssh || ( false; SaveThisExitCode )
             done
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
             #     CheckIfFileIsNull $str_file2
             #     CreateBackupFromFile $str_file2
-            #     WriteVarToFile $str_file1 $str_output1
+            #     AppendVarToFile $str_file1 $str_output1
             #     systemctl restart sshd || ( false; SaveThisExitCode )
             # done
         fi
@@ -1649,51 +1676,41 @@
     {           # NOTE: needs work.
         echo -e "Configuring system security..."
 
-        # parameters #
-        # bool_runOperationIfFileExists=false
-        # str_input1=""
+        # <parameters>
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
+        declare -lr arr_files1=(
+            "/etc/modprobe.d/disable-usb-storage.conf"
+            "/etc/modprobe.d/disable-firewire.conf"
+            "/etc/modprobe.d/disable-thunderbolt.conf"
+        )
         declare -lr str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        # </parameters>
 
-        # echo -e "Remove given apt packages?"
-        # apt remove ${str_packagesToRemove}
+        CheckIfDirIsNull $str_filesDir &> /dev/null
+        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
 
-        # str_input1=""
-        ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
-        case $int_thisExitCode in
-            0)
-                WriteVarToFile 'install usb-storage /bin/true' /etc/modprobe.d/disable-usb-storage.conf
-                WriteVarToFile "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
-                WriteVarToFile "blacklist thunderbolt" /etc/modprobe.d/disable-thunderbolt.conf
-                update-initramfs -u -k all
-                ;;
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                    OverwriteVarToFile 'install usb-storage /bin/true' /etc/modprobe.d/disable-usb-storage.conf
+                    OverwriteVarToFile "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
+                    AppendVarToFile "blacklist thunderbolt" /etc/modprobe.d/disable-thunderbolt.conf
+                    update-initramfs -u -k all
+            else
+                for var_element1 in ${arr_files1}; do
+                    DeleteFile $var_element1 &> /dev/null
+                done
 
-            *)
-                if [[ -e /etc/modprobe.d/disable-usb-storage.conf ]]; then
-                    DeleteFile /etc/modprobe.d/disable-usb-storage.conf &> /dev/null
-                    bool_runOperationIfFileExists=true
-                fi
-
-                if [[ -e /etc/modprobe.d/disable-firewire.conf ]]; then
-                    rm /etc/modprobe.d/disable-firewire.conf
-                    bool_runOperationIfFileExists=true
-                fi
-
-                if [[ -e /etc/modprobe.d/disable-thunderbolt.conf ]]; then
-                    rm /etc/modprobe.d/disable-thunderbolt.conf
-                    bool_runOperationIfFileExists=true
-                fi
-
-                if [[ $bool_runOperationIfFileExists == true ]]; then
+                if [[ $int_thisExitCode -eq 0 ]]; then
                     update-initramfs -u -k all
                 fi
-                ;;
-        esac
+            fi
+        fi
 
         echo
 
-        str_dir1=$(find .. -name files | uniq | head -n1)"/"
+        str_dir1=$( find .. -name files | uniq | head -n1 )"/"
 
         if [[ ${str_dir1} != "" ]]; then
             cd ${str_dir1}
