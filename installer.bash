@@ -19,6 +19,9 @@
 # </summary>
 
 ### global parameters ###
+# <summary>
+#
+# </summary>
 # <code>
     var_IFS=$IFS
     declare -r str_thisDir=$( dirname $0 )
@@ -32,6 +35,9 @@
 # </code>
 
 ### exit code functions ###
+# <summary>
+# Return statement logic.
+# </summary>
 # <code>
     # <summary>
     # This statement (function) must follow an exit code statement.
@@ -199,6 +205,9 @@
 # </code>
 
 ### validation functions ###
+# <summary>
+# Validation logic.
+# </summary>
 # <code>
     # <summary>
     # Checks if directory exists,
@@ -309,13 +318,16 @@
 # </code>
 
 ### general functions ###
+# <summary>
+# File operation logic.
+# </summary>
 # <code>
     # <summary>
     # Change ownership of given file to current user.
     # $UID is intelligent enough to differentiate between the two
     # </summary>
     # <returns>exit code</returns>
-    function ChangeOwnershipOfFileOrDir
+    function ChangeOwnershipOfFileOrDirToCurrentUser
     {
         CheckIfVarIsNull $1 &> /dev/null
 
@@ -808,7 +820,76 @@
 # </code>
 
 ### program functions ###
+# <summary>
+# Logic specific to the purpose of this program or repository.
+# </summary>
 # <code>
+    # <summary>
+    # Crontab
+    # </summary>
+    # <returns>exit code</returns>
+    function AppendCron
+    {
+        echo -e "Appending cron entries... "
+
+        # <parameters>
+        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
+        declare -lr str_dir2="/etc/cron.d/"
+
+        # <summary>
+        # List of packages that have cron files (see below).
+        # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
+        # </summary>
+        declare -a arr_requiredPackages=(
+            "flatpak"
+            "ntpdate"
+            "rsync"
+            "snap"
+        )
+
+        if [[ $( command -v unattended-upgrades ) == "" ]]; then
+            arr_requiredPackages+=("apt")
+        fi
+        # </parameters>
+
+        GoToScriptDirectory &> /dev/null
+        CheckIfDirIsNull $str_dir1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            cd $str_dir1 &> /dev/null
+
+            for str_element1 in $( ls *-cron ); do
+                ReadInput "Append '${str_element1}'?"
+
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    for str_element2 in ${arr_requiredPackages[@]}; do
+
+                        # <summary>
+                        # Match given cron file, append only if package exists in system.
+                        # </summary>
+                        if [[ ${str_element1} == *"${str_element2}"* ]]; then
+                            if [[ $( command -v ${str_element2} ) != "" ]]; then
+                                cp $str_element1 ${str_dir2}${str_element1}
+                                # echo -e "Appended file '${str_element1}'."
+                            else
+                                echo -e "\e${str_warning}Missing required package '${str_element2}'. Skipping..."
+                            fi
+                        fi
+                    done
+                fi
+            done
+        fi
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <summary>
+            # Restart service.
+            # </summary>
+            systemctl restart cron
+        fi
+
+        EchoPassOrFailThisExitCode "Appending cron entries... "; ParseThisExitCode
+    }
+
     # <summary>
     # Append SystemD services to host.
     # </summary>
@@ -817,46 +898,56 @@
         echo -e "Appending files to Systemd..."
 
         # <parameters>
-        declare -lr str_dir1="$( pwd )/$( basename $( find . -name services | uniq | head -n1 ))"
+        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
         declare -lr str_pattern=".service"
         cd ${str_dir1}
-        declare -al arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
         # </parameters>
+
+        # <summary>
+        # Copy files and set permissions.
+        # </summary>
+        function AppendServices_AppendFile
+        {
+            CheckIfFileIsNull $2 &> /dev/null
+
+            while [[ $int_thisExitCode -eq 0 ]]; do
+                cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                chown root $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                chmod +x $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            done
+        }
 
         # <summary>
         # Copy binaries to system.
         # </summary>
         for str_element1 in ${arr_dir1[@]}; do
-            local str_outFile1="/usr/sbin/${str_element1}"
-            cp ${str_element1} ${str_outFile1}
-            chown root ${str_outFile1}
-            chmod +x ${str_outFile1}
+            local str_file1="/usr/sbin/${str_element1}"
+            AppendServices_AppendFile $str_element1 $str_file1
         done
-
-        arr_dir1=( $( ls | uniq | grep ${str_pattern} ))
 
         # <summary>
         # Copy services to system.
         # </summary>
-        for str_element1 in ${arr_dir1[@]}; do
+        for str_element1 in ${arr_dir2[@]}; do
             # <parameters>
-            declare -i int_fileNameLength=$(( ${#str_element1} - ${#str_pattern} ))
-            str_outFile1="/etc/systemd/system/${str_element1}"
+            local str_file1="/etc/systemd/system/${str_element1}"
             # </parameters>
 
-            cp ${str_dir1}"/"${str_element1} ${str_outFile1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            chown root ${str_outFile1} &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-            chmod +x ${str_outFile1} &> /dev/null || ( SetExitCodeIfFileIsNotExecutable; SaveThisExitCode )
+            AppendServices_AppendFile $str_element1 $str_file1
 
-            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
-            ReadInput "Enable/disable '${str_element1}'?"
+            if [[ $int_thisExitCode -eq 0 ]]; then
+                systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+                ReadInput "Enable/disable '${str_element1}'?"
 
-            case $int_thisExitCode in
-                0)
-                    systemctl enable ${str_element1};;
-                *)
-                    systemctl disable ${str_element1};;
-            esac
+                case $int_thisExitCode in
+                    0)
+                        systemctl enable ${str_element1};;
+                    *)
+                        systemctl disable ${str_element1};;
+                esac
+            fi
         done
 
         systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
@@ -1019,7 +1110,7 @@
         # <summary>
         # Select and Install software sorted by type.
         # </summary>
-        function InstallAptByType
+        function InstallFromDebianRepos_InstallByType
         {
             if [[ $1 != "" ]]; then
                 echo -e $2
@@ -1045,17 +1136,17 @@
             fi
         }
 
-        InstallAptByType $str_aptUnsorted "Select given software?"
-        InstallAptByType $str_aptDeveloper "Select Development software?"
-        InstallAptByType $str_aptGames "Select games?"
-        InstallAptByType $str_aptInternet "Select Internet software?"
-        InstallAptByType $str_aptMedia "Select multi-media software?"
-        InstallAptByType $str_aptOffice "Select office software?"
-        InstallAptByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
-        InstallAptByType $str_aptSecurity "Select security tools?"
-        InstallAptByType $str_aptSuites "Select software suites?"
-        InstallAptByType $str_aptTools "Select software tools?"
-        InstallAptByType $str_aptVGAdrivers "Select VGA drivers?"
+        InstallFromDebianRepos_InstallByType $str_aptUnsorted "Select given software?"
+        InstallFromDebianRepos_InstallByType $str_aptDeveloper "Select Development software?"
+        InstallFromDebianRepos_InstallByType $str_aptGames "Select games?"
+        InstallFromDebianRepos_InstallByType $str_aptInternet "Select Internet software?"
+        InstallFromDebianRepos_InstallByType $str_aptMedia "Select multi-media software?"
+        InstallFromDebianRepos_InstallByType $str_aptOffice "Select office software?"
+        InstallFromDebianRepos_InstallByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+        InstallFromDebianRepos_InstallByType $str_aptSecurity "Select security tools?"
+        InstallFromDebianRepos_InstallByType $str_aptSuites "Select software suites?"
+        InstallFromDebianRepos_InstallByType $str_aptTools "Select software tools?"
+        InstallFromDebianRepos_InstallByType $str_aptVGAdrivers "Select VGA drivers?"
 
         if [[ $str_aptAll != "" ]]; then
             apt install $str_args $str_aptAll
@@ -1116,7 +1207,7 @@
             # Select and Install software sorted by type.
             # </summary>
             # <code>
-                function InstallFlatpakByType
+                function InstallFromFlathubRepos_InstallByType
                 {
                     if [[ $1 != "" ]]; then
                         echo -e $2
@@ -1142,8 +1233,8 @@
                     fi
                 }
 
-                InstallAptByType $str_flatpakUnsorted "Select given Flatpak software?"
-                InstallAptByType $str_flatpakPrismBreak "Select recommended Prism Break Flatpak software?"
+                InstallFromFlathubRepos_InstallByType $str_flatpakUnsorted "Select given Flatpak software?"
+                InstallFromFlathubRepos_InstallByType $str_flatpakPrismBreak "Select recommended Prism Break Flatpak software?"
 
                 if [[ $str_flatpakAll != "" ]]; then
                     echo -e "Install selected Flatpak apps?"
@@ -1296,7 +1387,7 @@
             # Select and Install software sorted by type.
             # </summary>
             # <code>
-                function InstallSnapByType
+                function InstallFromSnapRepos_InstallByType
                 {
                     if [[ $1 != "" ]]; then
                         echo -e $2
@@ -1322,7 +1413,7 @@
                     fi
                 }
 
-                InstallSnapByType $str_snapUnsorted "Select given Snap software?"
+                InstallFromSnapRepos_InstallByType $str_snapUnsorted "Select given Snap software?"
 
                 if [[ $str_snapAll != "" ]]; then
                     echo -e "Install selected Snap apps?"
@@ -1490,72 +1581,6 @@
     }
 
     # <summary>
-    # Crontab
-    # </summary>
-    # <returns>exit code</returns>
-    function AppendCron
-    {
-        echo -e "Appending cron entries... "
-
-        # <parameters>
-        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
-        declare -lr str_dir2="/etc/cron.d/"
-
-        # <summary>
-        # List of packages that have cron files (see below).
-        # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
-        # </summary>
-        declare -a arr_requiredPackages=(
-            "flatpak"
-            "ntpdate"
-            "rsync"
-            "snap"
-        )
-
-        if [[ $( command -v unattended-upgrades ) == "" ]]; then
-            arr_requiredPackages+=("apt")
-        fi
-        # </parameters>
-
-        GoToScriptDirectory &> /dev/null
-        CheckIfDirIsNull $str_dir1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            cd $str_dir1 &> /dev/null
-
-            for str_element1 in $( ls *-cron ); do
-                ReadInput "Append '${str_element1}'?"
-
-                if [[ $int_thisExitCode -eq 0 ]]; then
-                    for str_element2 in ${arr_requiredPackages[@]}; do
-
-                        # <summary>
-                        # Match given cron file, append only if package exists in system.
-                        # </summary>
-                        if [[ ${str_element1} == *"${str_element2}"* ]]; then
-                            if [[ $( command -v ${str_element2} ) != "" ]]; then
-                                cp $str_element1 ${str_dir2}${str_element1}
-                                # echo -e "Appended file '${str_element1}'."
-                            else
-                                echo -e "\e${str_warning}Missing required package '${str_element2}'. Skipping..."
-                            fi
-                        fi
-                    done
-                fi
-            done
-        fi
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            # <summary>
-            # Restart service.
-            # </summary>
-            systemctl restart cron
-        fi
-
-        EchoPassOrFailThisExitCode "Appending cron entries... "; ParseThisExitCode
-    }
-
-    # <summary>
     # SSH
     # </summary>
     # <returns>exit code</returns>
@@ -1625,28 +1650,28 @@
         echo -e "Configuring system security..."
 
         # parameters #
-        bool_runOperationIfFileExists=false
-        str_input1=""
+        # bool_runOperationIfFileExists=false
+        # str_input1=""
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
-        str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        declare -lr str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
 
         # echo -e "Remove given apt packages?"
         # apt remove ${str_packagesToRemove}
 
-        str_input1=""
+        # str_input1=""
         ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
-        case ${str_input1} in
-            "Y")
-                echo 'install usb-storage /bin/true' > /etc/modprobe.d/disable-usb-storage.conf
-                echo "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
-                echo "blacklist thunderbolt" >> /etc/modprobe.d/disable-thunderbolt.conf
+        case $int_thisExitCode in
+            0)
+                WriteVarToFile 'install usb-storage /bin/true' /etc/modprobe.d/disable-usb-storage.conf
+                WriteVarToFile "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
+                WriteVarToFile "blacklist thunderbolt" /etc/modprobe.d/disable-thunderbolt.conf
                 update-initramfs -u -k all
                 ;;
 
-            "N")
+            *)
                 if [[ -e /etc/modprobe.d/disable-usb-storage.conf ]]; then
-                    rm /etc/modprobe.d/disable-usb-storage.conf
+                    DeleteFile /etc/modprobe.d/disable-usb-storage.conf &> /dev/null
                     bool_runOperationIfFileExists=true
                 fi
 
@@ -1754,6 +1779,9 @@
 # </code>
 
 ### main functions ###
+# <summary>
+# Middleman logic between Program logic and Main code.
+# </summary>
 # <code>
     # <summary>
     # Display Help to console.
@@ -1913,6 +1941,9 @@
 # </code>
 
 ### main ###
+# <summary>
+# Ditto.
+# </summary>
 # <code>
     # NOTE: necessary for newline preservation in arrays and files
     SetInternalFieldSeparatorToNewline
