@@ -20,7 +20,7 @@
 
 ### global parameters ###
 # <summary>
-#
+# Variables to be used throughout the program.
 # </summary>
 # <code>
     var_IFS=$IFS
