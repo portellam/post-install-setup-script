@@ -21,6 +21,7 @@
 ### global parameters ###
 # <code>
     var_IFS=$IFS
+    declare -r str_thisDir=$( dirname $0 )
     declare -r str_pwd=$( pwd )
     declare -r str_warning="\e[33mWARNING:\e[0m"" "
 
@@ -260,7 +261,7 @@
         fi
     }
 
-        # <summary>
+    # <summary>
     # Checks if current user is sudo/root.
     # </summary>
     # <returns>exit code</returns>
@@ -268,12 +269,12 @@
     {
         if [[ $( whoami ) != "root" ]]; then
             echo -en "${str_warning}Script must execute as root."
-            local str_file1=$( echo ${0##/*} )
+            # declare -lr str_file1=$( echo ${0##/*} )
 
             while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileIsNull $str_file1 &> /dev/null
-                readonly str_file1=$( echo $str_file1 | cut -d '/' -f2 )
-                echo -e " In terminal, run:\n\t'sudo bash $str_file1'"
+                CheckIfFileIsNull $0 &> /dev/null
+                declare -lr str_file1=$( basename $0 )
+                echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
                 break
             done
 
@@ -488,6 +489,21 @@
             CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
             rm $1 &> /dev/null || (  break )
+            break
+        done
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
+    }
+
+    # <summary>
+    # Redirect to script directory.
+    # </summary>
+    # <returns>exit code</returns>
+    function GoToScriptDirectory
+    {
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfDirIsNull $str_thisDir
+            cd $str_thisDir || ( false; SaveThisExitCode )
             break
         done
 
@@ -848,7 +864,7 @@
     }
 
     # <summary>
-    # Check linux distro
+    # Check if Linux distribution is Debian or Debian-derivative.
     # </summary>
     # <returns>exit code</returns>
     function CheckCurrentDistro
@@ -1478,74 +1494,65 @@
     # </summary>
     # <returns>exit code</returns>
     function AppendCron
-    {               # NOTE: needs work.
-        # <parameters>
-        declare -a arr_dir1=()
-        declare -lr str_dir1=$( find .. -name files | uniq | head -n1 )"/"
-        str_outDir1="/etc/cron.d/"
+    {
+        echo -e "Appending cron entries... "
 
+        # <parameters>
+        declare -lr str_dir1=$( dirname $( find .. -name files | uniq | head -n1 ) )
+        declare -lr str_dir2="/etc/cron.d/"
+
+        # <summary>
         # List of packages that have cron files (see below).
         # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
-        # <summary>
+        # </summary>
         declare -a arr_requiredPackages=(
             "flatpak"
             "ntpdate"
             "rsync"
             "snap"
         )
-        # </summary>
-        # </parameters>
 
         if [[ $( command -v unattended-upgrades ) == "" ]]; then
             arr_requiredPackages+=("apt")
         fi
+        # </parameters>
 
-        if [[ ${str_dir1} != "" ]]; then
-            cd ${str_dir1}
+        GoToScriptDirectory &> /dev/null
+        CheckIfDirIsNull $str_dir1 &> /dev/null
 
-            # list of cron files #
-            arr1=$(ls *-cron)
-        fi
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            cd $str_dir1 &> /dev/null
 
-        # how do i get the file name after the last delimiter "/" ? check other repos or check for pattern regex
-        if [[ ${#arr1[@]} -gt 0 ]]; then
-            echo -e "Appending cron entries..."
+            for str_element1 in $( ls *-cron ); do
+                ReadInput "Append '${str_element1}'?"
 
-            for str_line1 in ${arr1}; do
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    for str_element2 in ${arr_requiredPackages[@]}; do
 
-                # update parameters #
-                str_input1=""
-
-                ReadInput "Append '${str_line1}'?"
-                echo
-
-                if [[ ${str_input1} == "Y" ]]; then
-
-                    # parse list of packages that have cron files #
-                    for str_line2 in ${arr_requiredPackages[@]}; do
-
-                        # match given cron file, append only if package exists in system #
-                        if [[ ${str_line1} == *"${str_line2}"* ]]; then
-                            if [[ $(command -v ${str_line2}) != "" ]]; then
-                                cp ${str_dir1}${str_line1} ${str_outDir1}${str_line1}
-                                # echo -e "Appended file '${str_line1}'."
-
+                        # <summary>
+                        # Match given cron file, append only if package exists in system.
+                        # </summary>
+                        if [[ ${str_element1} == *"${str_element2}"* ]]; then
+                            if [[ $( command -v ${str_element2} ) != "" ]]; then
+                                cp $str_element1 ${str_dir2}${str_element1}
+                                # echo -e "Appended file '${str_element1}'."
                             else
-                                echo -e "\e${str_warning}Missing required package '${str_line2}'. Skipping..."
+                                echo -e "\e${str_warning}Missing required package '${str_element2}'. Skipping..."
                             fi
                         fi
                     done
                 fi
             done
-
-            echo -e "Review changes made. "
-
-        else
-            echo -e "${str_warning}Missing files. Skipping..."
         fi
 
-        # restart service #
-        systemctl restart cron
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            # <summary>
+            # Restart service.
+            # </summary>
+            systemctl restart cron
+        fi
+
+        EchoPassOrFailThisExitCode "Appending cron entries... "; ParseThisExitCode
     }
 
     # <summary>
