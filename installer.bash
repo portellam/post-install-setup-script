@@ -6,6 +6,8 @@
 
 ### notes ###
 # <summary>
+# -use alias commands?
+#
 # -do not over-rely on existing functions for file manipulation, better to use commands than hope logic works as intended.
 #
 # -refactor *return statements* of functions with first input variable
@@ -1676,7 +1678,7 @@
     # <returns> exit code </returns>
     function Help
     {                                 # NOTE: needs work.
-        declare -r str_helpPrompt="Usage: $0 [ OPTIONS | ARGUMENTS ]
+        declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
             \nwhere OPTIONS
             \n\t-h  --help\t\t\tPrint this prompt.
             \n\t-d  --delete\t\t\tDelete existing VFIO setup.
