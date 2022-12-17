@@ -294,7 +294,7 @@
     function AppendArrayToFile
     {
         SetInternalFieldSeparatorToNewline
-        echo -en "Writing to file... "
+        echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -322,7 +322,7 @@
     function AppendVarToFile
     {
         SetInternalFieldSeparatorToNewline
-        echo -en "Writing to file... "
+        echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -358,7 +358,7 @@
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        echo -en "Verifying two files... "
+        echo -en "Verifying two files..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -388,7 +388,7 @@
     # <returns> exit code </returns>
     function CreateBackupFromFile
     {
-        echo -en "Backing up file... "
+        echo -en "Backing up file..."
         declare -lr str_file1=$1
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -465,7 +465,7 @@
     # <returns> exit code </returns>
     function CreateDir
     {
-        echo -en "Creating directory... "
+        echo -en "Creating directory..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -481,7 +481,7 @@
     # <returns> exit code </returns>
     function CreateFile
     {
-        echo -en "Creating file... "
+        echo -en "Creating file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -497,7 +497,7 @@
     # <returns> exit code </returns>
     function DeleteFile
     {
-        echo -en "Deleting file... "
+        echo -en "Deleting file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -528,7 +528,7 @@
     # <returns> string array </returns>
     function ReadFile
     {
-        echo -en "Reading file... "
+        echo -en "Reading file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -767,11 +767,11 @@
     # <returns> exit code </returns>
     function TestNetwork
     {
-        echo -en "Testing Internet connection... "
+        echo -en "Testing Internet connection..."
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
         SaveThisExitCode; EchoPassOrFailThisExitCode
 
-        echo -en "Testing connection to DNS... "
+        echo -en "Testing connection to DNS..."
         ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || false
         SaveThisExitCode; EchoPassOrFailThisExitCode
 
@@ -802,7 +802,7 @@
     function OverwriteVarToFile
     {
         SetInternalFieldSeparatorToNewline
-        echo -en "Writing to file... "
+        echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
@@ -827,7 +827,7 @@
     # <returns> exit code </returns>
     function AppendCron
     {
-        echo -e "Appending cron entries... "
+        echo -e "Appending cron entries..."
 
         # <parameters>
         declare -lr str_dir1="/etc/cron.d/"
@@ -883,7 +883,7 @@
             systemctl restart cron &> /dev/null || ( false; SaveThisExitCode )
         fi
 
-        EchoPassOrFailThisExitCode "Appending cron entries... "; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -1559,8 +1559,6 @@
             #     break
             # done
         fi
-
-        echo
     }
 
     # <summary> Recommended host security changes. </summary>
@@ -1666,6 +1664,8 @@
         done
 
         # edit hosts file here? #
+
+        EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode
     }
 # </code>
 
