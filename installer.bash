@@ -19,9 +19,7 @@
 # </summary>
 
 ### global parameters ###
-# <summary>
-# Variables to be used throughout the program.
-# </summary>
+# <summary> Variables to be used throughout the program. </summary>
 # <code>
     var_IFS=$IFS
     declare -r str_thisDir=$( dirname $0 )
@@ -36,9 +34,7 @@
 # </code>
 
 ### exit code functions ###
-# <summary>
-# Return statement logic.
-# </summary>
+# <summary> Return statement logic. </summary>
 # <code>
     # <summary>
     # This statement (function) must follow an exit code statement.
@@ -57,18 +53,17 @@
     #   131-255         Unreserved
     #
     #   255             Unspecified error.
-    #   254             Input is null.
+    #   254             Var is null.
     #   253             File/Dir is null.
     #   252             File/Dir is not readable.
     #   251             File/Dir is not writable.
     #   250             File/Dir is not executable.
+    #   249             "Input" is invalid.
     #   131             Neither pass or fail; Skipped execution.
     #
     # </summary>
 
-    # <summary>
-    # Output pass or fail statement given exit code.
-    # </summary>
+    # <summary> Output pass or fail statement given exit code. </summary>
     # <returns> exit code </returns>
     function EchoPassOrFailThisExitCode
     {
@@ -88,9 +83,7 @@
         esac
     }
 
-    # <summary>
-    # Output pass or fail test-case given exit code.
-    # </summary>
+    # <summary> Output pass or fail test-case given exit code. </summary>
     # <returns> exit code </returns>
     function EchoPassOrFailThisTestCase
     {
@@ -112,9 +105,7 @@
         esac
     }
 
-    # <summary>
-    # Exit bash session/script with current exit code.
-    # </summary>
+    # <summary> Exit bash session/script with current exit code. </summary>
     # <returns> exit code </returns>
     function ExitWithThisExitCode
     {
@@ -122,20 +113,18 @@
         exit $int_thisExitCode
     }
 
-    # <summary>
-    # Output error given exception.
-    # </summary>
+    # <summary> Output error given exception. </summary>
     # <returns> exit code </returns>
     function ParseThisExitCode
     {
         case $int_thisExitCode in
-            ### script agnostic ###
+            # <summary> general errors </summary>
             255)
                 echo -e "\e[33mError:\e[0m Unspecified error.";;
             254)
                 echo -e "\e[33mException:\e[0m Null input.";;
 
-            ### file operands ###
+            # <summary> file validation </summary>
             253)
                 echo -e "\e[33mException:\e[0m File/Dir does not exist.";;
             252)
@@ -144,10 +133,10 @@
                 echo -e "\e[33mException:\e[0m File/Dir is not writable.";;
             250)
                 echo -e "\e[33mException:\e[0m File/Dir is not executable.";;
+
+            # <summary> script specific </summary>
             249)
                 echo -e "\e[33mException:\e[0m Invalid input.";;
-
-            ### script specific ###
             248)
                 echo -e "\e[33mError:\e[0m Missed steps; missed execution of key subfunctions.";;
             247)
@@ -155,9 +144,7 @@
         esac
     }
 
-    # <summary>
-    # Updates main parameter.
-    # </summary>
+    # <summary> Updates global parameter. </summary>
     # <returns> exit code </returns>
     function SaveThisExitCode
     {
@@ -196,7 +183,7 @@
 
     function SetExitCodeIfInputIsInvalid
     {
-        (exit 250)
+        (exit 249)
     }
 
     function SetExitCodeIfPassNorFail
@@ -516,42 +503,36 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -lr str_output1=""
+        declare -l str_output1=""
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            declare -lr str_output1=$1
+            readonly str_output1="$1 "
         fi
         # </parameters> #
 
         true; SaveThisExitCode
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary>
-            # After given number of attempts, input is set to default: false.
-            # </summary>
+            # <summary> After given number of attempts, input is set to default: false. </summary>
             if [[ $int_count -gt $int_maxCount ]]; then
                 str_input1="N"
                 echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "$1 \e[30;43m[Y/n]:\e[0m "
+            echo -en "${str_output1}\e[30;43m[Y/n]:\e[0m "
             read str_input1
             str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
-            # <summary>
-            # Check if string is a valid input.
-            # </summary>
+            # <summary> Check if string is a valid input. </summary>
             case $str_input1 in
                 "Y")
-                    true; SaveThisExitCode; break;;
+                    break;;
                 "N")
                     false; SaveThisExitCode; break;;
             esac
 
-            # <summary>
-            # Input is invalid, increment counter.
-            # </summary>
+            # <summary> Input is invalid, increment counter. </summary>
             echo -en "\e[33mInvalid input.\e[0m "
             (( int_count++ ))
         done
@@ -569,10 +550,10 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -lr str_output1=""
+        declare -l str_output1=""
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            declare -lr str_output1=$1
+            readonly str_output1="$1 "
         fi
         # </parameters> #
 
@@ -588,7 +569,7 @@
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "$str_output1 "
+            echo -en "$str_output1"
             read str_input1
 
             # <summary>
@@ -623,10 +604,10 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -lr str_output1=""
+        declare -l str_output1=""
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            declare -lr str_output1=$1
+            readonly str_output1="$1 "
         fi
         # </parameters> #
 
@@ -642,30 +623,26 @@
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "$str_output1 "
+            echo -en "$str_output1"
             read str_input1
             str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
-            # <summary>
-            # Check if string is a valid input.
-            # </summary>
+            # <summary> Check if string is a valid input. </summary>
             case $str_input1 in
                 $2|$3|$4|$5|$6|$7|$8|$9)
                     true; SaveThisExitCode; break;
             esac
 
-            # <summary>
-            # Input is invalid, increment counter.
-            # </summary>
+            # <summary> Input is invalid, increment counter. # </summary>
             echo -en "\e[33mInvalid input.\e[0m "
             (( int_count++ ))
         done
 
-        # <summary>
-        # Return value with stdout.
-        # </summary>
-        $1=$str_input1
-        EchoVarIfVarIsNotNull $1
+        # <summary> Return value with stdout. </summary>
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $str_input1 &> /dev/null
+            echo $str_input1
+        done
     }
 
     # <summary>
@@ -678,45 +655,42 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
+        declare -l str_output1=""
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            readonly str_output1="$1 "
+        fi
         # </parameters> #
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary>
-            # After given number of attempts, input is set to default: min value.
-            # </summary>
+            # <summary> After given number of attempts, input is set to default: min value. </summary>
             if [[ $int_count -gt $int_maxCount ]]; then
                 str_input1=$2
                 echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                true; SaveThisExitCode; break
+                break
             fi
 
-            echo -en "$1 "
+            echo -en "$str_output1"
             read str_input1
 
-            # <summary>
-            # Check if string is a valid integer and within given range.
-            # </summary>
-            if [[ $str_input1 -ge $2 && $str_input1 -le $3 && ( "${str_input1}" -ge "$(( ${str_input1} ))" ) ]] 2> /dev/null;; then
-                true; SaveThisExitCode; break
+            # <summary> Check if string is a valid integer and within given range. </summary>
+            if [[ $str_input1 -ge $2 && $str_input1 -le $3 && ( "${str_input1}" -ge "$(( ${str_input1} ))" ) ]] 2> /dev/null; then
+                break
             fi
 
-            # <summary>
-            # Input is invalid, increment counter.
-            # </summary>
+            # <summary> Input is invalid, increment counter. </summary>
             echo -en "\e[33mInvalid input.\e[0m "
             (( int_count++ ))
         done
 
-        # <summary>
-        # Return value with stdout.
-        # </summary>
-        $1=$str_input1
-        EchoVarIfVarIsNotNull $1
+        # <summary> Return value with stdout. </summary>
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $str_input1 &> /dev/null
+            echo $str_input1
+        done
     }
 
-    # <summary>
-    # Reset IFS.
-    # </summary>
+    # <summary> Reset IFS. </summary>
     function SetInternalFieldSeparatorToDefault
     {
         IFS=$var_IFS
