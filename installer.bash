@@ -6,6 +6,8 @@
 
 ### notes ###
 # <summary>
+# -do not over-rely on existing functions for file manipulation, better to use commands than hope logic works as intended.
+#
 # -refactor *return statements* of functions with first input variable
 #   -set $1 as return string/var, and push back other input vars ($1 will be $2, and so on...)
 #
@@ -16,6 +18,8 @@
 # -refactor code
 #
 # -cat EOF
+#
+#
 # </summary>
 
 ### global parameters ###
@@ -283,6 +287,55 @@
 ### general functions ###
 # <summary> File operation logic </summary>
 # <code>
+    # <summary> Append file with contents of array. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string array </parameter>
+    # <returns> exit code </returns>
+    function AppendArrayToFile
+    {
+        SetInternalFieldSeparatorToNewline
+        echo -en "Writing to file... "
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfFileIsReadable $1 &> /dev/null
+            CheckIfFileIsWritable $1 &> /dev/null
+            # declare -aln arr_file1="$2"
+            local -n arr_file1="$2"
+
+            for var_element1 in ${arr_file1[@]}; do
+                ( echo -e $var_element1 >> $1 ) &> /dev/null || false; SaveThisExitCode
+            done
+
+            break
+        done
+
+        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+    }
+
+    # <summary> Append file with contents of variable. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> exit code </returns>
+    function AppendVarToFile
+    {
+        SetInternalFieldSeparatorToNewline
+        echo -en "Writing to file... "
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $1 &> /dev/null
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $2 &> /dev/null
+            CheckIfFileIsReadable $2 &> /dev/null
+            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
+            break
+        done
+
+        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+    }
+
     # <summary>
     # Change ownership of given file to current user.
     # $UID is intelligent enough to differentiate between the two
@@ -470,19 +523,21 @@
     }
 
     # <summary> Reads a file. </summary>
-    # <returns>elements of string array</returns>
+    # <parameter name="$1"> string array </parameter>
+    # <parameter name="$2"> file </parameter>
+    # <returns> string array </returns>
     function ReadFile
     {
         echo -en "Reading file... "
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-
-            while read var_element1; do
-                echo $var_element1 &> /dev/null || ( SetExitCodeIfFileIsNotReadable; break )
-            done < $1
+            CheckIfVarIsNull $2 &> /dev/null
+            CheckIfFileIsNull $2 &> /dev/null
+            CheckIfFileIsReadable $2 &> /dev/null
+            # declare -aln arr_file1="$1"
+            local -n arr_file1="$1"
+            readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
             break
         done
 
@@ -586,10 +641,11 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNull $str_input1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
-        done
+        fi
     }
 
     # <summary>
@@ -635,10 +691,11 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNull $str_input1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
-        done
+        fi
     }
 
     # <summary>
@@ -680,10 +737,11 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNull $str_input1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
-        done
+        fi
     }
 
     # <summary> Reset IFS. </summary>
@@ -724,35 +782,22 @@
         EchoPassOrFailThisExitCode; echo
     }
 
-    # <summary>
-    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
-    # This may help with calling/parsing arrays.
-    # When passing the var, write the name without " $ ".
-    # </summary>
+    # <summary> Overwrite file with contents of array. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string array </parameter>
     # <returns> exit code </returns>
-    function AppendVarToFile
+    function OverwriteArrayToFile
     {
-        SetInternalFieldSeparatorToNewline
-        echo -en "Writing to file... "
+        DeleteFile $1 &> /dev/null
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-            CheckIfFileIsWritable $1 &> /dev/null
-            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
-            break
-        done
-
-        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            AppendArrayToFile $1 $2
+        fi
     }
 
-    # <summary>
-    # Input variable #2 ( $2 ) is the name of the variable we wish to point to.
-    # This may help with calling/parsing arrays.
-    # When passing the var, write the name without " $ ".
-    # </summary>
+    # <summary> Overwrite file with contents of variable. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
     # <returns> exit code </returns>
     function OverwriteVarToFile
     {
@@ -765,7 +810,7 @@
             CheckIfFileIsNull $1 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsWritable $1 &> /dev/null
-            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
+            ( echo -e $2 > $1 ) &> /dev/null || false; SaveThisExitCode
             break
         done
 
@@ -861,6 +906,7 @@
                 cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                 chown root $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                 chmod +x $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                break
             done
         }
 
@@ -1447,6 +1493,7 @@
             apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
             apt update || ( SetExitCodeOnError; SaveThisExitCode )
             apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
+            break
         done
 
         EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
@@ -1501,6 +1548,7 @@
                 CreateBackupFromFile $str_file1
                 AppendVarToFile $str_file1 $str_output1
                 systemctl restart ssh || ( false; SaveThisExitCode )
+                break
             done
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
@@ -1508,6 +1556,7 @@
             #     CreateBackupFromFile $str_file2
             #     AppendVarToFile $str_file1 $str_output1
             #     systemctl restart sshd || ( false; SaveThisExitCode )
+            #     break
             # done
         fi
 
@@ -1539,9 +1588,9 @@
             ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             if [[ $int_thisExitCode -eq 0 ]]; then
-                    OverwriteVarToFile 'install usb-storage /bin/true' /etc/modprobe.d/disable-usb-storage.conf
-                    OverwriteVarToFile "blacklist firewire-core" /etc/modprobe.d/disable-firewire.conf
-                    AppendVarToFile "blacklist thunderbolt" /etc/modprobe.d/disable-thunderbolt.conf
+                    OverwriteVarToFile /etc/modprobe.d/disable-usb-storage.conf 'install usb-storage /bin/true'
+                    OverwriteVarToFile /etc/modprobe.d/disable-firewire.conf "blacklist firewire-core"
+                    AppendVarToFile  /etc/modprobe.d/disable-thunderbolt.conf "blacklist thunderbolt"
                     update-initramfs -u -k all
             else
                 for var_element1 in ${arr_files1}; do
@@ -1563,63 +1612,60 @@
             ReadInput "Setup '/etc/sysctl.conf' with defaults?"
             cp $str_file1 $str_file2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
             cat $str_file2 >> $str_file1 || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            break
         done
 
         ReadInput "Setup firewall with UFW?"
 
-        if [[ ${str_input1} == "Y" ]]; then
-            if [[ $( command -v ufw ) != "" ]]; then
-                # NOTE: change here!
-                # basic #
-                ufw reset
-                ufw default allow outgoing
-                ufw default deny incoming
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
+            if [[ $( command -v ufw ) == "" ]]; then
+                echo -e "${str_warning}UFW is not installed. Skipping..."
+                false; SaveThisExitCode
+            fi
 
-                # NOTE: default LAN subnets may be 192.168.1.0/24
+            ufw reset &> /dev/null || ( false; SaveThisExitCode )
+            ufw default allow outgoing &> /dev/null || ( false; SaveThisExitCode )
+            ufw default deny incoming &> /dev/null || ( false; SaveThisExitCode )
 
-                # secure-shell on local lan #
-                if [[ $( command -v ssh ) != "" ]]; then
-                    if [[ ${str_sshAlt} != "" ]]; then
-                        ufw deny ssh comment 'deny default ssh'
-                        ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh'
-
-                    else
-                        ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh'
-                    fi
-
-                    ufw deny ssh comment 'deny default ssh'
+            # <summary> SSH on LAN </summary>
+            if [[ $( command -v ssh ) != "" ]]; then
+                if [[ ${str_sshAlt} != "" ]]; then
+                    ufw deny ssh comment 'deny default ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                    ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                else
+                    ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                 fi
 
-                # services a desktop uses #
-                ufw allow DNS comment 'dns'
-                ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server'
-                ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server'
-
-                ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
-                ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server'
-                ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server'
-                ufw allow VNC comment 'VNC, local remote desktop server'
-
-                # services a server may use #
-                # ufw allow http comment 'HTTP, local Web server'
-                # ufw allow https comment 'HTTPS, local Web server'
-
-                # ufw allow 25 comment 'SMTPD, local mail server'
-                # ufw allow 110 comment 'POP3, local mail server'
-                # ufw allow 995 comment 'POP3S, local mail server'
-                # ufw allow 1194/udp 'SMTPD, local VPN server'
-                ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server'
-
-                # save changes #
-                ufw enable
-                ufw reload
-
-            else
-                echo -e "${str_warning}UFW is not installed. Skipping..."
+                ufw deny ssh comment 'deny default ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
             fi
-        fi
 
-        # edit hosts file here?
+            # <summary> Services a desktop may use. </summary>
+            ufw allow DNS comment 'dns' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+
+            # <summary> Services a server may use. </summary>
+            # ufw allow http comment 'HTTP, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            # ufw allow https comment 'HTTPS, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+
+            # ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            # ufw allow 110 comment 'POP3, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            # ufw allow 995 comment 'POP3S, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            # ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+
+            # <summary> Save changes. </summary>
+            ufw enable &> /dev/null || ( false; SaveThisExitCode )
+            ufw reload &> /dev/null || ( false; SaveThisExitCode )
+            break
+        done
+
+        # edit hosts file here? #
     }
 # </code>
 
@@ -1774,7 +1820,7 @@
 # </code>
 
 ### main ###
-# <summary> If you need to a summary to describe the purpose, you're not gonna make it. </summary>
+# <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
     SetInternalFieldSeparatorToNewline
