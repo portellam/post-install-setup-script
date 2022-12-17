@@ -355,8 +355,8 @@
                 # <parameters>
                 declare -ir int_maxCount=5
                 local var_element1=${arr_dir1[0]}
-                var_element1=${var_element1%"${str_suffix}"}              # substitution
-                var_element1=${var_element1##*.}                          # ditto
+                var_element1=${var_element1%"${str_suffix}"}             # substitution
+                var_element1=${var_element1##*.}                         # ditto
                 # </parameters>
 
                 CheckIfVarIsValidNum $var_element1 &> /dev/null
@@ -383,18 +383,16 @@
                 fi
 
                 # <parameters>
-                var_element1=${arr_dir1[-1]%"${str_suffix}"}             # substitution
-                var_element1=${var_element1##*.}                            # ditto
+                var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
+                var_element1=${var_element1##*.}                        # ditto
                 declare -il int_lastIndex=0
                 # </parameters>
 
                 CheckIfVarIsValidNum $var_element1 &> /dev/null
                 declare -i int_lastIndex="${var_element1}"
-                (( int_lastIndex++ ))                                # counter
+                (( int_lastIndex++ ))                                   # counter
 
-                # <summary>
-                # Source file is newer and different than backup, add to backups.
-                # </summary>
+                # <summary> Source file is newer and different than backup, add to backups. </summary>
                 if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
                     cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" &> /dev/null || ( false; SaveThisExitCode )
                 fi
@@ -435,7 +433,7 @@
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-            touch $1 &> /dev/null && ( true; SaveThisExitCode)
+            touch $1 &> /dev/null && ( false; SaveThisExitCode)
             break
         done
 
@@ -451,7 +449,7 @@
         while [[ $int_thisExitCode -eq 0 ]]; do
             CheckIfVarIsNull $1 &> /dev/null
             CheckIfFileIsNull $1 &> /dev/null
-            rm $1 &> /dev/null || (  break )
+            rm $1 &> /dev/null || ( false; SaveThisExitCode )
             break
         done
 
@@ -587,11 +585,11 @@
             (( int_count++ ))
         done
 
-        # <summary>
-        # Return value with stdout.
-        # </summary>
-        $1=$str_input1
-        EchoVarIfVarIsNotNull $1
+        # <summary> Return value with stdout. </summary>
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckIfVarIsNull $str_input1 &> /dev/null
+            echo $str_input1
+        done
     }
 
     # <summary>
@@ -614,9 +612,7 @@
         CheckIfVarIsNull $2 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary>
-            # After given number of attempts, input is set to default: false.
-            # </summary>
+            # <summary> After given number of attempts, input is set to default: false. </summary>
             if [[ $int_count -gt $int_maxCount ]]; then
                 str_input1="$2"
                 echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
@@ -649,7 +645,7 @@
     # Ask for number, within a given range.
     # Default selection is first choice.
     # </summary>
-    # <returns>int</returns>
+    # <returns> int </returns>
     function ReadInputFromRangeOfNums
     {
         # <parameters> #
@@ -745,7 +741,7 @@
             CheckIfFileIsNull $1 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsWritable $1 &> /dev/null
-            echo -e $2 >> $1 &> /dev/null || false; SaveThisExitCode
+            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
             break
         done
 
@@ -769,7 +765,7 @@
             CheckIfFileIsNull $1 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsWritable $1 &> /dev/null
-            echo -e $2 >> $1 &> /dev/null || false; SaveThisExitCode
+            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
             break
         done
 
@@ -1041,7 +1037,7 @@
         declare -lr str_aptPrismBreak=""
         declare -lr str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
         declare -lr str_aptSuites="debian-edu-install science-all"
-        declare -lr declare -lr str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        declare -lr str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
         declare -lr str_aptUnsorted=""
         declare -lr str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
@@ -1630,9 +1626,7 @@
 ### main functions ###
 # <summary> Middleman logic between Program logic and Main code. </summary>
 # <code>
-    # <summary>
-    # Display Help to console.
-    # </summary>
+    # <summary> Display Help to console. </summary>
     # <returns> exit code </returns>
     function Help
     {                                 # NOTE: needs work.
@@ -1653,9 +1647,7 @@
         ExitWithThisExitCode
     }
 
-    # <summary>
-    # Parse input parameters for given options.
-    # </summary>
+    # <summary> Parse input parameters for given options. </summary>
     # <returns> exit code </returns>
     function ParseInputParamForOptions
     {            # NOTE: needs work.
@@ -1732,9 +1724,7 @@
         esac
     }
 
-    # <summary>
-    # Execute setup of recommended and optional system changes.
-    # </summary>
+    # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> exit code </returns>
     function ExecuteSystemSetup
     {
@@ -1744,9 +1734,7 @@
         # AppendCron
     }
 
-    # <summary>
-    # Execute setup of all software repositories.
-    # </summary>
+    # <summary> Execute setup of all software repositories. </summary>
     # <returns> exit code </returns>
     function ExecuteSetupOfSoftwareSources
     {
@@ -1767,9 +1755,7 @@
         echo -e "\n${str_warning}If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
     }
 
-    # <summary>
-    # Execute setup of GitHub repositories (of which that are executable and installable).
-    # </summary>
+    # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
