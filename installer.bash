@@ -782,9 +782,7 @@
 # Logic specific to the purpose of this program or repository.
 # </summary>
 # <code>
-    # <summary>
-    # Crontab
-    # </summary>
+    # <summary> Crontab </summary>
     # <returns> exit code </returns>
     function AppendCron
     {
@@ -810,8 +808,10 @@
         # </parameters>
 
         GoToScriptDirectory &> /dev/null
+        # <summary> Set working directory to script root folder. </summary>
         CheckIfDirIsNull $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
+        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
+
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             for var_element1 in $( ls *-cron ); do
@@ -836,19 +836,16 @@
             done
         fi
 
+        # <summary> Restart service. </summary>
         if [[ $int_thisExitCode -eq 0 ]]; then
-            # <summary>
-            # Restart service.
-            # </summary>
-            systemctl restart cron
+            systemctl enable cron &> /dev/null || ( false; SaveThisExitCode )
+            systemctl restart cron &> /dev/null || ( false; SaveThisExitCode )
         fi
 
         EchoPassOrFailThisExitCode "Appending cron entries... "; ParseThisExitCode
     }
 
-    # <summary>
-    # Append SystemD services to host.
-    # </summary>
+    # <summary> Append SystemD services to host. </summary>
     function AppendServices
     {
         echo -e "Appending files to Systemd..."
@@ -859,9 +856,7 @@
         declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
         # </parameters>
 
-        # <summary>
-        # Copy files and set permissions.
-        # </summary>
+        # <summary> Copy files and set permissions. </summary>
         function AppendServices_AppendFile
         {
             CheckIfFileIsNull $2 &> /dev/null
@@ -873,21 +868,19 @@
             done
         }
 
+        # <summary> Set working directory to script root folder. </summary>
         CheckIfDirIsNull $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
+        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
+
 
         if [[ $int_thisExitCode -eq 0 ]]; then
-            # <summary>
-            # Copy binaries to system.
-            # </summary>
+            # <summary> Copy binaries to system. </summary>
             for var_element1 in ${arr_dir1[@]}; do
                 local str_file1="/usr/sbin/${var_element1}"
                 AppendServices_AppendFile $var_element1 $str_file1
             done
 
-            # <summary>
-            # Copy services to system.
-            # </summary>
+            # <summary> Copy services to system. </summary>
             for var_element1 in ${arr_dir2[@]}; do
                 # <parameters>
                 local str_file1="/etc/systemd/system/${var_element1}"
@@ -901,9 +894,9 @@
 
                     case $int_thisExitCode in
                         0)
-                            systemctl enable ${var_element1};;
+                            systemctl enable ${var_element1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode );;
                         *)
-                            systemctl disable ${var_element1};;
+                            systemctl disable ${var_element1} &> /dev/null;;
                     esac
                 fi
             done
@@ -914,9 +907,7 @@
         EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
     }
 
-    # <summary>
-    # Check if Linux distribution is Debian or Debian-derivative.
-    # </summary>
+    # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
     # <returns> exit code </returns>
     function CheckCurrentDistro
     {
@@ -926,17 +917,13 @@
         fi
     }
 
-    # <summary>
-    # Clone given GitHub repositories.
-    # </summary>
+    # <summary> Clone given GitHub repositories. </summary>
     # <returns> exit code </returns>
     function CloneOrUpdateGitRepositories
     {
         echo -e "Cloning/Updating Git repos..."
 
-        # <summary>
-        # Sudo/root v. user.
-        # </summary>
+        # <summary> sudo/root v. user </summary>
         CheckIfUserIsRoot
 
         # <summary>
@@ -1003,13 +990,11 @@
         SaveThisExitCode; EchoPassOrFailThisExitCode "Cloning/Updating Git repos..."; ParseThisExitCode
 
         if [[ $int_thisExitCode -eq 131 ]]; then
-            echo -e "One or more Git repositories could not be cloned.";;
+            echo -e "One or more Git repositories could not be cloned."
         fi
     }
 
-    # <summary>
-    # Install from Debian repositories.
-    # </summary>
+    # <summary> Install from Debian repositories. </summary>
     # <returns> exit code </returns>
     function InstallFromDebianRepos
     {
@@ -1023,15 +1008,11 @@
                 local str_args="";;
         esac
 
-        # <summary>
-        # Update and upgrade local packages
-        # </summary>
+        # <summary> Update and upgrade local packages </summary>
         apt clean
         apt update
 
-        # <summary>
-        # Desktop environment checks
-        # </summary>
+        # <summary> Desktop environment checks </summary>
         local str_aptCheck=""
         str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
 
@@ -1048,9 +1029,7 @@
 
         echo    # output padding
 
-        # <summary>
-        # APT packages sorted by type.
-        # </summary>
+        # <summary> APT packages sorted by type. </summary>
         # <parameters>
         local str_aptAll=""
         declare -lr str_aptDeveloper=""
@@ -1067,9 +1046,7 @@
         declare -lr str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
 
-        # <summary>
-        # Select and Install software sorted by type.
-        # </summary>
+        # <summary> Select and Install software sorted by type. </summary>
         function InstallFromDebianRepos_InstallByType
         {
             if [[ $1 != "" ]]; then
@@ -1112,24 +1089,18 @@
             apt install $str_args $str_aptAll
         fi
 
-        # <summary>
-        # Clean up
-        # </summary>
+        # <summary> Clean up </summary>
         apt autoremove $str_args
         EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 
-    # <summary>
-    # Install from Flathub software repositories.
-    # </summary>
+    # <summary> Install from Flathub software repositories. </summary>
     # <returns> exit code </returns>
     function InstallFromFlathubRepos
     {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
-        # <summary>
-        # Flatpak
-        # </summary>
+        # <summary> Flatpak </summary>
         if [[ $( command -v flatpak ) != "/usr/bin/flatpak" ]]; then
             echo -e "${str_warning}Flatpak not installed. Skipping..."
             false; SaveThisExitCode
@@ -1143,29 +1114,21 @@
                     local str_args="";;
             esac
 
-            # <summary>
-            # Add remote repository.
-            # </summary>
+            # <summary> Add remote repository. </summary>
             flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
-            # <summary>
-            # Update local packages.
-            # </summary>
+            # <summary> Update local packages. </summary>
             flatpak update $str_args
             echo    # output padding
 
-            # <summary>
-            # Flatpak packages sorted by type.
-            # </summary>
+            # <summary> Flatpak packages sorted by type. </summary>
             # <parameters>
             local str_flatpakAll=""
             declare -lr str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
             declare -lr str_flatpakPrismBreak="" # include from all, monero etc.
             # </parameters>
 
-            # <summary>
-            # Select and Install software sorted by type.
-            # </summary>
+            # <summary> Select and Install software sorted by type. </summary>
             # <code>
                 function InstallFromFlathubRepos_InstallByType
                 {
@@ -1206,17 +1169,13 @@
         EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode
     }
 
-    # <summary>
-    # Install from Git repositories.
-    # </summary>
+    # <summary> Install from Git repositories. </summary>
     # <returns> exit code </returns>
     function InstallFromGitRepos
     {
         echo -e "Executing Git scripts..."
 
-        # <summary>
-        # Prompt user to execute script or skip.
-        # </summary>
+        # <summary> Prompt user to execute script or skip. </summary>
         function ExecuteScript
         {
             cd $str_dir1
@@ -1260,9 +1219,7 @@
             local str_scriptDir="portellam/Auto-Xorg/installer.bash"
             ExecuteScript $str_scriptDir
 
-            # <summary>
-            # StevenBlack/hosts
-            # </summary>
+            # <summary> StevenBlack/hosts </summary>
             local str_scriptDir="StevenBlack/hosts"
             CheckIfDirIsNull $str_scriptDir
 
@@ -1277,27 +1234,23 @@
                 cd $str_dir1
             fi
 
-            # <summary>
-            # pyllyukko/user.js
-            # </summary>
+            # <summary> pyllyukko/user.js </summary>
             local str_scriptDir="pyllyukko/user.js"
             CheckIfDirIsNull $str_scriptDir
 
-            if [[ $int_thisExitCode -eq 0]]; then
+            if [[ $int_thisExitCode -eq 0 ]]; then
                 cd $str_scriptDir
                 make debian_locked.js && (
                     CreateBackupFromFile "/etc/firefox-esr/firefox-esr.js" &> /dev/null
 
-                    if [[ $int_thisExitCode -eq 0]]; then
+                    if [[ $int_thisExitCode -eq 0 ]]; then
                         cp debian_locked.js "/etc/firefox-esr/firefox-esr.js" &> /dev/null || SetExitCodeIfPassNorFail
                     fi
                 )
                 cd $str_dir1
             fi
 
-            # <summary>
-            # foundObjects/zram-swap
-            # </summary>
+            # <summary> foundObjects/zram-swap </summary>
             local str_scriptDir="foundObjects/zram-swap/install.sh"
             ExecuteScript $str_scriptDir
         fi
@@ -1311,9 +1264,7 @@
     {
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
-        # <summary>
-        # Snap
-        # </summary>
+        # <summary> Snap </summary>
         if [[ $( command -v snap ) != "/usr/bin/snap" ]]; then
             echo -e "${str_warning}Snap not installed. Skipping..."
             false; SaveThisExitCode
@@ -1327,23 +1278,17 @@
                     local str_args="";;
             esac
 
-            # <summary>
-            # Update local packages.
-            # </summary>
+            # <summary> Update local packages. </summary>
             flatpak update $str_args
             echo    # output padding
 
-            # <summary>
-            # Snap packages sorted by type.
-            # </summary>
+            # <summary> Snap packages sorted by type. </summary>
             # <parameters>
             local str_snapAll=""
             declare -lr str_snapUnsorted=""
             # </parameters>
 
-            # <summary>
-            # Select and Install software sorted by type.
-            # </summary>
+            # <summary> Select and Install software sorted by type. </summary>
             # <code>
                 function InstallFromSnapRepos_InstallByType
                 {
@@ -1405,15 +1350,15 @@
         fi
 
         # <summary> Setup optional sources. </summary>
-        while [[ $int_thisExitCode -eq 0  ]] do
+        while [[ $int_thisExitCode -eq 0  ]]; do
             ReadInput "Include 'contrib' sources?"
             str_sources+="contrib"
             break
         done
 
-        while [[ $int_thisExitCode -eq 0  ]] do
+        while [[ $int_thisExitCode -eq 0  ]]; do
             ReadInput "Include 'non-free' sources?"
-            str_sources+=" non-free";;
+            str_sources+=" non-free"
             break
         done
 
@@ -1446,9 +1391,7 @@
             )
             # </parameters>
 
-            # <summary>
-            # Copy lines from original to temp file as comments.
-            # </summary>
+            # <summary> Copy lines from original to temp file as comments. </summary>
             DeleteFile $str_newFile1 &> /dev/null
             CreateFile $str_newFile1 &> /dev/null
 
@@ -1461,15 +1404,11 @@
             done < $str_file1
 
             DeleteFile $str_newFile1 &> /dev/null
-            mv $str_newFile1 $str_file1 &> /dev/null || false && SaveThisExitCode
+            mv $str_newFile1 $str_file1 &> /dev/null || ( false; SaveThisExitCode )
 
-            # <summary>
-            # Append to output.
-            # </summary>
+            # <summary> Append to output. </summary>
             case $str_branchName in
-                # <summary>
-                # Current branch with backports.
-                # </summary>
+                # <summary> Current branch with backports. </summary>
                 "backports")
                     declare -al arr_sources=(
                         $'\n'
@@ -1489,13 +1428,10 @@
                         "deb-src http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
                         "#"
                     )
-
                     break;;
             esac
 
-            # <summary>
-            # Output to sources file.
-            # </summary>
+            # <summary> Output to sources file. </summary>
             case $str_branchName in
                 "backports"|"testing"|"unstable")
                     while read var_element1; do
@@ -1510,12 +1446,13 @@
             break
         done
 
-        # <summary>
-        # Update packages on system.
-        # </summary>
-        apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-        apt update || ( SetExitCodeOnError; SaveThisExitCode )
-        apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
+        # <summary> Update packages on system. </summary>
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            apt update || ( SetExitCodeOnError; SaveThisExitCode )
+            apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
+        done
+
         EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 
@@ -1584,7 +1521,7 @@
     # <summary> Recommended host security changes. </summary>
     # <returns> exit code </returns>
     function ModifySecurity
-    {           # NOTE: needs work.
+    {
         echo -e "Configuring system security..."
 
         # <parameters>
@@ -1597,18 +1534,17 @@
         declare -lr str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
         # </parameters>
 
-        # <summary>
-        #
-        # </summary>
+        # <summary> Set working directory to script root folder. </summary>
         CheckIfDirIsNull $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false && SaveThisExitCode )
+        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
+        # <summary> Write output to files. </summary>
         if [[ $int_thisExitCode -eq 0 ]]; then
             ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             if [[ $int_thisExitCode -eq 0 ]]; then
                     OverwriteVarToFile 'install usb-storage /bin/true' /etc/modprobe.d/disable-usb-storage.conf
-                    OverwriteVarToFile "blacklist firewire-core" > /etc/modprobe.d/disable-firewire.conf
+                    OverwriteVarToFile "blacklist firewire-core" /etc/modprobe.d/disable-firewire.conf
                     AppendVarToFile "blacklist thunderbolt" /etc/modprobe.d/disable-thunderbolt.conf
                     update-initramfs -u -k all
             else
@@ -1622,31 +1558,17 @@
             fi
         fi
 
-        if [[ ${str_dir1} != "" ]]; then
-            cd ${str_dir1}
-            str_inFile1="./sysctl.conf"
-            str_file1="/etc/sysctl.conf"
-            str_oldFile1="/etc/sysctl.conf_old"
-        else
-            str_inFile1=""
-        fi
+        # <summary> Write output to files. </summary>
+        local str_file1="sysctl.conf"
+        local str_file2="/etc/sysctl.conf"
+        CheckIfFileIsNull $str_file1 &> /dev/null
 
-        if [[ -e ${str_inFile1} ]]; then
-            str_input1=""
-            ReadInput "Setup /etc/sysctl.conf with defaults?"
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            ReadInput "Setup '/etc/sysctl.conf' with defaults?"
+            cp $str_file1 $str_file2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            cat $str_file2 >> $str_file1 || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+        done
 
-            if [[ ${str_input1} == "Y" && ${str_inFile1} != "" ]]; then
-                cp ${str_file1} ${str_oldFile1}
-                cat ${str_inFile1} >> ${str_file1}
-            fi
-
-        else
-            echo -e "${str_warning}'/etc/sysctl.conf' missing. Skipping..."
-        fi
-
-        echo
-
-        str_input1=""
         ReadInput "Setup firewall with UFW?"
 
         if [[ ${str_input1} == "Y" ]]; then
