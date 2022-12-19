@@ -746,6 +746,28 @@
         fi
     }
 
+    # <summary> Read from XML Data Object Module. </summary>
+    # <returns> content variable </returns>
+    function ReadFromXMLDOM
+    {
+        declare -lr IFS=\>
+        read -d \< $var_entity $var_content
+    }
+
+    # <summary> Read from XML Data Object Module. </summary>
+    # <returns> content variable </returns>
+    function ReadFromXMLFile
+    {
+        declare -al arr_file1=()
+
+        while ReadFromXMLDOM; do
+            if [[ $var_entity = "title" ]]; then
+                echo $var_content
+                exit
+            fi
+        done < xhtmlfile.xhtml > titleOfXHTMLPage.txt
+    }
+
     # <summary> Reset IFS. </summary>
     function SetInternalFieldSeparatorToDefault
     {
