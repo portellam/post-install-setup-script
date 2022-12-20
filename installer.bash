@@ -199,14 +199,16 @@
 # <code>
     # <summary> Checks if command is installed. </summary>
     # <parameter name="$1"> command name </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function CheckIfCommandIsInstalled
     {
+        local bool=false
+
         if [[ $( command -v $1 ) != "" ]]; then
-            true; SaveThisExitCode
-        else
-            false; SaveThisExitCode
+            bool=true
         fi
+
+        echo $bool
     }
 
     # <summary>
