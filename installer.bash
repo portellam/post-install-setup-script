@@ -24,21 +24,6 @@
 #
 # </summary>
 
-### global parameters ###
-# <summary> Variables to be used throughout the program. </summary>
-# <code>
-    var_IFS=$IFS
-    declare -r str_thisDir=$( dirname $0 )
-    declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
-    declare -r str_pwd=$( pwd )
-    declare -r str_warning="\e[33mWARNING:\e[0m"" "
-
-    # <summary>
-    # Necessary for exit code preservation, for conditional statements.
-    # </summary>
-    declare -i int_thisExitCode=$?
-# </code>
-
 ### exit code functions ###
 # <summary> Return statement logic. </summary>
 # <code>
@@ -157,6 +142,17 @@
         int_thisExitCode=$?
     }
 
+    # <summary> Parse exit code as boolean. </summary>
+    # <returns> string of boolean </returns>
+    function ParseThisExitCodeAsBoolean
+    {
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            echo "true"
+        else
+            echo "false"
+        fi
+    }
+
     function SetExitCodeOnError
     {
         (exit 255)
@@ -201,6 +197,18 @@
 ### validation functions ###
 # <summary> Validation logic </summary>
 # <code>
+    # <summary> Checks if command is installed. </summary>
+    # <parameter name="$1"> command name </parameter>
+    # <returns> exit code </returns>
+    function CheckIfCommandIsInstalled
+    {
+        if [[ $( command -v $1 ) != "" ]]; then
+            true; SaveThisExitCode
+        else
+            false; SaveThisExitCode
+        fi
+    }
+
     # <summary>
     # Checks if directory exists, and returns exit code if failed. </summary>
     # <returns> exit code </returns>
@@ -911,6 +919,7 @@
     }
 
     # <summary> Append SystemD services to host. </summary>
+    # <returns> exit code </returns>
     function AppendServices
     {
         echo -e "Appending files to Systemd..."
@@ -977,9 +986,10 @@
     # <returns> exit code </returns>
     function CheckCurrentDistro
     {
-        if [[ $( command -v apt ) != "/usr/bin/apt" ]]; then
+        CheckIfCommandIsInstalled "apt"
+
+        if [[ $int_thisExitCode -ne 0 ]]; then
             echo -e "${str_warning}Unrecognized Linux distribution; Apt not installed. Skipping..."
-            false; SaveThisExitCode
         fi
     }
 
@@ -1058,6 +1068,37 @@
         if [[ $int_thisExitCode -eq 131 ]]; then
             echo -e "One or more Git repositories could not be cloned."
         fi
+    }
+
+    # <summary> Install necessary commands/packages for this program. </summary>
+    # <returns> exit code </returns>
+    function InstallCommands
+    {
+        echo -e "Installing commands..."
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            CheckCurrentDistro &> /dev/null
+            TestNetwork &> /dev/null
+            break
+        done
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            if [[ $bool_is_xmllint_installed == false || "${bool_is_xmllint_installed}" == "false" ]]; then
+                echo -en "Installing 'xmllint'... "
+                apt install -y xml-core xmlstarlet &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
+                EchoPassOrFailThisExitCode
+            fi
+
+            # if [[ $bool_is_xmllint_installed == false || "${bool_is_xmllint_installed}" == "false" ]]; then
+            #     echo -en "Installing 'xmllint'... "
+            #     apt install -y xml-core &> /dev/null || ( false; SaveThisExitCode )
+            #     bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
+            #     EchoPassOrFailThisExitCode
+            # fi
+        fi
+
+        EchoPassOrFailThisExitCode "Installing commands..."; ParseThisExitCode
     }
 
     # <summary> Install from Debian repositories. </summary>
@@ -1534,7 +1575,7 @@
         fi
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
-        while [[$int_thisExitCode -eq 0 ]]; do
+        while [[ $int_thisExitCode -eq 0 ]]; do
             ReadInput "Modify SSH?"
 
             # <parameters>
@@ -1843,11 +1884,28 @@
     }
 # </code>
 
+### global parameters ###
+# <summary> Variables to be used throughout the program. </summary>
+# <code>
+    var_IFS=$IFS
+    declare -r str_thisDir=$( dirname $0 )
+    declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+    declare -r str_pwd=$( pwd )
+    declare -r str_warning="\e[33mWARNING:\e[0m"" "
+
+    # <summary> Necessary for exit code preservation, for conditional statements. </summary>
+    declare -i int_thisExitCode=$?
+
+    # <summary> Checks </summary>
+    bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint"; ParseThisExitCodeAsBoolean )
+# </code>
+
 ### main ###
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
     SetInternalFieldSeparatorToNewline
+    InstallCommands
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     CheckIfUserIsRoot
