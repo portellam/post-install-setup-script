@@ -55,14 +55,19 @@
     # </summary>
 
     # <summary> Output pass or fail statement given exit code. </summary>
-    # <returns> exit code </returns>
+    # <parameter name="$1"> string </parameter>
+    # <returns> string </returns>
     function EchoPassOrFailThisExitCode
     {
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckIfVarIsNull $1 &> /dev/null
+        #     echo -en "$1 "
+        #     break
+        # done
+
+        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
             echo -en "$1 "
-            break
-        done
+        fi
 
         case "$int_thisExitCode" in
             0)
@@ -75,17 +80,25 @@
     }
 
     # <summary> Output pass or fail test-case given exit code. </summary>
-    # <returns> exit code </returns>
+    # <parameter name="$1"> string </parameter>
+    # <returns> string </returns>
     function EchoPassOrFailThisTestCase
     {
-        CheckIfVarIsNull $1 &> /dev/null
-        local str_testCaseName="TestCase"
+        # CheckIfVarIsNull $1 &> /dev/null
+        # local str_testCaseName="TestCase"
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            str_testCaseName=$1
+        # if [[ $int_thisExitCode -eq 0 ]]; then
+        #     str_testCaseName=$1
+        # fi
+
+        # readonly str_testCaseName
+
+        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
+            declare -lr str_testCaseName="TestCase"
+        else
+            declare -lr str_testCaseName=$1
         fi
 
-        readonly str_testCaseName
         echo -en "$str_testCaseName "
 
         case "$int_thisExitCode" in
@@ -97,7 +110,8 @@
     }
 
     # <summary> Exit bash session/script with current exit code. </summary>
-    # <returns> exit code </returns>
+    # <parameter name="$?"> exit code </parameter>
+    # <returns> void </returns>
     function ExitWithThisExitCode
     {
         echo -e "Exiting."
@@ -105,7 +119,8 @@
     }
 
     # <summary> Output error given exception. </summary>
-    # <returns> exit code </returns>
+    # <parameter name="$?"> exit code </parameter>
+    # <returns> void </returns>
     function ParseThisExitCode
     {
         case $int_thisExitCode in
@@ -136,163 +151,222 @@
     }
 
     # <summary> Updates global parameter. </summary>
-    # <returns> exit code </returns>
+    # <parameter name="$?"> exit code </parameter>
+    # <returns> void </returns>
     function SaveThisExitCode
     {
         int_thisExitCode=$?
     }
 
     # <summary> Parse exit code as boolean. </summary>
-    # <returns> string of boolean </returns>
+    # <parameter name="$?"> exit code </parameter>
+    # <returns> boolean </returns>
     function ParseThisExitCodeAsBoolean
     {
         if [[ $int_thisExitCode -eq 0 ]]; then
-            echo "true"
+            declare -lr bool=true
         else
-            echo "false"
+            declare -lr bool=false
         fi
+
+        echo $bool
     }
 
-    function SetExitCodeOnError
-    {
-        (exit 255)
-    }
+    # <summary> Set exit codes based on reserved/custom conditions. </summary>
+    # <code>
+        function SetExitCodeOnError
+        {
+            (exit 255)
+        }
 
-    function SetExitCodeIfVarIsNull
-    {
-        (exit 254)
-    }
+        function SetExitCodeIfVarIsNull
+        {
+            (exit 254)
+        }
 
-    function SetExitCodeIfFileOrDirIsNull
-    {
-        (exit 253)
-    }
+        function SetExitCodeIfFileOrDirIsNull
+        {
+            (exit 253)
+        }
 
-    function SetExitCodeIfFileIsNotReadable
-    {
-        (exit 252)
-    }
+        function SetExitCodeIfFileIsNotReadable
+        {
+            (exit 252)
+        }
 
-    function SetExitCodeIfFileIsNotWritable
-    {
-        (exit 251)
-    }
+        function SetExitCodeIfFileIsNotWritable
+        {
+            (exit 251)
+        }
 
-    function SetExitCodeIfFileIsNotExecutable
-    {
-        (exit 250)
-    }
+        function SetExitCodeIfFileIsNotExecutable
+        {
+            (exit 250)
+        }
 
-    function SetExitCodeIfInputIsInvalid
-    {
-        (exit 249)
-    }
+        function SetExitCodeIfInputIsInvalid
+        {
+            (exit 249)
+        }
 
-    function SetExitCodeIfPassNorFail
-    {
-        (exit 131)
-    }
+        function SetExitCodeIfPassNorFail
+        {
+            (exit 131)
+        }
+    # </code>
 # </code>
 
 ### validation functions ###
 # <summary> Validation logic </summary>
 # <code>
-    # <summary> Checks if command is installed. </summary>
+    # <summary> Checks if command is installed, and set exit code if false. </summary>
     # <parameter name="$1"> command name </parameter>
     # <returns> boolean </returns>
     function CheckIfCommandIsInstalled
     {
-        local bool=false
-
         if [[ $( command -v $1 ) != "" ]]; then
-            bool=true
+            declare -lr bool=true
+        else
+            declare -lr bool=false
+            false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
     # <summary>
-    # Checks if directory exists, and returns exit code if failed. </summary>
-    # <returns> exit code </returns>
+    # Checks if directory exists, and set exit code if false. </summary>
+    # <parameter name="$1"> directory </parameter>
+    # <returns> boolean </returns>
     function CheckIfDirIsNull
     {
-        if [[ ! -d $1 ]]; then
+        if [[ -d $1 ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if file is executable, and returns exit code if failed. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if file is executable, and set exit code if false. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> boolean </returns>
     function CheckIfFileIsExecutable
     {
-        if [[ ! -x $1 ]]; then
-            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
+        if [[ -x $1 ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
+            SetExitCodeIfFileIsNotExecutable; SaveThisExitCode
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if file exists, and returns exit code if failed. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if file exists, and set exit code if false. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> boolean </returns>
     function CheckIfFileIsNull
     {
-        if [[ ! -e $1 ]]; then
+        if [[ -e $1 ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
-            echo -e "File not found: '$1'"
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if file is readable, and returns exit code if failed. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if file is readable, and set exit code if false. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> boolean </returns>
     function CheckIfFileIsReadable
     {
-        if [[ ! -r $1 ]]; then
+        if [[ -r $1 ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if file is writable, and returns exit code if failed. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if file is writable, and set exit code if false. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> boolean </returns>
     function CheckIfFileIsWritable
     {
-        if [[ ! -w $1 ]]; then
+        if [[ -w $1 ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfFileIsNotWritable; SaveThisExitCode
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if current user is sudo/root. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if current user is sudo/root, and set exit code if false. </summary>
+    # <parameter name="$0"> file </parameter>
+    # <returns> boolean </returns>
     function CheckIfUserIsRoot
     {
         if [[ $( whoami ) != "root" ]]; then
+            declare -lr bool=false
             echo -en "${str_warning}Script must execute as root."
-            # declare -lr str_file1=$( echo ${0##/*} )
 
-            while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileIsNull $0 &> /dev/null
+            # while [[ $int_thisExitCode -eq 0 ]]; do
+            #     CheckIfFileIsNull $0 &> /dev/null
+            #     declare -lr str_file1=$( basename $0 )
+            #     echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
+            #     break
+            # done
+
+            if [[ $( CheckIfFileIsNull $0 ) == false ]]; then
                 declare -lr str_file1=$( basename $0 )
                 echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
-                break
-            done
+            fi
 
             false; SaveThisExitCode
+        else
+            declare -lr bool=false
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if input parameter is null, and returns exit code given result. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if input parameter is null, and set exit code if false. </summary>
+    # <parameter name="$1"> variable </parameter>
+    # <returns> boolean </returns>
     function CheckIfVarIsNull
     {
         if [[ -z "$1" ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfVarIsNull; SaveThisExitCode
         fi
+
+        echo $bool
     }
 
-    # <summary> Checks if input parameter is a valid number, and returns exit code given result. </summary>
-    # <returns> exit code </returns>
+    # <summary> Checks if input parameter is a valid number, and set exit code if false. </summary>
+    # <parameter name="$1"> number variable </parameter>
+    # <returns> boolean </returns>
     function CheckIfVarIsValidNum
     {
         if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             SetExitCodeIfInputIsInvalid; SaveThisExitCode
         fi
+
+        echo $bool
     }
 # </code>
 
@@ -301,11 +375,11 @@
 # <code>
     # <summary> Append file with contents of array. </summary>
     # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> string array </parameter>
+    # <parameter name="$2"> array of string </parameter>
     # <returns> exit code </returns>
     function AppendArrayToFile
     {
-        SetInternalFieldSeparatorToNewline
+        declare -lr IFS='\n'
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -318,13 +392,13 @@
             local -n arr_file1="$2"
 
             for var_element1 in ${arr_file1[@]}; do
-                ( echo -e $var_element1 >> $1 ) &> /dev/null || false; SaveThisExitCode
+                ( echo -e $var_element1 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
             done
 
             break
         done
 
-        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary> Append file with contents of variable. </summary>
@@ -333,7 +407,7 @@
     # <returns> exit code </returns>
     function AppendVarToFile
     {
-        SetInternalFieldSeparatorToNewline
+        declare -lr IFS='\n'
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -341,17 +415,15 @@
             CheckIfVarIsNull $2 &> /dev/null
             CheckIfFileIsNull $2 &> /dev/null
             CheckIfFileIsReadable $2 &> /dev/null
-            ( echo -e $2 >> $1 ) &> /dev/null || false; SaveThisExitCode
+            ( echo -e $2 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
             break
         done
 
-        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
-    # <summary>
-    # Change ownership of given file to current user.
-    # $UID is intelligent enough to differentiate between the two
-    # </summary>
+    # <summary> Change ownership of given file to current user. </summary>
+    # <parameter name="$1"> file </parameter>
     # <returns> exit code </returns>
     function ChangeOwnershipOfFileOrDirToCurrentUser
     {
@@ -367,6 +439,8 @@
     }
 
     # <summary> Checks if two given files are the same, in composition. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> file </parameter>
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
@@ -397,6 +471,7 @@
     }
 
     # <summary> Checks if two given files are the same, in composition. </summary>
+    # <parameter name="$1"> file </parameter>
     # <returns> exit code </returns>
     function CreateBackupFromFile
     {
@@ -474,70 +549,90 @@
     }
 
     # <summary> Creates a directory. </summary>
+    # <parameter name="$1"> directory </parameter>
     # <returns> exit code </returns>
     function CreateDir
     {
         echo -en "Creating directory..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckIfVarIsNull $1 &> /dev/null
+        #     CheckIfFileIsNull $1 &> /dev/null
+        #     mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
+        #     break
+        # done
+
+        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
             mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary> Creates a file. </summary>
+    # <parameter name="$1"> file </parameter>
     # <returns> exit code </returns>
     function CreateFile
     {
         echo -en "Creating file..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            touch $1 &> /dev/null && ( false; SaveThisExitCode)
-            break
-        done
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckIfVarIsNull $1 &> /dev/null
+        #     CheckIfFileIsNull $1 &> /dev/null
+        #     touch $1 &> /dev/null && ( false; SaveThisExitCode)
+        #     break
+        # done
+
+        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
+            touch $1 &> /dev/null || ( false; SaveThisExitCode )
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary> Deletes a file. </summary>
+    # <parameter name="$1"> file </parameter>
     # <returns> exit code </returns>
     function DeleteFile
     {
         echo -en "Deleting file..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckIfVarIsNull $1 &> /dev/null
+        #     CheckIfFileIsNull $1 &> /dev/null
+        #     rm $1 &> /dev/null || ( false; SaveThisExitCode )
+        #     break
+        # done
+
+        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
             rm $1 &> /dev/null || ( false; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary> Redirect to script directory. </summary>
+    # <parameter name="$str_thisDir"> directory </parameter>
     # <returns> exit code </returns>
     function GoToScriptDirectory
     {
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfDirIsNull $str_thisDir
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckIfDirIsNull $str_thisDir
+        #     cd $str_thisDir || ( false; SaveThisExitCode )
+        #     break
+        # done
+
+        if [[ $( CheckIfDirIsNull $1 ) == true ]]; then
             cd $str_thisDir || ( false; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
     # <summary> Reads a file. </summary>
-    # <parameter name="$1"> string array </parameter>
+    # <parameter name="$1"> array of string </parameter>
     # <parameter name="$2"> file </parameter>
-    # <returns> string array </returns>
+    # <returns> array of string </returns>
     function ReadFile
     {
         echo -en "Reading file..."
@@ -818,7 +913,7 @@
 
     # <summary> Overwrite file with contents of array. </summary>
     # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> string array </parameter>
+    # <parameter name="$2"> array of string </parameter>
     # <returns> exit code </returns>
     function OverwriteArrayToFile
     {
@@ -844,7 +939,7 @@
             CheckIfFileIsNull $1 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsWritable $1 &> /dev/null
-            ( echo -e $2 > $1 ) &> /dev/null || false; SaveThisExitCode
+            ( echo -e $2 > $1 ) &> /dev/null || ( false; SaveThisExitCode )
             break
         done
 
