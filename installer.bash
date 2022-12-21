@@ -379,7 +379,7 @@
     # <returns> exit code </returns>
     function AppendArrayToFile
     {
-        declare -lr IFS='\n'
+        declare -lr IFS=$'\n'
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -407,7 +407,7 @@
     # <returns> exit code </returns>
     function AppendVarToFile
     {
-        declare -lr IFS='\n'
+        declare -lr IFS=$'\n'
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -855,7 +855,7 @@
     # <returns> content variable </returns>
     function ReadFromXMLDOM
     {
-        declare -lr IFS=\>
+        declare -lr IFS=$'\>'
         read -d \< $var_entity $var_content
     }
 
@@ -889,10 +889,7 @@
         IFS=$'\n'
     }
 
-    # <summary>
-    # Test network connection to Internet.
-    # Ping DNS servers by address and name.
-    # </summary>
+    # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
     # <returns> exit code </returns>
     function TestNetwork
     {
@@ -915,14 +912,20 @@
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array of string </parameter>
     # <returns> exit code </returns>
-    function OverwriteArrayToFile
-    {
-        DeleteFile $1 &> /dev/null
+    # function OverwriteArrayToFile                                     # refactor or consolidate, this looks like shite
+    # {
+    #     echo -en "Writing to file..."
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            AppendArrayToFile $1 $2
-        fi
-    }
+    #     DeleteFile $1 &> /dev/null
+
+    #     # if [[ $int_thisExitCode -eq 0 ]]; then
+    #     #     AppendArrayToFile $1 $2
+    #     # fi
+
+    #     if [[ $( DeleteFile $1 ) == true ]]; then
+    #         AppendArrayToFile $1 $2
+    #     fi
+    # }
 
     # <summary> Overwrite file with contents of variable. </summary>
     # <parameter name="$1"> file </parameter>
@@ -930,7 +933,7 @@
     # <returns> exit code </returns>
     function OverwriteVarToFile
     {
-        SetInternalFieldSeparatorToNewline
+        declare -lr IFS=$'\n'
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -943,7 +946,11 @@
             break
         done
 
-        SetInternalFieldSeparatorToDefault; EchoPassOrFailThisExitCode; ParseThisExitCode
+        if [[ $( DeleteFile $1 ) == true ]]; then
+            AppendArrayToFile $1 $2
+        fi
+
+        EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 # </code>
 
@@ -1984,7 +1991,8 @@
 ### global parameters ###
 # <summary> Variables to be used throughout the program. </summary>
 # <code>
-    var_IFS=$IFS
+    readonly var_IFS=$IFS
+    IFS=$'\n'
     declare -r str_thisDir=$( dirname $0 )
     declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
     declare -r str_pwd=$( pwd )
@@ -1994,14 +2002,13 @@
     declare -i int_thisExitCode=$?
 
     # <summary> Checks </summary>
-    bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint"; ParseThisExitCodeAsBoolean )
+    bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint" )
 # </code>
 
 ### main ###
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
-    SetInternalFieldSeparatorToNewline
     InstallCommands
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
@@ -2016,5 +2023,6 @@
     fi
 
     # <summary> Post-execution clean up. </summary>
-    SetInternalFieldSeparatorToDefault; ExitWithThisExitCode
+    IFS=$var_IFS
+    ExitWithThisExitCode
 # </code>
