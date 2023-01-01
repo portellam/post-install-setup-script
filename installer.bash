@@ -1051,14 +1051,15 @@
         declare -l bool_gitCloneHasFailed=false
         # </parameters>
 
-        # <summary>
-        # sudo/root v. user
-        # List of useful Git repositories.
-        # Example: "username/reponame"
-        # </summary>
+        # <summary> sudo/root v. user </summary>
         if [[ $bool_isUserRoot == true ]]; then
             # <parameters>
             declare -lr str_dir1="/root/source/"
+
+            # <summary>
+            # List of useful Git repositories.
+            # Example: "username/reponame"
+            # </summary>
             declare -alr arr_repo=(
                 "corna/me_cleaner"
                 "dt-zero/me_cleaner"
@@ -1072,6 +1073,11 @@
         else
             # <parameters>
             declare -lr str_dir1=$( echo ~/ )"source/"
+
+            # <summary>
+            # List of useful Git repositories.
+            # Example: "username/reponame"
+            # </summary>
             declare -alr arr_repo=(
                 "awilliam/rom-parser"
                 #"pixelplanetdev/4chan-flag-filter"
@@ -1127,8 +1133,10 @@
         EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode
 
         if [[ $bool_gitCloneHasFailed == true ]]; then
-            echo -e "One or more Git repositories could not be cloned."
+            echo -e "One or more Git repositories were not cloned."
         fi
+
+        echo
     }
 
     # <summary> Install necessary commands/packages for this program. </summary>
@@ -1355,30 +1363,43 @@
         # <summary> Prompt user to execute script or skip. </summary>
         function ExecuteScript
         {
-            cd $str_dir1
-
             # <parameters>
-            local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
-            local str_script=$( basename $str_dir2 )
+            # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
+            # local str_script=$( basename $str_dir2 )
             # </parameters>
 
-            if [[ $( CheckIfDirIsNotNull $str_script ) == true ]]; then
-                ReadInput "Execute script '$str_script'?"
+            if [[ $( CheckIfDirIsNotNull $1 ) == true ]]; then
+                cd $1
+            fi
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
-                    cd $str_dir2
-                    CheckIfFileIsExecutable $str_script &> /dev/null
+            if [[ $( CheckIfFileIsNotNull $2 ) == true ]]; then
+                ReadInput "Execute script '$2'?"
+                chmod +x $2 &> /dev/null
 
-                    if [[ $( CheckIfFileIsExecutable $str_script ) == true ]]; then
-                        bash $str_script || SetExitCodeIfPassNorFail
+                if [[ $int_thisExitCode -eq 0 && $( CheckIfFileIsExecutable $2 ) == true ]]; then
+                    # <summary> sudo/root v. user </summary>
+                    if [[ $bool_isUserRoot == true ]]; then
+                        sudo bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                    else
+                        bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                     fi
 
                     cd $str_dir1
                 fi
             fi
+
+            # <summary> Save status of operations and reset exit code. </summary>
+            if [[ $int_thisExitCode -eq 131 ]]; then
+                bool_gitCloneHasFailed=true
+            fi
+
+            true; SaveThisExitCode
         }
 
         # <parameters>
+        declare -l bool_execHasFailed=false
+
+        # <summary> sudo/root v. user </summary>
         if [[ $bool_isUserRoot == true ]]; then
             declare -lr str_dir1="/root/source/"
         else
@@ -1386,22 +1407,17 @@
         fi
         # </parameters>
 
-        CreateDir $str_dir1 &> /dev/null
+        # <summary> Test this on a fresh install </summary>
+        if [[ $( CheckIfDirIsNotNull $str_dir1 ) == true ]]; then
 
-        exit 0
-
-        if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
+            # <summary> sudo/root v. user </summary>
             if [[ $bool_isUserRoot == true ]]; then
-                # <summary>
-                # portellam/Auto-Xorg
-                # Install system service from repository.
-                # Finds first available non-VFIO VGA/GPU and binds to Xorg.
-                # </summary>
-                local str_scriptDir="portellam/Auto-Xorg/installer.bash"
-                ExecuteScript $str_scriptDir
+
+                # <summary> portellam/Auto-Xorg </summary>
+                ExecuteScript "${str_dir1}portellam/auto-xorg/" "installer.bash"
 
                 # <summary> StevenBlack/hosts </summary>
-                local str_scriptDir="StevenBlack/hosts"
+                local str_scriptDir="${str_dir1}stevenblack/hosts"
 
                 if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
@@ -1410,13 +1426,10 @@
                     if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
                         cp hosts $str_file1 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                     fi
-
-                    cd $str_dir1
                 fi
 
                 # <summary> pyllyukko/user.js </summary>
-                local str_scriptDir="pyllyukko/user.js"
-                CheckIfDirIsNotNull $str_scriptDir
+                local str_scriptDir="${str_dir1}pyllyukko/user.js"
 
                 if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
@@ -1427,16 +1440,35 @@
                             cp debian_locked.js $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                         fi
                     )
-                    cd $str_dir1
                 fi
 
                 # <summary> foundObjects/zram-swap </summary>
-                local str_scriptDir="foundObjects/zram-swap/install.sh"
-                ExecuteScript $str_scriptDir
+                ExecuteScript "${str_dir1}foundObjects/zram-swap/" "install.sh"
+            else
+
+                # <summary> awilliam/rom-parser </summary>
+                local str_scriptDir="${str_dir1}awilliam/rom-parser"
+                # CheckIfDirIsNotNull $str_scriptDir
+
+                # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
+                local str_scriptDir="${str_dir1}spaceinvaderone/dump_gpu_vbios"
+                # CheckIfDirIsNotNull $str_scriptDir
+
+                # <summary> spheenik/vfio-isolate </summary>
+                local str_scriptDir="${str_dir1}spheenik/vfio-isolate"
+                # CheckIfDirIsNotNull $str_scriptDir
             fi
         fi
 
+        if [[ $bool_execHasFailed == true ]]; then
+            SetExitCodeIfPassNorFail; SaveThisExitCode
+        fi
+
         EchoPassOrFailThisExitCode "Executing Git scripts..."; ParseThisExitCode
+
+        if [[ $bool_execHasFailed == true ]]; then
+            echo -e "One or more Git scripts were not executed."
+        fi
     }
 
     # <summary> Install from Snap software repositories. </summary>
