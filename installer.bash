@@ -1045,15 +1045,19 @@
     # <returns> exit code </returns>
     function CloneOrUpdateGitRepositories
     {
-        echo -e "Cloning/Updating Git repos..."
+        echo -e "Cloning Git repos..."
+
+        # <parameters>
+        declare -l bool_gitCloneHasFailed=false
+        # </parameters>
 
         # <summary>
         # sudo/root v. user
         # List of useful Git repositories.
         # Example: "username/reponame"
         # </summary>
-        # <parameters>
         if [[ $bool_isUserRoot == true ]]; then
+            # <parameters>
             declare -lr str_dir1="/root/source/"
             declare -alr arr_repo=(
                 "corna/me_cleaner"
@@ -1064,17 +1068,19 @@
                 "pyllyukko/user.js"
                 "StevenBlack/hosts"
             )
+            # </parameters>
         else
+            # <parameters>
             declare -lr str_dir1=$( echo ~/ )"source/"
             declare -alr arr_repo=(
                 "awilliam/rom-parser"
                 #"pixelplanetdev/4chan-flag-filter"
-                "pyllyukko/user.js"
+                #"pyllyukko/user.js"
                 "SpaceinvaderOne/Dump_GPU_vBIOS"
                 "spheenik/vfio-isolate"
             )
+            # </parameters>
         fi
-        # </parameters>
 
         CreateDir $str_dir1 &> /dev/null
         chmod -R +w $str_dir1 &> /dev/null
@@ -1104,12 +1110,23 @@
                         echo
                     fi
                 fi
+
+                # <summary> Save status of operations and reset exit code. </summary>
+                if [[ $int_thisExitCode -eq 131 ]]; then
+                    bool_gitCloneHasFailed=true
+                fi
+
+                true; SaveThisExitCode
             done
         fi
 
-        EchoPassOrFailThisExitCode "Cloning/Updating Git repos..."; ParseThisExitCode
+        if [[ $bool_gitCloneHasFailed == true ]]; then
+            SetExitCodeIfPassNorFail; SaveThisExitCode
+        fi
 
-        if [[ $int_thisExitCode -eq 131 ]]; then
+        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode
+
+        if [[ $bool_gitCloneHasFailed == true ]]; then
             echo -e "One or more Git repositories could not be cloned."
         fi
     }
@@ -1370,6 +1387,8 @@
         # </parameters>
 
         CreateDir $str_dir1 &> /dev/null
+
+        exit 0
 
         if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
             if [[ $bool_isUserRoot == true ]]; then
@@ -1940,7 +1959,10 @@
     declare -i int_thisExitCode=$?
 
     # <summary> Checks </summary>
-    readonly bool_isUserRoot=$( CheckIfUserIsRoot; ParseThisExitCodeAsBoolean )
+    CheckIfUserIsRoot &> /dev/null
+    readonly bool_isUserRoot=$( ParseThisExitCodeAsBoolean )
+    true; SaveThisExitCode
+
     bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint" )
 # </code>
 
