@@ -61,12 +61,12 @@
     function EchoPassOrFailThisExitCode
     {
         # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfVarIsNull $1 &> /dev/null
+        #     CheckIfVarIsNotNull $1 &> /dev/null
         #     echo -en "$1 "
         #     break
         # done
 
-        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
             echo -en "$1 "
         fi
 
@@ -85,7 +85,7 @@
     # <returns> string </returns>
     function EchoPassOrFailThisTestCase
     {
-        # CheckIfVarIsNull $1 &> /dev/null
+        # CheckIfVarIsNotNull $1 &> /dev/null
         # local str_testCaseName="TestCase"
 
         # if [[ $int_thisExitCode -eq 0 ]]; then
@@ -94,7 +94,7 @@
 
         # readonly str_testCaseName
 
-        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
             declare -lr str_testCaseName="TestCase"
         else
             declare -lr str_testCaseName=$1
@@ -239,9 +239,9 @@
     # Checks if directory exists, and set exit code if false. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
-    function CheckIfDirIsNull
+    function CheckIfDirIsNotNull
     {
-        if [[ -d $1 && $( CheckIfVarIsNull $1 ) == true ]]; then
+        if [[ -d $1 && $( CheckIfVarIsNotNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -256,7 +256,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsExecutable
     {
-        if [[ -x $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ -x $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -269,9 +269,9 @@
     # <summary> Checks if file exists, and set exit code if false. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfFileIsNull
+    function CheckIfFileIsNotNull
     {
-        if [[ -e $1 && $( CheckIfVarIsNull $1 ) == true ]]; then
+        if [[ -e $1 && $( CheckIfVarIsNotNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -286,7 +286,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsReadable
     {
-        if [[ -r $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ -r $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -301,7 +301,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsWritable
     {
-        if [[ -w $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ -w $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -320,13 +320,13 @@
             echo -en "${str_warning}Script must execute as root."
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
-            #     CheckIfFileIsNull $0 &> /dev/null
+            #     CheckIfFileIsNotNull $0 &> /dev/null
             #     declare -lr str_file1=$( basename $0 )
             #     echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
             #     break
             # done
 
-            if [[ $( CheckIfFileIsNull $0 ) == false ]]; then
+            if [[ $( CheckIfFileIsNotNull $0 ) == false ]]; then
                 declare -lr str_file1=$( basename $0 )
                 echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
             fi
@@ -340,7 +340,7 @@
     # <summary> Checks if input parameter is null, and set exit code if false. </summary>
     # <parameter name="$1"> variable </parameter>
     # <returns> boolean </returns>
-    function CheckIfVarIsNull
+    function CheckIfVarIsNotNull
     {
         if [[ ! -z "$1" ]]; then
             declare -lr bool=true
@@ -378,14 +378,16 @@
     function AppendArrayToFile
     {
         declare -lr IFS=$'\n'
-        echo -en "Writing to file..."
+        echo -en "Writing to file...\t"
 
-        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNull $2 ) == true ]]; then
+        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true ]]; then
             local -n arr_file1="$2"
 
             for var_element1 in ${arr_file1[@]}; do
                 ( echo -e $var_element1 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
             done
+        else
+            false; SaveThisExitCode
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -398,10 +400,12 @@
     function AppendVarToFile
     {
         declare -lr IFS=$'\n'
-        echo -en "Writing to file..."
+        echo -en "Writing to file...\t"
 
-        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNull $2 ) == true ]]; then
+        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true ]]; then
             ( echo -e $2 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
+        else
+            false; SaveThisExitCode
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -412,8 +416,10 @@
     # <returns> exit code </returns>
     function ChangeOwnershipOfFileOrDirToCurrentUser
     {
-        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
             chown -f $UID $1 || ( false; SaveThisExitCode )
+        else
+            false; SaveThisExitCode
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -425,7 +431,7 @@
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        echo -e "Verifying two files..."
+        echo -e "Verifying two files...\t"
 
         if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
             if cmp -s "$1" "$2"; then
@@ -434,6 +440,8 @@
                 echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
                 false; SaveThisExitCode
             fi
+        else
+            false; SaveThisExitCode
         fi
 
         ParseThisExitCode
@@ -444,7 +452,7 @@
     # <returns> exit code </returns>
     function CreateBackupFromFile
     {
-        echo -en "Backing up file..."
+        echo -en "Backing up file...\t"
         declare -lr str_file1=$1
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -520,10 +528,14 @@
     # <returns> exit code </returns>
     function CreateDir
     {
-        echo -en "Creating directory..."
+        echo -en "Creating directory...\t"
 
-        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
-            mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
+        if [[ $( CheckIfDirIsNotNull $1 ) == false ]]; then
+            if [[ $bool_isUserRoot == true ]]; then
+                sudo mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
+            else
+                mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
+            fi
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -534,10 +546,14 @@
     # <returns> exit code </returns>
     function CreateFile
     {
-        echo -en "Creating file..."
+        echo -en "Creating file...\t"
 
-        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
-            touch $1 &> /dev/null || ( false; SaveThisExitCode )
+        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
+            if [[ $bool_isUserRoot == true ]]; then
+                sudo touch $1 &> /dev/null || ( false; SaveThisExitCode )
+            else
+                touch $1 &> /dev/null || ( false; SaveThisExitCode )
+            fi
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -548,9 +564,9 @@
     # <returns> exit code </returns>
     function DeleteFile
     {
-        echo -en "Deleting file..."
+        echo -en "Deleting file...\t"
 
-        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
             rm $1 &> /dev/null || ( false; SaveThisExitCode )
         fi
 
@@ -562,7 +578,7 @@
     # <returns> exit code </returns>
     function GoToScriptDirectory
     {
-        if [[ $( CheckIfDirIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfDirIsNotNull $1 ) == true ]]; then
             cd $str_thisDir || ( false; SaveThisExitCode )
         fi
 
@@ -575,9 +591,9 @@
     # <returns> array of string </returns>
     function ReadFile
     {
-        echo -en "Reading file..."
+        echo -en "Reading file...\t"
 
-        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNull $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
             local -n arr_file1="$1"
             readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
         fi
@@ -597,7 +613,7 @@
         declare -lir int_maxCount=2
         declare -l str_output1=""
 
-        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
             readonly str_output1="$1 "
         fi
         # </parameters> #
@@ -649,7 +665,7 @@
         fi
         # </parameters> #
 
-        CheckIfVarIsNull $2 &> /dev/null
+        CheckIfVarIsNotNull $2 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             # <summary>
@@ -680,7 +696,7 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNotNull $str_input1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
@@ -704,7 +720,7 @@
         fi
         # </parameters> #
 
-        CheckIfVarIsNull $2 &> /dev/null
+        CheckIfVarIsNotNull $2 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             # <summary> After given number of attempts, input is set to default: false. </summary>
@@ -730,7 +746,7 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNotNull $str_input1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
@@ -776,7 +792,7 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNull $str_input1 &> /dev/null
+        CheckIfVarIsNotNull $str_input1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
@@ -825,19 +841,17 @@
     # <returns> exit code </returns>
     function TestNetwork
     {
-        echo -en "Testing Internet connection... "
+        echo -en "Testing Internet connection...\t"
         ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || ( false; SaveThisExitCode; )
         EchoPassOrFailThisExitCode
 
-        echo -en "Testing connection to DNS... "
+        echo -en "Testing connection to DNS...\t"
         ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || ( false; SaveThisExitCode; )
         EchoPassOrFailThisExitCode
 
         if [[ $int_thisExitCode -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
         fi
-
-        EchoPassOrFailThisExitCode; echo
     }
 
     # <summary> Overwrite file with contents of array. </summary>
@@ -869,9 +883,9 @@
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
+            CheckIfVarIsNotNull $1 &> /dev/null
+            CheckIfVarIsNotNull $2 &> /dev/null
+            CheckIfFileIsNotNull $1 &> /dev/null
             CheckIfFileIsReadable $1 &> /dev/null
             CheckIfFileIsWritable $1 &> /dev/null
             ( echo -e $2 > $1 ) &> /dev/null || ( false; SaveThisExitCode )
@@ -918,7 +932,7 @@
 
         GoToScriptDirectory &> /dev/null
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNull $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
@@ -969,7 +983,7 @@
         # <summary> Copy files and set permissions. </summary>
         function AppendServices_AppendFile
         {
-            CheckIfFileIsNull $2 &> /dev/null
+            CheckIfFileIsNotNull $2 &> /dev/null
 
             while [[ $int_thisExitCode -eq 0 ]]; do
                 cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
@@ -980,7 +994,7 @@
         }
 
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNull $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
@@ -1068,9 +1082,8 @@
         # </parameters>
 
         CreateDir $str_dir1 &> /dev/null
-        # CheckIfFileIsWritable $str_dir1 &> /dev/null
+        chmod -R +w $str_dir1 &> /dev/null
 
-        # if [[ $int_thisExitCode -eq 0 ]]; then
         if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
             for str_repo in ${arr_repo[@]}; do
                 cd $str_dir1
@@ -1079,24 +1092,15 @@
                 local str_userName=$( basename $str_repo )
                 # </parameters>
 
-                # CheckIfDirIsNull ${str_dir1}${str_userName} &> /dev/null
+                CreateDir ${str_dir1}${str_userName} &> /dev/null
 
-                # if [[ $int_thisExitCode -ne 0 ]]; then
-                if [[ $( CheckIfDirIsNull ${str_dir1}${str_userName} ) == true  ]]; then
-                    CreateDir ${str_dir1}${str_userName} &> /dev/null
-                fi
-
-                # CheckIfDirIsNull ${str_dir1}${str_repo} &> /dev/null
-
-                # if [[ $int_thisExitCode -eq 0 ]]; then
-                if [[ $( CheckIfDirIsNull ${str_dir1}${str_repo} ) == true  ]]; then
+                if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == true  ]]; then
                     cd ${str_dir1}${str_repo}
                     git pull https://github.com/$str_repo
                 else
                     ReadInput "Clone repo '$str_repo'?"
 
                     if [[ $int_thisExitCode -eq 0 ]]; then
-                    # if [[ $( ReadInput "Clone repo '$str_repo'?" ) == true ]]; then                 # NOTE: will this work?
                         cd ${str_dir1}${str_userName}
                         git clone https://github.com/$str_repo || SetExitCodeIfPassNorFail
                     fi
@@ -1104,7 +1108,7 @@
             done
         fi
 
-        SaveThisExitCode; EchoPassOrFailThisExitCode "Cloning/Updating Git repos..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Cloning/Updating Git repos..."; ParseThisExitCode
 
         if [[ $int_thisExitCode -eq 131 ]]; then
             echo -e "One or more Git repositories could not be cloned."
@@ -1123,8 +1127,8 @@
         # <returns> exit code </returns>
         function InstallThisCommand
         {
-            if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfVarIsNull $2 ) == true && $( CheckIfCommandIsInstalled $1 ) == false ]]; then
-                echo -en "Installing '$1'... "
+            if [[ $( CheckIfVarIsNotNull $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true && $( CheckIfCommandIsInstalled $1 ) == false ]]; then
+                echo -en "Installing '$1'...\t"
                 apt install -y $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
 
                 if [[ $( CheckIfCommandIsInstalled $1 ) == false ]]; then
@@ -1258,7 +1262,7 @@
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
         # <summary> Flatpak </summary>
-        if [[ $( command -v flatpak ) != "/usr/bin/flatpak" ]]; then
+        if [[ $( CheckIfCommandIsInstalled "flatpak" ) == true ]]; then
             echo -e "${str_warning}Flatpak not installed. Skipping..."
             false; SaveThisExitCode
         else
@@ -1342,7 +1346,7 @@
             local str_script=$( basename $str_dir2 )
             # </parameters>
 
-            if [[ $( CheckIfDirIsNull $str_script ) == true ]]; then
+            if [[ $( CheckIfDirIsNotNull $str_script ) == true ]]; then
                 ReadInput "Execute script '$str_script'?"
 
                 if [[ $int_thisExitCode -eq 0 ]]; then
@@ -1381,7 +1385,7 @@
                 # <summary> StevenBlack/hosts </summary>
                 local str_scriptDir="StevenBlack/hosts"
 
-                if [[ $( CheckIfDirIsNull $str_scriptDir ) == true ]]; then
+                if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/hosts"
 
@@ -1394,9 +1398,9 @@
 
                 # <summary> pyllyukko/user.js </summary>
                 local str_scriptDir="pyllyukko/user.js"
-                CheckIfDirIsNull $str_scriptDir
+                CheckIfDirIsNotNull $str_scriptDir
 
-                if [[ $( CheckIfDirIsNull $str_scriptDir ) == true ]]; then
+                if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/firefox-esr/firefox-esr.js"
 
@@ -1502,24 +1506,14 @@
         # </parameters>
 
         # <summary> Create backup or restore from backup. </summary>
-        CheckIfFileIsNull $str_file1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            CreateBackupFromFile $str_file1
-        fi
-
-        # <summary> Setup optional sources. </summary>
-        while [[ $int_thisExitCode -eq 0  ]]; do
+        if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
             ReadInput "Include 'contrib' sources?"
             str_sources+="contrib"
-            break
-        done
 
-        while [[ $int_thisExitCode -eq 0  ]]; do
+            # <summary> Setup optional sources. </summary>
             ReadInput "Include 'non-free' sources?"
             str_sources+=" non-free"
-            break
-        done
+        fi
 
         # <summary> Setup mandatory sources. </summary>
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -1621,7 +1615,7 @@
     function ModifySSH
     {
         # <summary> Exit if command is not present. </summary>
-        if [[ $( command -v ssh ) == "" ]]; then
+        if [[ $( CheckIfCommandIsInstalled "ssh" ) == true ]]; then
             false; SaveThisExitCode
             echo -e "${str_warning}SSH not installed! Skipping..."
         fi
@@ -1661,7 +1655,7 @@
             # </parameters>
 
             while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileIsNull $str_file1
+                CheckIfFileIsNotNull $str_file1
                 CreateBackupFromFile $str_file1
                 AppendVarToFile $str_file1 $str_output1
                 systemctl restart ssh || ( false; SaveThisExitCode )
@@ -1669,7 +1663,7 @@
             done
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
-            #     CheckIfFileIsNull $str_file2
+            #     CheckIfFileIsNotNull $str_file2
             #     CreateBackupFromFile $str_file2
             #     AppendVarToFile $str_file1 $str_output1
             #     systemctl restart sshd || ( false; SaveThisExitCode )
@@ -1695,7 +1689,7 @@
         # </parameters>
 
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNull $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
         # <summary> Write output to files. </summary>
@@ -1721,7 +1715,7 @@
         # <summary> Write output to files. </summary>
         local str_file1="sysctl.conf"
         local str_file2="/etc/sysctl.conf"
-        CheckIfFileIsNull $str_file1 &> /dev/null
+        CheckIfFileIsNotNull $str_file1 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             ReadInput "Setup '/etc/sysctl.conf' with defaults?"
@@ -1903,8 +1897,9 @@
     {
         if [[ $( CheckCurrentDistro ) == true ]]; then
             ModifyDebianRepos
+            TestNetwork &> /dev/null
 
-            if [[ $( TestNetwork ) == true ]]; then
+            if [[ $int_thisExitCode -eq 0 ]]; then
                 InstallFromDebianRepos
                 InstallFromFlathubRepos
                 InstallFromSnapRepos
@@ -1919,7 +1914,9 @@
     function ExecuteSetupOfGitRepos
     {
         if [[ $( CheckIfCommandIsInstalled "git" ) == true ]]; then
-            if [[ $( TestNetwork ) == true ]]; then
+            TestNetwork &> /dev/null
+
+            if [[ $int_thisExitCode -eq 0 ]]; then
                 CloneOrUpdateGitRepositories
             fi
 
@@ -1952,11 +1949,11 @@
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
-    InstallCommands
+    InstallCommands &> /dev/null
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     if [[ $bool_isUserRoot == true ]]; then
-        ExecuteSetupOfSoftwareSources
+        # ExecuteSetupOfSoftwareSources
         ExecuteSetupOfGitRepos
         # ExecuteSystemSetup
     else
