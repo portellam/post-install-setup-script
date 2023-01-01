@@ -1022,9 +1022,6 @@
     # <returns> boolean </returns>
     function CheckCurrentDistro
     {
-        # CheckIfCommandIsInstalled "apt"
-
-        # if [[ $int_thisExitCode -ne 0 ]]; then
         if [[ $( CheckIfCommandIsInstalled "apt" ) == true ]]; then
             declare -lr bool=true
         else
@@ -1041,16 +1038,13 @@
     {
         echo -e "Cloning/Updating Git repos..."
 
-        # <summary> sudo/root v. user </summary>
-        # CheckIfUserIsRoot
-
         # <summary>
+        # sudo/root v. user
         # List of useful Git repositories.
         # Example: "username/reponame"
         # </summary>
         # <parameters>
-        # if [[ $int_thisExitCode -eq 0 ]]; then
-        if [[ $( CheckIfUserIsRoot ) == true ]]; then
+        if [[ $bool_isUserRoot == true ]]; then
             declare -lr str_dir1="/root/source/repos"
             declare -alr arr_repo=(
                 "corna/me_cleaner"
@@ -1140,12 +1134,6 @@
                 EchoPassOrFailThisExitCode
             fi
         }
-
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckCurrentDistro &> /dev/null
-        #     TestNetwork &> /dev/null
-        #     break
-        # done
 
         TestNetwork &> /dev/null
 
@@ -1354,17 +1342,15 @@
             local str_script=$( basename $str_dir2 )
             # </parameters>
 
-            CheckIfDirIsNull $str_script &> /dev/null
-
-            if [[ $int_thisExitCode -eq 0 ]]; then
+            if [[ $( CheckIfDirIsNull $str_script ) == true ]]; then
                 ReadInput "Execute script '$str_script'?"
 
                 if [[ $int_thisExitCode -eq 0 ]]; then
                     cd $str_dir2
                     CheckIfFileIsExecutable $str_script &> /dev/null
 
-                    if [[ $int_thisExitCode -eq 0 ]]; then
-                        sudo bash $str_script || SetExitCodeIfPassNorFail
+                    if [[ $( CheckIfFileIsExecutable $str_script ) == true ]]; then
+                        bash $str_script || SetExitCodeIfPassNorFail
                     fi
 
                     cd $str_dir1
@@ -1373,55 +1359,59 @@
         }
 
         # <parameters>
-        declare -lr str_dir1="/root/source/repos"
+        if [[ $bool_isUserRoot == true ]]; then
+            declare -lr str_dir1="/root/source/repos"
+        else
+            declare -lr str_dir1="~/source/repos"
+        fi
         # </parameters>
 
         CreateDir $str_dir1 &> /dev/null
-        CheckIfFileIsWritable $str_dir1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            # <summary>
-            # portellam/Auto-Xorg
-            # Install system service from repository.
-            # Finds first available non-VFIO VGA/GPU and binds to Xorg.
-            # </summary>
-            local str_scriptDir="portellam/Auto-Xorg/installer.bash"
-            ExecuteScript $str_scriptDir
+        if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
+            if [[ $bool_isUserRoot == true ]]; then
+                # <summary>
+                # portellam/Auto-Xorg
+                # Install system service from repository.
+                # Finds first available non-VFIO VGA/GPU and binds to Xorg.
+                # </summary>
+                local str_scriptDir="portellam/Auto-Xorg/installer.bash"
+                ExecuteScript $str_scriptDir
 
-            # <summary> StevenBlack/hosts </summary>
-            local str_scriptDir="StevenBlack/hosts"
-            CheckIfDirIsNull $str_scriptDir
+                # <summary> StevenBlack/hosts </summary>
+                local str_scriptDir="StevenBlack/hosts"
 
-            if [[ $int_thisExitCode -eq 0 ]]; then
-                cd $str_scriptDir
-                CreateBackupFromFile "/etc/hosts" &> /dev/null
+                if [[ $( CheckIfDirIsNull $str_scriptDir ) == true ]]; then
+                    cd $str_scriptDir
+                    local str_file1="/etc/hosts"
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
-                    cp hosts "/etc/hosts" || SetExitCodeIfPassNorFail
+                    if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
+                        cp hosts $str_file1 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                    fi
+
+                    cd $str_dir1
                 fi
 
-                cd $str_dir1
+                # <summary> pyllyukko/user.js </summary>
+                local str_scriptDir="pyllyukko/user.js"
+                CheckIfDirIsNull $str_scriptDir
+
+                if [[ $( CheckIfDirIsNull $str_scriptDir ) == true ]]; then
+                    cd $str_scriptDir
+                    local str_file1="/etc/firefox-esr/firefox-esr.js"
+
+                    make debian_locked.js && (
+                        if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
+                            cp debian_locked.js $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                        fi
+                    )
+                    cd $str_dir1
+                fi
+
+                # <summary> foundObjects/zram-swap </summary>
+                local str_scriptDir="foundObjects/zram-swap/install.sh"
+                ExecuteScript $str_scriptDir
             fi
-
-            # <summary> pyllyukko/user.js </summary>
-            local str_scriptDir="pyllyukko/user.js"
-            CheckIfDirIsNull $str_scriptDir
-
-            if [[ $int_thisExitCode -eq 0 ]]; then
-                cd $str_scriptDir
-                make debian_locked.js && (
-                    CreateBackupFromFile "/etc/firefox-esr/firefox-esr.js" &> /dev/null
-
-                    if [[ $int_thisExitCode -eq 0 ]]; then
-                        cp debian_locked.js "/etc/firefox-esr/firefox-esr.js" &> /dev/null || SetExitCodeIfPassNorFail
-                    fi
-                )
-                cd $str_dir1
-            fi
-
-            # <summary> foundObjects/zram-swap </summary>
-            local str_scriptDir="foundObjects/zram-swap/install.sh"
-            ExecuteScript $str_scriptDir
         fi
 
         EchoPassOrFailThisExitCode "Executing Git scripts..."; ParseThisExitCode
@@ -1911,18 +1901,14 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfSoftwareSources
     {
-        CheckCurrentDistro
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckCurrentDistro ) == true ]]; then
             ModifyDebianRepos
-        fi
 
-        TestNetwork
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            InstallFromDebianRepos
-            InstallFromFlathubRepos
-            InstallFromSnapRepos
+            if [[ $( TestNetwork ) == true ]]; then
+                InstallFromDebianRepos
+                InstallFromFlathubRepos
+                InstallFromSnapRepos
+            fi
         fi
 
         echo -e "\n${str_warning}If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
@@ -1932,10 +1918,8 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
-        if [[ $( command -v git ) == "/usr/bin/git" ]]; then
-            TestNetwork
-
-            if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfCommandIsInstalled "git" ) == true ]]; then
+            if [[ $( TestNetwork ) == true ]]; then
                 CloneOrUpdateGitRepositories
             fi
 
@@ -1960,6 +1944,7 @@
     declare -i int_thisExitCode=$?
 
     # <summary> Checks </summary>
+    readonly bool_isUserRoot=$( CheckIfUserIsRoot; ParseThisExitCodeAsBoolean )
     bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint" )
 # </code>
 
@@ -1970,10 +1955,7 @@
     InstallCommands
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
-    CheckIfUserIsRoot
-    exit 0
-
-    if [[ $( ParseThisExitCodeAsBoolean ) == true ]]; then
+    if [[ $bool_isUserRoot == true ]]; then
         ExecuteSetupOfSoftwareSources
         ExecuteSetupOfGitRepos
         # ExecuteSystemSetup
