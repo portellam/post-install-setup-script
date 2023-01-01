@@ -21,6 +21,7 @@
 #
 # -cat EOF
 #
+# use awk, grep, cut, paste
 #
 # </summary>
 
@@ -240,7 +241,7 @@
     # <returns> boolean </returns>
     function CheckIfDirIsNull
     {
-        if [[ -d $1 ]]; then
+        if [[ -d $1 && $( CheckIfVarIsNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -255,7 +256,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsExecutable
     {
-        if [[ -x $1 ]]; then
+        if [[ -x $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -270,7 +271,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsNull
     {
-        if [[ -e $1 ]]; then
+        if [[ -e $1 && $( CheckIfVarIsNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -285,7 +286,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsReadable
     {
-        if [[ -r $1 ]]; then
+        if [[ -r $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -300,7 +301,7 @@
     # <returns> boolean </returns>
     function CheckIfFileIsWritable
     {
-        if [[ -w $1 ]]; then
+        if [[ -w $1 && $( CheckIfFileIsNull $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -312,11 +313,10 @@
 
     # <summary> Checks if current user is sudo/root, and set exit code if false. </summary>
     # <parameter name="$0"> file </parameter>
-    # <returns> boolean </returns>
+    # <returns> exit code </returns>
     function CheckIfUserIsRoot
     {
         if [[ $( whoami ) != "root" ]]; then
-            declare -lr bool=false
             echo -en "${str_warning}Script must execute as root."
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
@@ -332,11 +332,9 @@
             fi
 
             false; SaveThisExitCode
-        else
-            declare -lr bool=false
         fi
 
-        echo $bool
+        echo
     }
 
     # <summary> Checks if input parameter is null, and set exit code if false. </summary>
@@ -344,7 +342,7 @@
     # <returns> boolean </returns>
     function CheckIfVarIsNull
     {
-        if [[ -z "$1" ]]; then
+        if [[ ! -z "$1" ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -382,21 +380,13 @@
         declare -lr IFS=$'\n'
         echo -en "Writing to file..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-            CheckIfFileIsWritable $1 &> /dev/null
-            # declare -aln arr_file1="$2"
+        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNull $2 ) == true ]]; then
             local -n arr_file1="$2"
 
             for var_element1 in ${arr_file1[@]}; do
                 ( echo -e $var_element1 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
             done
-
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
@@ -410,14 +400,9 @@
         declare -lr IFS=$'\n'
         echo -en "Writing to file..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $2 &> /dev/null
-            CheckIfFileIsReadable $2 &> /dev/null
+        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNull $2 ) == true ]]; then
             ( echo -e $2 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
@@ -427,13 +412,9 @@
     # <returns> exit code </returns>
     function ChangeOwnershipOfFileOrDirToCurrentUser
     {
-        CheckIfVarIsNull $1 &> /dev/null
-
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
+        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
             chown -f $UID $1 || ( false; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
@@ -444,21 +425,9 @@
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        echo -en "Verifying two files..."
+        echo -e "Verifying two files..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $1 &> /dev/null
-            CheckIfFileIsNull $2 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-            CheckIfFileIsReadable $2 &> /dev/null
-            break
-        done
-
-        EchoPassOrFailThisExitCode
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
             if cmp -s "$1" "$2"; then
                 echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             else
@@ -479,8 +448,6 @@
         declare -lr str_file1=$1
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $str_file1 &> /dev/null
-            CheckIfFileIsNull $str_file1 &> /dev/null
             CheckIfFileIsReadable $str_file1 &> /dev/null
 
             # <parameters>
@@ -555,14 +522,7 @@
     {
         echo -en "Creating directory..."
 
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfVarIsNull $1 &> /dev/null
-        #     CheckIfFileIsNull $1 &> /dev/null
-        #     mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
-        #     break
-        # done
-
-        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
             mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
         fi
 
@@ -576,14 +536,7 @@
     {
         echo -en "Creating file..."
 
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfVarIsNull $1 &> /dev/null
-        #     CheckIfFileIsNull $1 &> /dev/null
-        #     touch $1 &> /dev/null && ( false; SaveThisExitCode)
-        #     break
-        # done
-
-        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
             touch $1 &> /dev/null || ( false; SaveThisExitCode )
         fi
 
@@ -597,14 +550,7 @@
     {
         echo -en "Deleting file..."
 
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfVarIsNull $1 &> /dev/null
-        #     CheckIfFileIsNull $1 &> /dev/null
-        #     rm $1 &> /dev/null || ( false; SaveThisExitCode )
-        #     break
-        # done
-
-        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileIsNull $1 ) == true ]]; then
             rm $1 &> /dev/null || ( false; SaveThisExitCode )
         fi
 
@@ -616,12 +562,6 @@
     # <returns> exit code </returns>
     function GoToScriptDirectory
     {
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfDirIsNull $str_thisDir
-        #     cd $str_thisDir || ( false; SaveThisExitCode )
-        #     break
-        # done
-
         if [[ $( CheckIfDirIsNull $1 ) == true ]]; then
             cd $str_thisDir || ( false; SaveThisExitCode )
         fi
@@ -637,16 +577,10 @@
     {
         echo -en "Reading file..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNull $1 &> /dev/null
-            CheckIfVarIsNull $2 &> /dev/null
-            CheckIfFileIsNull $2 &> /dev/null
-            CheckIfFileIsReadable $2 &> /dev/null
-            # declare -aln arr_file1="$1"
+        if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
             local -n arr_file1="$1"
             readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
-            break
-        done
+        fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
@@ -658,14 +592,12 @@
     # <returns> exit code </returns>
     function ReadInput
     {
-        CheckIfVarIsNull $1 &> /dev/null
-
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
         declare -l str_output1=""
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfVarIsNull $1 ) == true ]]; then
             readonly str_output1="$1 "
         fi
         # </parameters> #
@@ -853,53 +785,53 @@
 
     # <summary> Read from XML Data Object Module. </summary>
     # <returns> content variable </returns>
-    function ReadFromXMLDOM
-    {
-        declare -lr IFS=$'\>'
-        read -d \< $var_entity $var_content
-    }
+    # function ReadFromXMLDOM
+    # {
+    #     declare -lr IFS=$'\>'
+    #     read -d \< $var_entity $var_content
+    # }
 
     # <summary> Read from XML Data Object Module. </summary>
     # <returns> content variable </returns>
-    function ReadFromXMLFile
-    {
-        declare -al arr_file1=()
+    # function ReadFromXMLFile
+    # {
+    #     declare -al arr_file1=()
 
-        while ReadFromXMLDOM; do
-            if [[ $var_entity = "title" ]]; then
-                echo $var_content
-                exit
-            fi
-        done < xhtmlfile.xhtml > titleOfXHTMLPage.txt
-    }
+    #     while ReadFromXMLDOM; do
+    #         if [[ $var_entity = "title" ]]; then
+    #             echo $var_content
+    #             exit
+    #         fi
+    #     done < xhtmlfile.xhtml > titleOfXHTMLPage.txt
+    # }
 
     # <summary> Reset IFS. </summary>
-    function SetInternalFieldSeparatorToDefault
-    {
-        IFS=$var_IFS
-    }
+    # function SetInternalFieldSeparatorToDefault
+    # {
+    #     IFS=$var_IFS
+    # }
 
     # <summary>
     # Backup IFS and Set IFS to newline char.
     # NOTE: necessary for newline preservation in arrays and files.
     # </summary>
-    function SetInternalFieldSeparatorToNewline
-    {
-        var_IFS=$IFS
-        IFS=$'\n'
-    }
+    # function SetInternalFieldSeparatorToNewline
+    # {
+    #     var_IFS=$IFS
+    #     IFS=$'\n'
+    # }
 
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
     # <returns> exit code </returns>
     function TestNetwork
     {
-        echo -en "Testing Internet connection..."
-        ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || false
-        SaveThisExitCode; EchoPassOrFailThisExitCode
+        echo -en "Testing Internet connection... "
+        ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || ( false; SaveThisExitCode; )
+        EchoPassOrFailThisExitCode
 
-        echo -en "Testing connection to DNS..."
-        ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || false
-        SaveThisExitCode; EchoPassOrFailThisExitCode
+        echo -en "Testing connection to DNS... "
+        ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || ( false; SaveThisExitCode; )
+        EchoPassOrFailThisExitCode
 
         if [[ $int_thisExitCode -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
@@ -1087,14 +1019,20 @@
     }
 
     # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function CheckCurrentDistro
     {
-        CheckIfCommandIsInstalled "apt"
+        # CheckIfCommandIsInstalled "apt"
 
-        if [[ $int_thisExitCode -ne 0 ]]; then
+        # if [[ $int_thisExitCode -ne 0 ]]; then
+        if [[ $( CheckIfCommandIsInstalled "apt" ) == true ]]; then
+            declare -lr bool=true
+        else
+            declare -lr bool=false
             echo -e "${str_warning}Unrecognized Linux distribution; Apt not installed. Skipping..."
         fi
+
+        echo $bool
     }
 
     # <summary> Clone given GitHub repositories. </summary>
@@ -1104,14 +1042,15 @@
         echo -e "Cloning/Updating Git repos..."
 
         # <summary> sudo/root v. user </summary>
-        CheckIfUserIsRoot
+        # CheckIfUserIsRoot
 
         # <summary>
         # List of useful Git repositories.
         # Example: "username/reponame"
         # </summary>
         # <parameters>
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        # if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfUserIsRoot ) == true ]]; then
             declare -lr str_dir1="/root/source/repos"
             declare -alr arr_repo=(
                 "corna/me_cleaner"
@@ -1135,9 +1074,10 @@
         # </parameters>
 
         CreateDir $str_dir1 &> /dev/null
-        CheckIfFileIsWritable $str_dir1 &> /dev/null
+        # CheckIfFileIsWritable $str_dir1 &> /dev/null
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        # if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
             for str_repo in ${arr_repo[@]}; do
                 cd $str_dir1
 
@@ -1145,21 +1085,24 @@
                 local str_userName=$( basename $str_repo )
                 # </parameters>
 
-                CheckIfDirIsNull ${str_dir1}${str_userName} &> /dev/null
+                # CheckIfDirIsNull ${str_dir1}${str_userName} &> /dev/null
 
-                if [[ $int_thisExitCode -ne 0 ]]; then
+                # if [[ $int_thisExitCode -ne 0 ]]; then
+                if [[ $( CheckIfDirIsNull ${str_dir1}${str_userName} ) == true  ]]; then
                     CreateDir ${str_dir1}${str_userName} &> /dev/null
                 fi
 
-                CheckIfDirIsNull ${str_dir1}${str_repo} &> /dev/null
+                # CheckIfDirIsNull ${str_dir1}${str_repo} &> /dev/null
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
+                # if [[ $int_thisExitCode -eq 0 ]]; then
+                if [[ $( CheckIfDirIsNull ${str_dir1}${str_repo} ) == true  ]]; then
                     cd ${str_dir1}${str_repo}
                     git pull https://github.com/$str_repo
                 else
                     ReadInput "Clone repo '$str_repo'?"
 
                     if [[ $int_thisExitCode -eq 0 ]]; then
+                    # if [[ $( ReadInput "Clone repo '$str_repo'?" ) == true ]]; then                 # NOTE: will this work?
                         cd ${str_dir1}${str_userName}
                         git clone https://github.com/$str_repo || SetExitCodeIfPassNorFail
                     fi
@@ -1178,31 +1121,46 @@
     # <returns> exit code </returns>
     function InstallCommands
     {
-        echo -e "Installing commands..."
+        echo -e "Checking for commands..."
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckCurrentDistro &> /dev/null
-            TestNetwork &> /dev/null
-            break
-        done
+        # <summary> Install a given command. </summary>
+        # <parameter name="$1"> command_to_use </parameter>
+        # <parameter name="$2"> required_packages </parameter>
+        # <returns> exit code </returns>
+        function InstallThisCommand
+        {
+            if [[ $( CheckIfVarIsNull $1 ) == true && $( CheckIfVarIsNull $2 ) == true && $( CheckIfCommandIsInstalled $1 ) == false ]]; then
+                echo -en "Installing '$1'... "
+                apt install -y $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            if [[ $bool_is_xmllint_installed == false || "${bool_is_xmllint_installed}" == "false" ]]; then
-                echo -en "Installing 'xmllint'... "
-                apt install -y xml-core xmlstarlet &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
+                if [[ $( CheckIfCommandIsInstalled $1 ) == false ]]; then
+                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                fi
+
                 EchoPassOrFailThisExitCode
             fi
+        }
 
-            # if [[ $bool_is_xmllint_installed == false || "${bool_is_xmllint_installed}" == "false" ]]; then
-            #     echo -en "Installing 'xmllint'... "
-            #     apt install -y xml-core &> /dev/null || ( false; SaveThisExitCode )
-            #     bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
-            #     EchoPassOrFailThisExitCode
-            # fi
+        # while [[ $int_thisExitCode -eq 0 ]]; do
+        #     CheckCurrentDistro &> /dev/null
+        #     TestNetwork &> /dev/null
+        #     break
+        # done
+
+        TestNetwork &> /dev/null
+
+        # if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_thisExitCode -eq 0 && $( CheckCurrentDistro ) == true ]]; then
+            InstallThisCommand "xmllint" "xml-core xmlstarlet"
+            bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
+
+            # InstallThisCommand "command_to_use" "required_packages"
+            # boolean_to_set=$( ParseThisExitCodeAsBoolean )
+        else
+            false; SaveThisExitCode
         fi
 
-        EchoPassOrFailThisExitCode "Installing commands..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Checking for commands..."; ParseThisExitCode
     }
 
     # <summary> Install from Debian repositories. </summary>
@@ -2013,8 +1971,9 @@
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     CheckIfUserIsRoot
+    exit 0
 
-    if [[ $int_thisExitCode -eq 0 ]]; then
+    if [[ $( ParseThisExitCodeAsBoolean ) == true ]]; then
         ExecuteSetupOfSoftwareSources
         ExecuteSetupOfGitRepos
         # ExecuteSystemSetup
