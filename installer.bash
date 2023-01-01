@@ -611,11 +611,6 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -l str_output1=""
-
-        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
-            readonly str_output1="$1 "
-        fi
         # </parameters> #
 
         true; SaveThisExitCode
@@ -628,7 +623,11 @@
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "${str_output1}\e[30;43m[Y/n]:\e[0m "
+            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+                echo -n "$1 "
+            fi
+
+            echo -en "\e[30;43m[Y/n]:\e[0m "
             read str_input1
             str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
@@ -644,8 +643,6 @@
             echo -en "\e[33mInvalid input.\e[0m "
             (( int_count++ ))
         done
-
-        echo
     }
 
     # <summary>
@@ -658,11 +655,6 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -l str_output1=""
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            readonly str_output1="$1 "
-        fi
         # </parameters> #
 
         CheckIfVarIsNotNull $2 &> /dev/null
@@ -677,7 +669,10 @@
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "$str_output1"
+            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+                echo -n "$1 "
+            fi
+
             read str_input1
 
             # <summary>
@@ -713,11 +708,6 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -l str_output1=""
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            readonly str_output1="$1 "
-        fi
         # </parameters> #
 
         CheckIfVarIsNotNull $2 &> /dev/null
@@ -730,7 +720,10 @@
                 false; SaveThisExitCode; break
             fi
 
-            echo -en "$str_output1"
+            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+                echo -n "$1 "
+            fi
+
             read str_input1
             str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
@@ -763,11 +756,6 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=2
-        declare -l str_output1=""
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            readonly str_output1="$1 "
-        fi
         # </parameters> #
 
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -778,7 +766,10 @@
                 break
             fi
 
-            echo -en "$str_output1"
+            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+                echo -n "$1 "
+            fi
+
             read str_input1
 
             # <summary> Check if string is a valid integer and within given range. </summary>
@@ -836,7 +827,11 @@
     #     var_IFS=$IFS
     #     IFS=$'\n'
     # }
+        declare -l str_output1=""
 
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            readonly str_output1="$1 "
+        fi
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
     # <returns> exit code </returns>
     function TestNetwork
@@ -1059,7 +1054,7 @@
         # </summary>
         # <parameters>
         if [[ $bool_isUserRoot == true ]]; then
-            declare -lr str_dir1="/root/source/repos"
+            declare -lr str_dir1="/root/source/"
             declare -alr arr_repo=(
                 "corna/me_cleaner"
                 "dt-zero/me_cleaner"
@@ -1070,7 +1065,7 @@
                 "StevenBlack/hosts"
             )
         else
-            declare -lr str_dir1=$( echo ~/ )"source/repos"
+            declare -lr str_dir1=$( echo ~/ )"source/"
             declare -alr arr_repo=(
                 "awilliam/rom-parser"
                 #"pixelplanetdev/4chan-flag-filter"
@@ -1089,20 +1084,23 @@
                 cd $str_dir1
 
                 # <parameters>
-                local str_userName=$( basename $str_repo )
+                local str_userName=$( echo $str_repo | cut -d "/" -f1 )
                 # </parameters>
 
                 CreateDir ${str_dir1}${str_userName} &> /dev/null
+                ReadInput "Clone repo '$str_repo'?"
 
-                if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == true  ]]; then
-                    cd ${str_dir1}${str_repo}
-                    git pull https://github.com/$str_repo
-                else
-                    ReadInput "Clone repo '$str_repo'?"
-
-                    if [[ $int_thisExitCode -eq 0 ]]; then
+                if [[ $int_thisExitCode -eq 0 ]]; then
+                    # <summary> Clone new GitHub repository. </summary>
+                    if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == false ]]; then
                         cd ${str_dir1}${str_userName}
-                        git clone https://github.com/$str_repo || SetExitCodeIfPassNorFail
+                        git clone https://github.com/$str_repo || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                        echo
+
+                    # <summary> Update existing GitHub repository. </summary>
+                    else
+                        cd ${str_dir1}${str_repo}
+                        git pull &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                     fi
                 fi
             done
