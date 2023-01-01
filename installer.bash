@@ -1088,19 +1088,20 @@
                 # </parameters>
 
                 CreateDir ${str_dir1}${str_userName} &> /dev/null
-                ReadInput "Clone repo '$str_repo'?"
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
-                    # <summary> Clone new GitHub repository. </summary>
-                    if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == false ]]; then
+                # <summary> Update existing GitHub repository. </summary>
+                if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == true ]]; then
+                    cd ${str_dir1}${str_repo}
+                    git pull &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+
+                # <summary> Clone new GitHub repository. </summary>
+                else
+                    ReadInput "Clone repo '$str_repo'?"
+
+                    if [[ $int_thisExitCode -eq 0 ]]; then
                         cd ${str_dir1}${str_userName}
                         git clone https://github.com/$str_repo || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                         echo
-
-                    # <summary> Update existing GitHub repository. </summary>
-                    else
-                        cd ${str_dir1}${str_repo}
-                        git pull &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                     fi
                 fi
             done
@@ -1362,9 +1363,9 @@
 
         # <parameters>
         if [[ $bool_isUserRoot == true ]]; then
-            declare -lr str_dir1="/root/source/repos"
+            declare -lr str_dir1="/root/source/"
         else
-            declare -lr str_dir1="~/source/repos"
+            declare -lr str_dir1="~/source/"
         fi
         # </parameters>
 
