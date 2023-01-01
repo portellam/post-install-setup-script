@@ -960,7 +960,7 @@
             systemctl restart cron &> /dev/null || ( false; SaveThisExitCode )
         fi
 
-        EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode; echo
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -1024,7 +1024,7 @@
             systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
         fi
 
-        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
     }
 
     # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
@@ -1130,7 +1130,7 @@
             SetExitCodeIfPassNorFail; SaveThisExitCode
         fi
 
-        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
 
         if [[ $bool_gitCloneHasFailed == true ]]; then
             echo -e "One or more Git repositories were not cloned."
@@ -1176,7 +1176,7 @@
             false; SaveThisExitCode
         fi
 
-        EchoPassOrFailThisExitCode "Checking for commands..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Checking for commands..."; ParseThisExitCode; echo
     }
 
     # <summary> Install from Debian repositories. </summary>
@@ -1351,7 +1351,7 @@
             # </code>
         fi
 
-        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
 
     # <summary> Install from Git repositories. </summary>
@@ -1365,7 +1365,7 @@
         {
             # <parameters>
             # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
-            # local str_script=$( basename $str_dir2 )
+            local str_dir2=$( basename $1 )"/"
             # </parameters>
 
             if [[ $( CheckIfDirIsNotNull $1 ) == true ]]; then
@@ -1373,7 +1373,7 @@
             fi
 
             if [[ $( CheckIfFileIsNotNull $2 ) == true ]]; then
-                ReadInput "Execute script '$2'?"
+                ReadInput "Execute script '${str_dir2}$2'?"
                 chmod +x $2 &> /dev/null
 
                 if [[ $int_thisExitCode -eq 0 && $( CheckIfFileIsExecutable $2 ) == true ]]; then
@@ -1393,7 +1393,7 @@
                 bool_gitCloneHasFailed=true
             fi
 
-            true; SaveThisExitCode
+            true; SaveThisExitCode; echo
         }
 
         # <parameters>
@@ -1469,6 +1469,8 @@
         if [[ $bool_execHasFailed == true ]]; then
             echo -e "One or more Git scripts were not executed."
         fi
+
+        echo
     }
 
     # <summary> Install from Snap software repositories. </summary>
@@ -1538,7 +1540,7 @@
             # </code>
         fi
 
-        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
@@ -1657,7 +1659,7 @@
             break
         done
 
-        EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Modifying $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
 
     # <summary> Configuration of SSH. </summary>
@@ -1826,7 +1828,7 @@
 
         # edit hosts file here? #
 
-        EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode; echo
     }
 # </code>
 
