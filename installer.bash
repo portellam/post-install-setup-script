@@ -1130,7 +1130,7 @@
             SetExitCodeIfPassNorFail; SaveThisExitCode
         fi
 
-        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
+        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode
 
         if [[ $bool_gitCloneHasFailed == true ]]; then
             echo -e "One or more Git repositories were not cloned."
@@ -1414,48 +1414,70 @@
             if [[ $bool_isUserRoot == true ]]; then
 
                 # <summary> portellam/Auto-Xorg </summary>
-                ExecuteScript "${str_dir1}portellam/auto-xorg/" "installer.bash"
+                local str_file1="installer.bash"
+                local str_repo="portellam/auto-xorg"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                ExecuteScript $str_scriptDir $str_file1
 
                 # <summary> StevenBlack/hosts </summary>
-                local str_scriptDir="${str_dir1}stevenblack/hosts"
+                local str_repo="stevenblack/hosts"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                echo -e "Executing script '${str_repo}'"
 
                 if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/hosts"
+                    CreateBackupFromFile $str_file1 &> /dev/null
 
-                    if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
-                        cp hosts $str_file1 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                    if [[ $int_thisExitCode -eq 0 ]]; then
+                        cp hosts $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                     fi
                 fi
 
                 # <summary> pyllyukko/user.js </summary>
-                local str_scriptDir="${str_dir1}pyllyukko/user.js"
+                local str_repo="pyllyukko/user.js"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                echo -e "Executing script '${str_repo}'"
 
                 if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/firefox-esr/firefox-esr.js"
 
-                    make debian_locked.js && (
-                        if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
+                    make debian_locked.js &> /dev/null && (
+                        CreateBackupFromFile $str_file1 &> /dev/null
+
+                        if [[ $int_thisExitCode -eq 0 ]]; then
                             cp debian_locked.js $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                         fi
                     )
                 fi
 
                 # <summary> foundObjects/zram-swap </summary>
-                ExecuteScript "${str_dir1}foundObjects/zram-swap/" "install.sh"
+                local str_file1="installer.sh"
+                local str_repo="foundObjects/zram-swap"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                ExecuteScript $str_scriptDir $str_file1
             else
 
                 # <summary> awilliam/rom-parser </summary>
-                local str_scriptDir="${str_dir1}awilliam/rom-parser"
+                # local str_file1="installer.sh"
+                local str_repo="awilliam/rom-parser"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                # ExecuteScript $str_scriptDir $str_file1
                 # CheckIfDirIsNotNull $str_scriptDir
 
                 # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
-                local str_scriptDir="${str_dir1}spaceinvaderone/dump_gpu_vbios"
+                # local str_file1="installer.sh"
+                local str_repo="spaceinvaderone/dump_gpu_vbios"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                # ExecuteScript $str_scriptDir $str_file1
                 # CheckIfDirIsNotNull $str_scriptDir
 
                 # <summary> spheenik/vfio-isolate </summary>
-                local str_scriptDir="${str_dir1}spheenik/vfio-isolate"
+                # local str_file1="installer.sh"
+                local str_repo="spheenik/vfio-isolate"
+                local str_scriptDir="${str_dir1}${str_repo}/"
+                # ExecuteScript $str_scriptDir $str_file1
                 # CheckIfDirIsNotNull $str_scriptDir
             fi
         fi
