@@ -57,16 +57,10 @@
 
     # <summary> Output pass or fail statement given exit code. </summary>
     # <parameter name="$1"> string </parameter>
-    # <returns> string </returns>
+    # <returns> void </returns>
     function EchoPassOrFailThisExitCode
     {
-        # while [[ $int_thisExitCode -eq 0 ]]; do
-        #     CheckIfVarIsNotNull $1 &> /dev/null
-        #     echo -en "$1 "
-        #     break
-        # done
-
-        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
             echo -en "$1 "
         fi
 
@@ -82,19 +76,10 @@
 
     # <summary> Output pass or fail test-case given exit code. </summary>
     # <parameter name="$1"> string </parameter>
-    # <returns> string </returns>
+    # <returns> void </returns>
     function EchoPassOrFailThisTestCase
     {
-        # CheckIfVarIsNotNull $1 &> /dev/null
-        # local str_testCaseName="TestCase"
-
-        # if [[ $int_thisExitCode -eq 0 ]]; then
-        #     str_testCaseName=$1
-        # fi
-
-        # readonly str_testCaseName
-
-        if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+        if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
             declare -lr str_testCaseName="TestCase"
         else
             declare -lr str_testCaseName=$1
@@ -159,15 +144,15 @@
         int_thisExitCode=$?
     }
 
-    # <summary> Parse exit code as boolean. </summary>
+    # <summary> Given last exit code, return a boolean. </summary>
     # <parameter name="$?"> exit code </parameter>
     # <returns> boolean </returns>
-    function ParseThisExitCodeAsBoolean
+    function ParseThisExitCodeAsBool
     {
+        local bool=false
+
         if [[ $int_thisExitCode -eq 0 ]]; then
-            declare -lr bool=true
-        else
-            declare -lr bool=false
+            bool=true
         fi
 
         echo $bool
@@ -220,43 +205,44 @@
 ### validation functions ###
 # <summary> Validation logic </summary>
 # <code>
-    # <summary> Checks if command is installed, and set exit code if false. </summary>
+    # <summary> Check if command exists, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> command name </parameter>
     # <returns> boolean </returns>
-    function CheckIfCommandIsInstalled
+    function CheckIfCommandExistsReturnBool
     {
+        local bool=false
+
         if [[ $( command -v $1 ) != "" ]]; then
-            declare -lr bool=true
+            bool=true
         else
-            declare -lr bool=false
             false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary>
-    # Checks if directory exists, and set exit code if false. </summary>
+    # <summary> Check if directory exists, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
-    function CheckIfDirIsNotNull
+    function CheckIfDirIsNotNullReturnBool
     {
-        if [[ -d $1 && $( CheckIfVarIsNotNull $1 ) == true ]]; then
-            declare -lr bool=true
+        local bool=false
+
+        if [[ -d $1 && $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+            bool=true
         else
-            declare -lr bool=false
             SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Checks if file is executable, and set exit code if false. </summary>
+    # <summary> Check if file is executable, and set exit code if false. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfFileIsExecutable
+    function CheckIfFileIsExecutableReturnBool
     {
-        if [[ -x $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
+        if [[ -x $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -266,67 +252,67 @@
         echo $bool
     }
 
-    # <summary> Checks if file exists, and set exit code if false. </summary>
+    # <summary> Check if file exists, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfFileIsNotNull
+    function CheckIfFileExistsReturnBool
     {
-        if [[ -e $1 && $( CheckIfVarIsNotNull $1 ) == true ]]; then
-            declare -lr bool=true
+        local bool=false
+
+        if [[ -e $1 ]]; then
+            bool=true
         else
-            declare -lr bool=false
-            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
+            false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Checks if file is readable, and set exit code if false. </summary>
+    # <summary> Check if file is readable, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfFileIsReadable
+    function CheckIfFileIsReadableReturnBool
     {
-        if [[ -r $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
-            declare -lr bool=true
+        local bool=false
+
+        if [[ -r $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
+            bool=true
         else
-            declare -lr bool=false
             SetExitCodeIfFileIsNotReadable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Checks if file is writable, and set exit code if false. </summary>
+    # <summary> Check if file is writable, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfFileIsWritable
+    function CheckIfFileIsWritableReturnBool
     {
-        if [[ -w $1 && $( CheckIfFileIsNotNull $1 ) == true ]]; then
-            declare -lr bool=true
+        local bool=false
+
+        if [[ -w $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
+            bool=true
         else
-            declare -lr bool=false
             SetExitCodeIfFileIsNotWritable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Checks if current user is sudo/root, and set exit code if false. </summary>
+    # <summary> Check if current user is sudo/root, set exit code if false, and return boolean. </summary>
     # <parameter name="$0"> file </parameter>
-    # <returns> exit code </returns>
-    function CheckIfUserIsRoot
+    # <returns> boolean </returns>
+    function CheckIfUserIsRootReturnBool
     {
-        if [[ $( whoami ) != "root" ]]; then
+        local bool=false
+
+        if [[ $( whoami ) == "root" ]]; then
+            bool=true
+        else
             echo -en "${str_warning}Script must execute as root."
 
-            # while [[ $int_thisExitCode -eq 0 ]]; do
-            #     CheckIfFileIsNotNull $0 &> /dev/null
-            #     declare -lr str_file1=$( basename $0 )
-            #     echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
-            #     break
-            # done
-
-            if [[ $( CheckIfFileIsNotNull $0 ) == false ]]; then
+            if [[ $( CheckIfFileExistsReturnBool $0 ) == false ]]; then
                 declare -lr str_file1=$( basename $0 )
                 echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
             fi
@@ -334,33 +320,35 @@
             false; SaveThisExitCode
         fi
 
-        echo
+        echo $bool
     }
 
-    # <summary> Checks if input parameter is null, and set exit code if false. </summary>
+    # <summary> Check if input parameter is null, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> variable </parameter>
     # <returns> boolean </returns>
-    function CheckIfVarIsNotNull
+    function CheckIfVarIsNotNullReturnBool
     {
+        local bool=false
+
         if [[ ! -z "$1" ]]; then
-            declare -lr bool=true
+            bool=true
         else
-            declare -lr bool=false
             SetExitCodeIfVarIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Checks if input parameter is a valid number, and set exit code if false. </summary>
+    # <summary> Check if input parameter is a valid number, set exit code if false, and return boolean. </summary>
     # <parameter name="$1"> number variable </parameter>
     # <returns> boolean </returns>
-    function CheckIfVarIsValidNum
+    function CheckIfVarIsValidNumReturnBool
     {
+        local bool=false
+
         if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
-            declare -lr bool=true
+            bool=true
         else
-            declare -lr bool=false
             SetExitCodeIfInputIsInvalid; SaveThisExitCode
         fi
 
@@ -368,47 +356,81 @@
     }
 # </code>
 
-### general functions ###
-# <summary> File operation logic </summary>
+### status functions ###
+# <summary> Operation status logic </summary>
 # <code>
-    # <summary> Append file with contents of array. </summary>
+    # <summary> Output status, and return exit code. </summary>
     # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> array of string </parameter>
+    # <parameter name="$2"> array </parameter>
     # <returns> exit code </returns>
-    function AppendArrayToFile
+    function AppendArrayToFileReturnExitCode
     {
-        declare -lr IFS=$'\n'
         echo -en "Writing to file...\t"
+        declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
 
-        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true ]]; then
-            local -n arr_file1="$2"
-
-            for var_element1 in ${arr_file1[@]}; do
-                ( echo -e $var_element1 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
-            done
+        if [[ $bool == true ]]; then
+            true
         else
-            false; SaveThisExitCode
+            SetExitCodeIfFileIsNotWritable
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        SaveThisExitCode; EchoPassOrFailThisExitCode
     }
 
-    # <summary> Append file with contents of variable. </summary>
+    # <summary> Output status. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> exit code </returns>
-    function AppendVarToFile
+    function AppendVarToFileReturnExitCode
     {
-        declare -lr IFS=$'\n'
         echo -en "Writing to file...\t"
+        declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
 
-        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true ]]; then
-            ( echo -e $2 >> $1 ) &> /dev/null || ( false; SaveThisExitCode )
+        if [[ $bool == true ]]; then
+            true
         else
-            false; SaveThisExitCode
+            SetExitCodeIfFileIsNotWritable
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        SaveThisExitCode; EchoPassOrFailThisExitCode
+    }
+# </code>
+
+### general functions ###
+# <summary> File operation logic </summary>
+# <code>
+    # <summary> Append file with array, and return boolean. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> array </parameter>
+    # <returns> boolean </returns>
+    function AppendArrayToFileReturnBool
+    {
+        declare -lr IFS=$'\n'
+        local bool=false
+
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            bool=true
+            local -n arr_file1="$2"
+            ( printf "%s\n" "${arr_file1[@]}" || bool=false ) &> /dev/null
+        fi
+
+        echo $bool
+    }
+
+    # <summary> Append file with string, and return boolean. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> boolean </returns>
+    function AppendVarToFileReturnBool
+    {
+        local bool=false
+
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            bool=true
+            ( echo -e $2 >> $1 || bool=false ) &> /dev/null
+        fi
+
+        echo $bool
     }
 
     # <summary> Change ownership of given file to current user. </summary>
@@ -416,7 +438,7 @@
     # <returns> exit code </returns>
     function ChangeOwnershipOfFileOrDirToCurrentUser
     {
-        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
+        if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             chown -f $UID $1 || ( false; SaveThisExitCode )
         else
             false; SaveThisExitCode
@@ -425,29 +447,30 @@
         EchoPassOrFailThisExitCode; ParseThisExitCode
     }
 
-    # <summary> Checks if two given files are the same, in composition. </summary>
+    # <summary> Check if two given files are the same, in composition. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function CheckIfTwoFilesAreSame
     {
-        echo -e "Verifying two files...\t"
+        # echo -e "Verifying two files...\t"
+        declare -l bool=false
 
-        if [[ $( CheckIfFileIsReadable $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
+        if [[ $( CheckIfFileIsReadableReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
             if cmp -s "$1" "$2"; then
-                echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-            else
-                echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-                false; SaveThisExitCode
+                # echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+                bool=true
+            # else
+                # echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+                # false; SaveThisExitCode
             fi
-        else
-            false; SaveThisExitCode
         fi
 
-        ParseThisExitCode
+        # EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
-    # <summary> Checks if two given files are the same, in composition. </summary>
+    # <summary> Check if two given files are the same, in composition. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> exit code </returns>
     function CreateBackupFromFile
@@ -456,7 +479,7 @@
         declare -lr str_file1=$1
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfFileIsReadable $str_file1 &> /dev/null
+            CheckIfFileIsReadableReturnBool $str_file1 &> /dev/null
 
             # <parameters>
             declare -lr str_suffix=".old"
@@ -474,7 +497,7 @@
                 var_element1=${var_element1##*.}                         # ditto
                 # </parameters>
 
-                CheckIfVarIsValidNum $var_element1 &> /dev/null
+                CheckIfVarIsValidNumReturnBool $var_element1 &> /dev/null
 
                 for var_element1 in ${arr_dir1[@]}; do
                     CheckIfTwoFilesAreSame $str_file1 $var_element1 &> /dev/null
@@ -503,7 +526,7 @@
                 declare -il int_lastIndex=0
                 # </parameters>
 
-                CheckIfVarIsValidNum $var_element1 &> /dev/null
+                CheckIfVarIsValidNumReturnBool $var_element1 &> /dev/null
                 declare -i int_lastIndex="${var_element1}"
                 (( int_lastIndex++ ))                                   # counter
 
@@ -525,87 +548,88 @@
 
     # <summary> Creates a directory. </summary>
     # <parameter name="$1"> directory </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function CreateDir
     {
-        echo -en "Creating directory...\t"
+        # echo -en "Creating directory...\t"
+        local bool=false
 
-        if [[ $( CheckIfDirIsNotNull $1 ) == false ]]; then
-            if [[ $bool_isUserRoot == true ]]; then
-                sudo mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
-            else
-                mkdir -p $1 &> /dev/null || ( false; SaveThisExitCode )
-            fi
+        if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == false ]]; then
+            bool=true
+            mkdir -p $1 &> /dev/null || bool=false
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        # EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
     # <summary> Creates a file. </summary>
     # <parameter name="$1"> file </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function CreateFile
     {
-        echo -en "Creating file...\t"
+        # echo -en "Creating file...\t"
+        local bool=false
 
-        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
-            if [[ $bool_isUserRoot == true ]]; then
-                sudo touch $1 &> /dev/null || ( false; SaveThisExitCode )
-            else
-                touch $1 &> /dev/null || ( false; SaveThisExitCode )
-            fi
+        if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
+            bool=true
+            touch $1 &> /dev/null || bool=false
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        # EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
     # <summary> Deletes a file. </summary>
     # <parameter name="$1"> file </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function DeleteFile
     {
-        echo -en "Deleting file...\t"
+        # echo -en "Deleting file...\t"
+        local bool=false
 
-        if [[ $( CheckIfFileIsNotNull $1 ) == true ]]; then
-            rm $1 &> /dev/null || ( false; SaveThisExitCode )
+        if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
+            bool=true
+            rm $1 &> /dev/null || bool=false
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        # EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
     # <summary> Redirect to script directory. </summary>
     # <parameter name="$str_thisDir"> directory </parameter>
-    # <returns> exit code </returns>
+    # <returns> boolean </returns>
     function GoToScriptDirectory
     {
-        if [[ $( CheckIfDirIsNotNull $1 ) == true ]]; then
-            cd $str_thisDir || ( false; SaveThisExitCode )
+        local bool=false
+
+        if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == true ]]; then
+            bool=true
+            cd $str_thisDir || bool=false
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
     # <summary> Reads a file. </summary>
     # <parameter name="$1"> array of string </parameter>
     # <parameter name="$2"> file </parameter>
-    # <returns> array of string </returns>
-    function ReadFile
-    {
-        echo -en "Reading file...\t"
+    # <returns> array </returns>
+    # function ReadFile
+    # {
+    #     echo -en "Reading file...\t"
 
-        if [[ $( CheckIfVarIsNotNull $1 ) == true && $( CheckIfFileIsReadable $2 ) == true ]]; then
-            local -n arr_file1="$1"
-            readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
-        fi
+    #     if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
+    #         local -n arr_file1="$1"
+    #         readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
+    #     fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
-    }
+    #     EchoPassOrFailThisExitCode; ParseThisExitCode
+    # }
 
-    # <summary>
-    # Ask for Yes/No answer, return exit code.
-    # Default selection is N/false.
-    # </summary>
-    # <returns> exit code </returns>
+    # <summary> Ask for Yes/No answer, set exit code. Default selection is N/false. </summary>
+    # <returns> void </returns>
     function ReadInput
     {
         # <parameters> #
@@ -623,7 +647,7 @@
                 false; SaveThisExitCode; break
             fi
 
-            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
                 echo -n "$1 "
             fi
 
@@ -645,11 +669,8 @@
         done
     }
 
-    # <summary>
-    # Ask for multiple choice, up to eight choices.
-    # Default selection is first choice.
-    # </summary>
-    # <returns> string </returns>
+    # <summary> Ask for multiple choice, up to eight choices. Default selection is first choice. </summary>
+    # <returns> void </returns>
     function ReadInputFromMultipleChoiceIgnoreCase
     {
         # <parameters> #
@@ -657,60 +678,7 @@
         declare -lir int_maxCount=2
         # </parameters> #
 
-        CheckIfVarIsNotNull $2 &> /dev/null
-
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary>
-            # After given number of attempts, input is set to default: false.
-            # </summary>
-            if [[ $int_count -gt $int_maxCount ]]; then
-                str_input1="$2"
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                false; SaveThisExitCode; break
-            fi
-
-            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
-                echo -n "$1 "
-            fi
-
-            read str_input1
-
-            # <summary>
-            # Check if string is a valid input.
-            # </summary>
-            case $str_input1 in
-                $2|$3|$4|$5|$6|$7|$8|$9)
-                    true; SaveThisExitCode; break;
-            esac
-
-            # <summary>
-            # Input is invalid, increment counter.
-            # </summary>
-            echo -en "\e[33mInvalid input.\e[0m "
-            (( int_count++ ))
-        done
-
-        # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNotNull $str_input1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            echo $str_input1
-        fi
-    }
-
-    # <summary>
-    # Ask for multiple choice, up to eight choices.
-    # Default selection is first choice.
-    # </summary>
-    # <returns> string </returns>
-    function ReadInputFromMultipleChoiceUpperCase
-    {
-        # <parameters> #
-        declare -il int_count=0
-        declare -lir int_maxCount=2
-        # </parameters> #
-
-        CheckIfVarIsNotNull $2 &> /dev/null
+        CheckIfVarIsNotNullReturnBool $2 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             # <summary> After given number of attempts, input is set to default: false. </summary>
@@ -720,8 +688,50 @@
                 false; SaveThisExitCode; break
             fi
 
-            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
-                echo -n "$1 "
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+                echo -en "$1 "
+            fi
+
+            read str_input1
+
+            # <summary> Check if string is a valid input. </summary>
+            case $str_input1 in
+                $2|$3|$4|$5|$6|$7|$8|$9)
+                    true; SaveThisExitCode; break;
+            esac
+
+            # <summary> Input is invalid, increment counter. </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
+        done
+
+        # <summary> Return value. </summary>
+        if [[ $( CheckIfVarIsNotNullReturnBool $str_input1 ) == true ]]; then
+            var_return=$str_input1
+        fi
+    }
+
+    # <summary> Ask for multiple choice, up to eight choices. Default selection is first choice. </summary>
+    # <returns> void </returns>
+    function ReadInputFromMultipleChoiceUpperCase
+    {
+        # <parameters> #
+        declare -il int_count=0
+        declare -lir int_maxCount=2
+        # </parameters> #
+
+        CheckIfVarIsNotNullReturnBool $2 &> /dev/null
+
+        while [[ $int_thisExitCode -eq 0 ]]; do
+            # <summary> After given number of attempts, input is set to default: false. </summary>
+            if [[ $int_count -gt $int_maxCount ]]; then
+                str_input1="$2"
+                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                false; SaveThisExitCode; break
+            fi
+
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+                echo -en "$1 "
             fi
 
             read str_input1
@@ -733,16 +743,14 @@
                     true; SaveThisExitCode; break;
             esac
 
-            # <summary> Input is invalid, increment counter. # </summary>
+            # <summary> Input is invalid, increment counter. </summary>
             echo -en "\e[33mInvalid input.\e[0m "
             (( int_count++ ))
         done
 
-        # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNotNull $str_input1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            echo $str_input1
+        # <summary> Return value. </summary>
+        if [[ $( CheckIfVarIsNotNullReturnBool $str_input1 ) == true ]]; then
+            var_return=$str_input1
         fi
     }
 
@@ -766,7 +774,7 @@
                 break
             fi
 
-            if [[ $( CheckIfVarIsNotNull $1 ) == true ]]; then
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
                 echo -n "$1 "
             fi
 
@@ -783,7 +791,7 @@
         done
 
         # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNotNull $str_input1 &> /dev/null
+        CheckIfVarIsNotNullReturnBool $str_input1 &> /dev/null
 
         if [[ $int_thisExitCode -eq 0 ]]; then
             echo $str_input1
@@ -860,11 +868,11 @@
     #     DeleteFile $1 &> /dev/null
 
     #     # if [[ $int_thisExitCode -eq 0 ]]; then
-    #     #     AppendArrayToFile $1 $2
+    #     #     AppendArrayToFileReturnBool $1 $2
     #     # fi
 
     #     if [[ $( DeleteFile $1 ) == true ]]; then
-    #         AppendArrayToFile $1 $2
+    #         AppendArrayToFileReturnBool $1 $2
     #     fi
     # }
 
@@ -878,17 +886,17 @@
         echo -en "Writing to file..."
 
         while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNotNull $1 &> /dev/null
-            CheckIfVarIsNotNull $2 &> /dev/null
-            CheckIfFileIsNotNull $1 &> /dev/null
-            CheckIfFileIsReadable $1 &> /dev/null
-            CheckIfFileIsWritable $1 &> /dev/null
+            CheckIfVarIsNotNullReturnBool $1 &> /dev/null
+            CheckIfVarIsNotNullReturnBool $2 &> /dev/null
+            CheckIfFileExistsReturnBool $1 &> /dev/null
+            CheckIfFileIsReadableReturnBool $1 &> /dev/null
+            CheckIfFileIsWritableReturnBool $1 &> /dev/null
             ( echo -e $2 > $1 ) &> /dev/null || ( false; SaveThisExitCode )
             break
         done
 
         if [[ $( DeleteFile $1 ) == true ]]; then
-            AppendArrayToFile $1 $2
+            AppendArrayToFileReturnBool $1 $2
         fi
 
         EchoPassOrFailThisExitCode; ParseThisExitCode
@@ -927,7 +935,7 @@
 
         GoToScriptDirectory &> /dev/null
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
@@ -978,7 +986,7 @@
         # <summary> Copy files and set permissions. </summary>
         function AppendServices_AppendFile
         {
-            CheckIfFileIsNotNull $2 &> /dev/null
+            CheckIfFileExistsReturnBool $2 &> /dev/null
 
             while [[ $int_thisExitCode -eq 0 ]]; do
                 cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
@@ -989,7 +997,7 @@
         }
 
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
@@ -1031,7 +1039,7 @@
     # <returns> boolean </returns>
     function CheckCurrentDistro
     {
-        if [[ $( CheckIfCommandIsInstalled "apt" ) == true ]]; then
+        if [[ $( CheckIfCommandExistsReturnBool "apt" ) == true ]]; then
             declare -lr bool=true
         else
             declare -lr bool=false
@@ -1091,7 +1099,7 @@
         CreateDir $str_dir1 &> /dev/null
         chmod -R +w $str_dir1 &> /dev/null
 
-        if [[ $( CheckIfFileIsWritable $str_dir1 ) == true ]]; then
+        if [[ $( CheckIfFileIsWritableReturnBool $str_dir1 ) == true ]]; then
             for str_repo in ${arr_repo[@]}; do
                 cd $str_dir1
 
@@ -1102,7 +1110,7 @@
                 CreateDir ${str_dir1}${str_userName} &> /dev/null
 
                 # <summary> Update existing GitHub repository. </summary>
-                if [[ $( CheckIfDirIsNotNull ${str_dir1}${str_repo} ) == true ]]; then
+                if [[ $( CheckIfDirIsNotNullReturnBool ${str_dir1}${str_repo} ) == true ]]; then
                     cd ${str_dir1}${str_repo}
                     git pull &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
 
@@ -1151,11 +1159,11 @@
         # <returns> exit code </returns>
         function InstallThisCommand
         {
-            if [[ $( CheckIfVarIsNotNull $1 ) == true && $( CheckIfVarIsNotNull $2 ) == true && $( CheckIfCommandIsInstalled $1 ) == false ]]; then
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true && $( CheckIfVarIsNotNullReturnBool $2 ) == true && $( CheckIfCommandExistsReturnBool $1 ) == false ]]; then
                 echo -en "Installing '$1'...\t"
                 apt install -y $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
 
-                if [[ $( CheckIfCommandIsInstalled $1 ) == false ]]; then
+                if [[ $( CheckIfCommandExistsReturnBool $1 ) == false ]]; then
                     SetExitCodeIfPassNorFail; SaveThisExitCode
                 fi
 
@@ -1168,10 +1176,10 @@
         # if [[ $int_thisExitCode -eq 0 ]]; then
         if [[ $int_thisExitCode -eq 0 && $( CheckCurrentDistro ) == true ]]; then
             InstallThisCommand "xmllint" "xml-core xmlstarlet"
-            bool_is_xmllint_installed=$( ParseThisExitCodeAsBoolean )
+            bool_is_xmllint_installed=$( ParseThisExitCodeAsBool )
 
             # InstallThisCommand "command_to_use" "required_packages"
-            # boolean_to_set=$( ParseThisExitCodeAsBoolean )
+            # boolean_to_set=$( ParseThisExitCodeAsBool )
         else
             false; SaveThisExitCode
         fi
@@ -1286,7 +1294,7 @@
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
         # <summary> Flatpak </summary>
-        if [[ $( CheckIfCommandIsInstalled "flatpak" ) == true ]]; then
+        if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == true ]]; then
             echo -e "${str_warning}Flatpak not installed. Skipping..."
             false; SaveThisExitCode
         else
@@ -1368,15 +1376,15 @@
             local str_dir2=$( basename $1 )"/"
             # </parameters>
 
-            if [[ $( CheckIfDirIsNotNull $1 ) == true ]]; then
+            if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == true ]]; then
                 cd $1
             fi
 
-            if [[ $( CheckIfFileIsNotNull $2 ) == true ]]; then
+            if [[ $( CheckIfFileExistsReturnBool $2 ) == true ]]; then
                 ReadInput "Execute script '${str_dir2}$2'?"
                 chmod +x $2 &> /dev/null
 
-                if [[ $int_thisExitCode -eq 0 && $( CheckIfFileIsExecutable $2 ) == true ]]; then
+                if [[ $int_thisExitCode -eq 0 && $( CheckIfFileIsExecutableReturnBool $2 ) == true ]]; then
                     # <summary> sudo/root v. user </summary>
                     if [[ $bool_isUserRoot == true ]]; then
                         sudo bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
@@ -1408,7 +1416,7 @@
         # </parameters>
 
         # <summary> Test this on a fresh install </summary>
-        if [[ $( CheckIfDirIsNotNull $str_dir1 ) == true ]]; then
+        if [[ $( CheckIfDirIsNotNullReturnBool $str_dir1 ) == true ]]; then
 
             # <summary> sudo/root v. user </summary>
             if [[ $bool_isUserRoot == true ]]; then
@@ -1424,7 +1432,7 @@
                 local str_scriptDir="${str_dir1}${str_repo}/"
                 echo -e "Executing script '${str_repo}'"
 
-                if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
+                if [[ $( CheckIfDirIsNotNullReturnBool $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/hosts"
                     CreateBackupFromFile $str_file1 &> /dev/null
@@ -1439,7 +1447,7 @@
                 local str_scriptDir="${str_dir1}${str_repo}/"
                 echo -e "Executing script '${str_repo}'"
 
-                if [[ $( CheckIfDirIsNotNull $str_scriptDir ) == true ]]; then
+                if [[ $( CheckIfDirIsNotNullReturnBool $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/firefox-esr/firefox-esr.js"
 
@@ -1464,21 +1472,21 @@
                 local str_repo="awilliam/rom-parser"
                 local str_scriptDir="${str_dir1}${str_repo}/"
                 # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNull $str_scriptDir
+                # CheckIfDirIsNotNullReturnBool $str_scriptDir
 
                 # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
                 # local str_file1="installer.sh"
                 local str_repo="spaceinvaderone/dump_gpu_vbios"
                 local str_scriptDir="${str_dir1}${str_repo}/"
                 # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNull $str_scriptDir
+                # CheckIfDirIsNotNullReturnBool $str_scriptDir
 
                 # <summary> spheenik/vfio-isolate </summary>
                 # local str_file1="installer.sh"
                 local str_repo="spheenik/vfio-isolate"
                 local str_scriptDir="${str_dir1}${str_repo}/"
                 # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNull $str_scriptDir
+                # CheckIfDirIsNotNullReturnBool $str_scriptDir
             fi
         fi
 
@@ -1569,6 +1577,8 @@
     # <returns> exit code </returns>
     function ModifyDebianRepos
     {
+        IFS=$'\n'
+
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
         # <parameters>
@@ -1580,98 +1590,112 @@
         # </parameters>
 
         # <summary> Create backup or restore from backup. </summary>
-        if [[ $( CreateBackupFromFile $str_file1 ) == true ]]; then
-            ReadInput "Include 'contrib' sources?"
-            str_sources+="contrib"
+        CreateBackupFromFile $str_file1 &> /dev/null
+
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            while [[ $int_thisExitCode -eq 0 ]]; do
+                ReadInput "Include 'contrib' sources?"
+                str_sources+="contrib"
+                break
+            done
+
+            true; SaveThisExitCode
 
             # <summary> Setup optional sources. </summary>
-            ReadInput "Include 'non-free' sources?"
-            str_sources+=" non-free"
+            while [[ $int_thisExitCode -eq 0 ]]; do
+                ReadInput "Include 'non-free' sources?"
+                str_sources+=" non-free"
+                break
+            done
         fi
 
+        true; SaveThisExitCode
+
         # <summary> Setup mandatory sources. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> User prompt </summary>
-            echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_releaseName})."
-            echo -e "\t\n${str_warning}It is NOT possible to revert from a Non-stable branch back to a Stable or ${str_releaseName} branch."
-            echo -e "\tRelease branches:"
-            echo -e "\t\t'stable'\t== '${str_releaseName}'"
-            echo -e "\t\t'testing'\t*more recent updates, slightly less stability"
-            echo -e "\t\t'unstable'\t*most recent updates, least stability. NOT recommended."
-            echo -e "\t\t'backports'\t== '${str_releaseName}-backports'\t*optionally receive more recent updates."
+        # <summary> User prompt </summary>
+        echo
+        echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_releaseName})."
+        echo -e "${str_warning}It is NOT possible to revert from a non-stable branch back to a stable or ${str_releaseName} release branch."
+        echo -e "Release branches:"
+        echo -e "\t'stable'\t== '${str_releaseName}'"
+        echo -e "\t'testing'\t*more recent updates; slightly less stability"
+        echo -e "\t'unstable'\t*most recent updates; least stability. NOT recommended."
+        echo -e "\t'backports'\t== '${str_releaseName}-backports'\t*optionally receive more recent updates."
 
-            # <summary Apt sources </summary>
-            # <parameters>
-            declare -lr str_branchName=$( ReadInputFromMultipleChoiceIgnoreCase "\tEnter option: " "stable" "testing" "unstable" "backports" )
-            declare -al arr_sources=(
-                "# debian $str_branchName"
-                "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ $str_branchName main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branchName main $str_sources"
-                $'\n'
-                "deb http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
-                $'\n'
-                "deb http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
-                "#"
-            )
-            # </parameters>
+        # <summary Apt sources </summary>
+        # <parameters>
+        local var_return=""
+        ReadInputFromMultipleChoiceIgnoreCase "Enter option: " "stable" "testing" "unstable" "backports"
+        declare -lr str_branchName=$var_return
 
-            # <summary> Copy lines from original to temp file as comments. </summary>
-            DeleteFile $str_newFile1 &> /dev/null
-            CreateFile $str_newFile1 &> /dev/null
+        declare -al arr_sources=(
+            "# debian $str_branchName"
+            "# See https://wiki.debian.org/SourcesList for more information."
+            "deb http://deb.debian.org/debian/ $str_branchName main $str_sources"
+            "deb-src http://deb.debian.org/debian/ $str_branchName main $str_sources"
+            $'\n'
+            "deb http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
+            "deb-src http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
+            $'\n'
+            "deb http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
+            "deb-src http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
+            "#"
+        )
+        # </parameters>
+
+        # <summary> Write to file. </summary>
+        if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
+            declare -al arr_file1=()
 
             while read var_element1; do
                 if [[ $var_element1 != "#"* ]]; then
                     var_element1="#$var_element1"
                 fi
 
-                AppendVarToFile $str_newFile1 $var_element1
+                arr_file1+=( $var_element1 )
             done < $str_file1
 
-            DeleteFile $str_newFile1 &> /dev/null
-            mv $str_newFile1 $str_file1 &> /dev/null || ( false; SaveThisExitCode )
+            # for var_element1 in ${arr_file1[@]}; do
+            #     # AppendVarToFileReturnBool $str_file1 $var_element1 &> /dev/null
+            #     ( echo -e $var_element1 >> $str_file1 ) &> /dev/null || ( false; SaveThisExitCode )
+            # done
+        fi
 
-            # <summary> Append to output. </summary>
-            case $str_branchName in
-                # <summary> Current branch with backports. </summary>
-                "backports")
-                    declare -al arr_sources=(
-                        $'\n'
-                        "# debian $str_releaseVer/$str_releaseName"
-                        "# See https://wiki.debian.org/SourcesList for more information."
-                        "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
-                        $'\n'
-                        "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
-                        $'\n'
-                        "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
-                        "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
-                        "#"
-                        "# debian $str_releaseVer/$str_releaseName $str_input2"
-                        "deb http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
-                        "deb-src http://deb.debian.org/debian $str_releaseName-$str_input2 main contrib non-free"
-                        "#"
-                    )
-                    break;;
-            esac
+        # <summary> Append to output. </summary>
+        case $str_branchName in
+            # <summary> Current branch with backports. </summary>
+            "backports")
+                declare -al arr_sources=(
+                    "# debian $str_releaseVer/$str_releaseName"
+                    "# See https://wiki.debian.org/SourcesList for more information."
+                    "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+                    "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+                    ""
+                    "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+                    "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+                    ""
+                    "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+                    "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+                    "#"
+                    ""
+                    "# debian $str_releaseVer/$str_releaseName $str_branchName"
+                    "deb http://deb.debian.org/debian $str_releaseName-$str_branchName main contrib non-free"
+                    "deb-src http://deb.debian.org/debian $str_releaseName-$str_branchName main contrib non-free"
+                    "#"
+                );;
+        esac
 
-            # <summary> Output to sources file. </summary>
-            case $str_branchName in
-                "backports"|"testing"|"unstable")
-                    while read var_element1; do
-                        var_element1=${arr_sources[$int_i]}
-                        AppendVarToFile "/etc/apt/sources.list.d/'$str_input2'.list" $var_element1
-                    done < $str_file1;;
-                *)
-                    echo -e "\e[33mInvalid input.\e[0m";;
-            esac
+        # <summary> Output to sources file. </summary>
+        declare -lr str_file2="/etc/apt/sources.list.d/$str_branchName.list"
+        DeleteFile $str_file2 &> /dev/null
+        CreateFile $str_file2 &> /dev/null
 
-            DeleteFile $str_newFile1 &> /dev/null
-            break
-        done
+        case $str_branchName in
+            "backports"|"testing"|"unstable")
+                printf "%s\n" "${arr_sources[@]}" > $str_file2 &> /dev/null
+                SaveThisExitCode
+                ;;
+        esac
 
         # <summary> Update packages on system. </summary>
         while [[ $int_thisExitCode -eq 0 ]]; do
@@ -1689,7 +1713,7 @@
     function ModifySSH
     {
         # <summary> Exit if command is not present. </summary>
-        if [[ $( CheckIfCommandIsInstalled "ssh" ) == true ]]; then
+        if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == true ]]; then
             false; SaveThisExitCode
             echo -e "${str_warning}SSH not installed! Skipping..."
         fi
@@ -1729,17 +1753,17 @@
             # </parameters>
 
             while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileIsNotNull $str_file1
+                CheckIfFileExistsReturnBool $str_file1
                 CreateBackupFromFile $str_file1
-                AppendVarToFile $str_file1 $str_output1
+                AppendVarToFileReturnBool $str_file1 $str_output1
                 systemctl restart ssh || ( false; SaveThisExitCode )
                 break
             done
 
             # while [[ $int_thisExitCode -eq 0 ]]; do
-            #     CheckIfFileIsNotNull $str_file2
+            #     CheckIfFileExistsReturnBool $str_file2
             #     CreateBackupFromFile $str_file2
-            #     AppendVarToFile $str_file1 $str_output1
+            #     AppendVarToFileReturnBool $str_file1 $str_output1
             #     systemctl restart sshd || ( false; SaveThisExitCode )
             #     break
             # done
@@ -1763,7 +1787,7 @@
         # </parameters>
 
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNull $str_filesDir &> /dev/null
+        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
         # <summary> Write output to files. </summary>
@@ -1773,7 +1797,7 @@
             if [[ $int_thisExitCode -eq 0 ]]; then
                     OverwriteVarToFile /etc/modprobe.d/disable-usb-storage.conf 'install usb-storage /bin/true'
                     OverwriteVarToFile /etc/modprobe.d/disable-firewire.conf "blacklist firewire-core"
-                    AppendVarToFile  /etc/modprobe.d/disable-thunderbolt.conf "blacklist thunderbolt"
+                    AppendVarToFileReturnBool  /etc/modprobe.d/disable-thunderbolt.conf "blacklist thunderbolt"
                     update-initramfs -u -k all
             else
                 for var_element1 in ${arr_files1}; do
@@ -1789,7 +1813,7 @@
         # <summary> Write output to files. </summary>
         local str_file1="sysctl.conf"
         local str_file2="/etc/sysctl.conf"
-        CheckIfFileIsNotNull $str_file1 &> /dev/null
+        CheckIfFileExistsReturnBool $str_file1 &> /dev/null
 
         while [[ $int_thisExitCode -eq 0 ]]; do
             ReadInput "Setup '/etc/sysctl.conf' with defaults?"
@@ -1987,7 +2011,7 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
-        if [[ $( CheckIfCommandIsInstalled "git" ) == true ]]; then
+        if [[ $( CheckIfCommandExistsReturnBool "git" ) == true ]]; then
             TestNetwork &> /dev/null
 
             if [[ $int_thisExitCode -eq 0 ]]; then
@@ -2015,23 +2039,22 @@
     declare -i int_thisExitCode=$?
 
     # <summary> Checks </summary>
-    CheckIfUserIsRoot &> /dev/null
-    readonly bool_isUserRoot=$( ParseThisExitCodeAsBoolean )
-    true; SaveThisExitCode
+    readonly bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
+    true; SaveThisExitCode  # TODO: remove exit code checks, then remove this.
 
-    bool_is_xmllint_installed=$( CheckIfCommandIsInstalled "xmllint" )
+    bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
 
 ### main ###
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
-    InstallCommands &> /dev/null
+    # InstallCommands &> /dev/null
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     if [[ $bool_isUserRoot == true ]]; then
-        # ExecuteSetupOfSoftwareSources
-        ExecuteSetupOfGitRepos
+        ExecuteSetupOfSoftwareSources
+        # ExecuteSetupOfGitRepos
         # ExecuteSystemSetup
     else
         ExecuteSetupOfGitRepos
