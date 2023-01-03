@@ -55,6 +55,23 @@
     #
     # </summary>
 
+    # <summary> Output pass or fail statement given boolean. </summary>
+    # <parameter name="$1"> bool </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> void </returns>
+    function EchoPassOrFailThisBool
+    {
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            echo -en "$2 "
+        fi
+
+        if [[ $1 == true ]]
+            echo -e "\e[32mSuccessful. \e[0m"
+        else
+            echo -e "\e[31mFailed. \e[0m"
+        fi
+    }
+
     # <summary> Output pass or fail statement given exit code. </summary>
     # <parameter name="$1"> string </parameter>
     # <returns> void </returns>
@@ -362,7 +379,7 @@
     # <summary> Output status, and return exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array </parameter>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function AppendArrayToFileReturnExitCode
     {
         echo -en "Writing to file...\t"
@@ -380,7 +397,7 @@
     # <summary> Output status, and return exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function AppendVarToFileReturnExitCode
     {
         echo -en "Writing to file...\t"
@@ -398,7 +415,7 @@
     # <summary> Output status, and return exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function CheckIfTwoFilesAreSameReturnExitCode
     {
         echo -e "Verifying two files...\t"
@@ -549,7 +566,7 @@
         if [[ ${int_thisExitCode} -eq 0 ]]; then
             # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
             while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
-                bool=$( DeleteFile ${arr_dir1[0]} )
+                bool=$( DeleteFileReturnBool ${arr_dir1[0]} )
 
                 # <summary> Break outside this one while loop, not any above. </summary>
                 if [[ $bool == true ]]; then
@@ -588,7 +605,7 @@
     # <summary> Creates a directory. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
-    function CreateDir
+    function CreateDirReturnBool
     {
         local bool=false
 
@@ -603,7 +620,7 @@
     # <summary> Creates a file. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function CreateFile
+    function CreateFileReturnBool
     {
         local bool=false
 
@@ -618,7 +635,7 @@
     # <summary> Deletes a file. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
-    function DeleteFile
+    function DeleteFileReturnBool
     {
         local bool=false
 
@@ -702,8 +719,54 @@
         done
     }
 
+    # <summary> Ask for Yes/No answer, return boolean. Default selection is N/false. </summary>
+    # <parameter name="$1"> boolean return value </parameter>
+    # <parameter name="$2"> output statement </parameter>
+    # <returns> boolean </returns>
+    function ReadInputReturnBool
+    {
+        # <parameters> #
+        local bool=false
+        declare -il int_count=0
+        declare -lir int_maxCount=3
+        # </parameters> #
+
+        while [[ $int_count -le $int_maxCount ]]; do
+            # <summary> After given number of attempts, input is set to default: false. </summary>
+            if [[ $int_count -ge $int_maxCount ]]; then
+                echo -en "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                break
+            fi
+
+            if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+                echo -n "$1 "
+            fi
+
+            echo -en "\e[30;43m[Y/n]:\e[0m "
+            read str_input1
+            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
+
+            # <summary> Check if string is a valid input. </summary>
+            case $str_input1 in
+                "Y")
+                    bool=true; break;;
+                "N")
+                    break;;
+            esac
+
+            # <summary> Input is invalid, increment counter. </summary>
+            echo -en "\e[33mInvalid input.\e[0m "
+            (( int_count++ ))
+        done
+
+        # <summary> Return value. </summary>
+        var_return=$bool
+    }
+
     # <summary> Ask for multiple choice, up to eight choices. Default selection is first choice. </summary>
-    # <returns> void </returns>
+    # <parameter name="$1"> variable return value </parameter>
+    # <parameter name="$2"> output statement </parameter>
+    # <returns> value </returns>
     function ReadInputFromMultipleChoiceIgnoreCase
     {
         # <parameters> #
@@ -787,10 +850,7 @@
         fi
     }
 
-    # <summary>
-    # Ask for number, within a given range.
-    # Default selection is first choice.
-    # </summary>
+    # <summary> Ask for number, within a given range. Default selection is first choice. </summary>
     # <returns> int </returns>
     function ReadInputFromRangeOfNums
     {
@@ -868,43 +928,55 @@
     #     var_IFS=$IFS
     #     IFS=$'\n'
     # }
-        declare -l str_output1=""
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            readonly str_output1="$1 "
-        fi
-    # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
-    # <returns> exit code </returns>
+    # <summary> Test network connection to Internet; Ping DNS servers by address and name, and set exit code. </summary>
+    # <returns> void </returns>
     function TestNetwork
     {
+        # <summary>
+        local bool=true
+        declare -alr arr_server1=( "8.8.8.8", "www.google.com" )
+        declare -alr arr_server2=( "1.1.1.1", "www.yandex.com" )
+
         echo -en "Testing Internet connection...\t"
-        ( ping -q -c 1 8.8.8.8 &> /dev/null || ping -q -c 1 1.1.1.1 &> /dev/null ) || ( false; SaveThisExitCode; )
-        EchoPassOrFailThisExitCode
+
+        if [[ ( ping -q -c 1 ${arr_server1[0]} &> /dev/null || ping -q -c 1 ${arr_server2[1]} &> /dev/null ) ]]; then
+            EchoPassOrFailThisBool true
+        else
+            bool=false
+            EchoPassOrFailThisBool false
+        fi
 
         echo -en "Testing connection to DNS...\t"
-        ( ping -q -c 1 www.google.com &> /dev/null && ping -q -c 1 www.yandex.com &> /dev/null ) || ( false; SaveThisExitCode; )
-        EchoPassOrFailThisExitCode
 
-        if [[ $int_thisExitCode -ne 0 ]]; then
+        if [[ ( ping -q -c 1 ${arr_server1[0]} &> /dev/null && ping -q -c 1 ${arr_server2[1]} &> /dev/null ) ]]; then
+            EchoPassOrFailThisBool true
+        else
+            bool=false
+            EchoPassOrFailThisBool false
+        fi
+
+        if [[ $bool == false ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
+            false; SaveThisExitCode
         fi
     }
 
     # <summary> Overwrite file with contents of array. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array of string </parameter>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     # function OverwriteArrayToFile                                     # refactor or consolidate, this looks like shite
     # {
     #     echo -en "Writing to file..."
 
-    #     DeleteFile $1 &> /dev/null
+    #     DeleteFileReturnBool $1 &> /dev/null
 
     #     # if [[ $int_thisExitCode -eq 0 ]]; then
     #     #     AppendArrayToFileReturnBool $1 $2
     #     # fi
 
-    #     if [[ $( DeleteFile $1 ) == true ]]; then
+    #     if [[ $( DeleteFileReturnBool $1 ) == true ]]; then
     #         AppendArrayToFileReturnBool $1 $2
     #     fi
     # }
@@ -912,7 +984,7 @@
     # <summary> Overwrite file with contents of variable. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function OverwriteVarToFile
     {
         declare -lr IFS=$'\n'
@@ -928,7 +1000,7 @@
             break
         done
 
-        if [[ $( DeleteFile $1 ) == true ]]; then
+        if [[ $( DeleteFileReturnBool $1 ) == true ]]; then
             AppendArrayToFileReturnBool $1 $2
         fi
 
@@ -942,7 +1014,7 @@
 # </summary>
 # <code>
     # <summary> Crontab </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function AppendCron
     {
         echo -e "Appending cron entries..."
@@ -1005,7 +1077,7 @@
     }
 
     # <summary> Append SystemD services to host. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function AppendServices
     {
         echo -e "Appending files to Systemd..."
@@ -1083,7 +1155,7 @@
     }
 
     # <summary> Clone given GitHub repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function CloneOrUpdateGitRepositories
     {
         echo -e "Cloning Git repos..."
@@ -1129,7 +1201,7 @@
             # </parameters>
         fi
 
-        CreateDir $str_dir1 &> /dev/null
+        CreateDirReturnBool $str_dir1 &> /dev/null
         chmod -R +w $str_dir1 &> /dev/null
 
         if [[ $( CheckIfFileIsWritableReturnBool $str_dir1 ) == true ]]; then
@@ -1140,7 +1212,7 @@
                 local str_userName=$( echo $str_repo | cut -d "/" -f1 )
                 # </parameters>
 
-                CreateDir ${str_dir1}${str_userName} &> /dev/null
+                CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
 
                 # <summary> Update existing GitHub repository. </summary>
                 if [[ $( CheckIfDirIsNotNullReturnBool ${str_dir1}${str_repo} ) == true ]]; then
@@ -1181,7 +1253,7 @@
     }
 
     # <summary> Install necessary commands/packages for this program. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function InstallCommands
     {
         echo -e "Checking for commands..."
@@ -1189,7 +1261,7 @@
         # <summary> Install a given command. </summary>
         # <parameter name="$1"> command_to_use </parameter>
         # <parameter name="$2"> required_packages </parameter>
-        # <returns> exit code </returns>
+        # <returns> void </returns>
         function InstallThisCommand
         {
             if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true && $( CheckIfVarIsNotNullReturnBool $2 ) == true && $( CheckIfCommandExistsReturnBool $1 ) == false ]]; then
@@ -1221,7 +1293,7 @@
     }
 
     # <summary> Install from Debian repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function InstallFromDebianRepos
     {
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
@@ -1321,7 +1393,7 @@
     }
 
     # <summary> Install from Flathub software repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function InstallFromFlathubRepos
     {
         echo -e "Installing from alternative $( uname -o ) repositories..."
@@ -1396,7 +1468,7 @@
     }
 
     # <summary> Install from Git repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function InstallFromGitRepos
     {
         echo -e "Executing Git scripts..."
@@ -1534,7 +1606,7 @@
     }
 
     # <summary> Install from Snap software repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function InstallFromSnapRepos
     {
         echo -e "Installing from alternative $( uname -o ) repositories..."
@@ -1604,7 +1676,7 @@
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ModifyDebianRepos
     {
         IFS=$'\n'
@@ -1715,8 +1787,8 @@
 
         # <summary> Output to sources file. </summary>
         declare -lr str_file2="/etc/apt/sources.list.d/$str_branchName.list"
-        DeleteFile $str_file2 &> /dev/null
-        CreateFile $str_file2 &> /dev/null
+        DeleteFileReturnBool $str_file2 &> /dev/null
+        CreateFileReturnBool $str_file2 &> /dev/null
 
         case $str_branchName in
             "backports"|"testing"|"unstable")
@@ -1737,7 +1809,7 @@
     }
 
     # <summary> Configuration of SSH. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ModifySSH
     {
         # <summary> Exit if command is not present. </summary>
@@ -1803,12 +1875,13 @@
     }
 
     # <summary> Recommended host security changes. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ModifySecurity
     {
         echo -e "Configuring system security..."
 
         # <parameters>
+        local bool=false
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
         declare -lr arr_files1=(
             "/etc/modprobe.d/disable-usb-storage.conf"
@@ -1819,92 +1892,142 @@
         # </parameters>
 
         # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
+        bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
+        ( cd $str_filesDir || bool=false ) &> /dev/null
 
         # <summary> Write output to files. </summary>
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $bool == true ]]; then
             ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
-            if [[ $int_thisExitCode -eq 0 ]]; then
-                    OverwriteVarToFile /etc/modprobe.d/disable-usb-storage.conf 'install usb-storage /bin/true'
-                    OverwriteVarToFile /etc/modprobe.d/disable-firewire.conf "blacklist firewire-core"
-                    AppendVarToFileReturnBool  /etc/modprobe.d/disable-thunderbolt.conf "blacklist thunderbolt"
-                    update-initramfs -u -k all
+            # <summary> Yes. </summary>
+            if [[ $int_thisExitCode -eq 0 && (
+                $( DeleteFileReturnBool ${arr_files1[0]} ) == true
+                && $( AppendVarToFileReturnBool ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
+                && $( DeleteFileReturnBool ${arr_files1[1]} ) == true
+                && $( AppendVarToFileReturnBool ${arr_files1[1]} 'blacklist firewire-core' ) == true
+                && $( DeleteFileReturnBool ${arr_files1[2]} ) == true
+                && $( AppendVarToFileReturnBool ${arr_files1[2]} 'blacklist thunderbolt' ) == true
+            ) ]]; then
+                bool=true
+                update-initramfs -u -k all || bool=false
+
+            # <summary> No, delete any changes and update system. </summary>
             else
                 for var_element1 in ${arr_files1}; do
-                    DeleteFile $var_element1 &> /dev/null
+                    bool=$( DeleteFileReturnBool ${arr_files1[0]} )
                 done
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
-                    update-initramfs -u -k all
+                if [[ $bool == true ]]; then
+                    update-initramfs -u -k all || bool=false
                 fi
             fi
+        fi
+
+        if [[ $bool == true ]]; then
+            echo -e "${str_warning}Failed to make changes."
         fi
 
         # <summary> Write output to files. </summary>
         local str_file1="sysctl.conf"
         local str_file2="/etc/sysctl.conf"
-        CheckIfFileExistsReturnBool $str_file1 &> /dev/null
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
+        # fix here
+
+        if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
             ReadInput "Setup '/etc/sysctl.conf' with defaults?"
-            cp $str_file1 $str_file2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            cat $str_file2 >> $str_file1 || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            break
+
+            if [[ $int_thisExitCode -eq 0 && (
+                ! ( cp $str_file1 $str_file2 )
+                || ! (cat $str_file2 >> $str_file1 )
+                ) ]]; then
+                SetExitCodeIfPassNorFail; SaveThisExitCode
+            fi
         done
 
         ReadInput "Setup firewall with UFW?"
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
-            if [[ $( command -v ufw ) == "" ]]; then
+        if [[ $int_thisExitCode -eq 0 ]]; then
+            bool=$( CheckIfCommandExistsReturnBool "ufw" )
+
+            if [[ $bool == false ]]; then
                 echo -e "${str_warning}UFW is not installed. Skipping..."
-                false; SaveThisExitCode
             fi
 
-            ufw reset &> /dev/null || ( false; SaveThisExitCode )
-            ufw default allow outgoing &> /dev/null || ( false; SaveThisExitCode )
-            ufw default deny incoming &> /dev/null || ( false; SaveThisExitCode )
+            if [[ $bool == true && (
+                ! $( ufw reset )
+                && ! $( ufw default allow outgoing )
+                && ! $( ufw default deny incoming )
+                ) ]]; then
+                bool=false
+            fi
+
+            # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
+            # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
+            if [[ $bool == true && (
+                ! $( ufw allow DNS comment 'dns' &> /dev/null )
+                && ! $( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null )
+                && ! $( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null )
+                && ! $( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null )
+                && ! $( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null )
+                && ! $( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null )
+                && ! $( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null )
+                ) ]]; then
+                bool=false
+            fi
+
+            # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
+            if [[ $bool == true && (
+                ! $( ufw allow http comment 'HTTP, local Web server' &> /dev/null )
+                && ! $( ufw allow https comment 'HTTPS, local Web server' &> /dev/null )
+                && ! $( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null )
+                && ! $( ufw allow 110 comment 'POP3, local mail server' &> /dev/null )
+                && ! $( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null )
+                && ! $( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null )
+                ) ]]; then
+                bool=false
+            fi
 
             # <summary> SSH on LAN </summary>
-            if [[ $( command -v ssh ) != "" ]]; then
-                if [[ ${str_sshAlt} != "" ]]; then
-                    ufw deny ssh comment 'deny default ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                    ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                else
-                    ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == false ]]; then
+                echo -e "${str_warning}SSH is not installed. Skipping..."
+            else
+                local var_return=""
+                ModifySSH $var_return
+                declare -lr bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_altSSH} )
+
+                # <summary> If alternate choice is provided, attempt to make changes. Exit early at failure. </summary>
+                if [[ $bool == true && (
+                    ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null )
+                    || ! $( ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh' &> /dev/null )
+                    ) ]]; then
+                    SetExitCodeIfPassNorFail; SaveThisExitCode
                 fi
 
-                ufw deny ssh comment 'deny default ssh' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                # <summary> If alternate choice is not provided, attempt to make changes. Exit early at failure. </summary>
+                if [[ $bool == false && (
+                    ! $( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null )
+                    ) ]]; then
+                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                fi
+
+                if [[ ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null ) ]]; then
+                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                fi
             fi
 
-            # <summary> Services a desktop may use. </summary>
-            ufw allow DNS comment 'dns' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            # <summary> Do not save changes. </summary>
+            if [[ $bool == false ]]; then
+                SetExitCodeIfPassNorFail; SaveThisExitCode
+            fi
 
-            # <summary> Services a server may use. </summary>
-            # ufw allow http comment 'HTTP, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            # ufw allow https comment 'HTTPS, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-
-            # ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            # ufw allow 110 comment 'POP3, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            # ufw allow 995 comment 'POP3S, local mail server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            # ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-
-            # <summary> Save changes. </summary>
-            ufw enable &> /dev/null || ( false; SaveThisExitCode )
-            ufw reload &> /dev/null || ( false; SaveThisExitCode )
-            break
-        done
-
-        # edit hosts file here? #
+            # <summary> Attempt to save changes. Exit early at failure. </summary>
+            if [[
+                ! $( ufw enable &> /dev/null )
+                || ! $( ufw reload &> /dev/null )
+                ]]; then
+                false; SaveThisExitCode
+            fi
+        fi
 
         EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode; echo
     }
@@ -1914,7 +2037,7 @@
 # <summary> Middleman logic between Program logic and Main code. </summary>
 # <code>
     # <summary> Display Help to console. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function Help
     {                                 # NOTE: needs work.
         declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
@@ -1935,7 +2058,7 @@
     }
 
     # <summary> Parse input parameters for given options. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ParseInputParamForOptions
     {            # NOTE: needs work.
         if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
@@ -2012,7 +2135,7 @@
     }
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ExecuteSystemSetup
     {
         # ModifySecurity
@@ -2022,7 +2145,7 @@
     }
 
     # <summary> Execute setup of all software repositories. </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ExecuteSetupOfSoftwareSources
     {
         if [[ $( CheckCurrentDistro ) == true ]]; then
@@ -2040,7 +2163,7 @@
     }
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
-    # <returns> exit code </returns>
+    # <returns> void </returns>
     function ExecuteSetupOfGitRepos
     {
         if [[ $( CheckIfCommandExistsReturnBool "git" ) == true ]]; then
