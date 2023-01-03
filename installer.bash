@@ -55,7 +55,7 @@
     #
     # </summary>
 
-    # <summary> Output pass or fail statement given boolean. </summary>
+    # <summary> Append output with string, and output pass or fail statement given boolean. </summary>
     # <parameter name="$1"> bool </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
@@ -65,60 +65,65 @@
             echo -en "$2 "
         fi
 
-        if [[ $1 == true ]]
+        if [[ $1 == true ]]; then
             echo -e "\e[32mSuccessful. \e[0m"
         else
             echo -e "\e[31mFailed. \e[0m"
         fi
     }
 
-    # <summary> Output pass or fail statement given exit code. </summary>
-    # <parameter name="$1"> string </parameter>
+    # <summary> Append output with string, and output pass or fail statement given exit code. </summary>
+    # <parameter name="$1"> exit code </parameter>
+    # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
     function EchoPassOrFailThisExitCode
     {
-        if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-            echo -en "$1 "
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            echo -en "$2 "
         fi
 
-        case "$int_thisExitCode" in
+        case "$1" in
             0)
-                echo -e "\e[32mSuccessful. \e[0m";;
+                echo -e "\e[32mSuccessful.\e[0m";;
             131)
-                echo -e "\e[33mSkipped. \e[0m";;
+                echo -e "\e[33mSkipped.\e[0m";;
             *)
-                echo -e "\e[31mFailed. \e[0m";;
+                echo -e "\e[31mFailed.\e[0m";;
         esac
     }
 
-    # <summary> Output pass or fail test-case given exit code. </summary>
-    # <parameter name="$1"> string </parameter>
+    # <summary> Append output with string, and output pass or fail statement given exit code. </summary>
+    # <parameter name="$1"> exit code </parameter>
+    # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
     function EchoPassOrFailThisTestCase
     {
-        if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-            declare -lr str_testCaseName="TestCase"
-        else
-            declare -lr str_testCaseName=$1
-        fi
-
-        echo -en "$str_testCaseName "
-
-        case "$int_thisExitCode" in
+        case "$1" in
             0)
-                echo -e "\e[32mPASS:\e[0m""\t$str_testCaseName";;
+                echo -en "\e[32mPASS:\e[0m""\t";;
             *)
-                echo -e " \e[33mFAIL:\e[0m""\t$str_testCaseName";;
+                echo -e " \e[33mFAIL:\e[0m""\t";;
         esac
+
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            echo -e "$2"
+        else
+            echo -e "unknown test case"
+        fi
     }
 
     # <summary> Exit bash session/script with current exit code. </summary>
-    # <parameter name="$?"> exit code </parameter>
+    # <parameter name="$1"> exit code </parameter>
     # <returns> void </returns>
     function ExitWithThisExitCode
     {
         echo -e "Exiting."
-        exit $int_thisExitCode
+
+        if [[ $( CheckIfVarIsValidNumReturnBool $1 ) == true ]]; then
+            exit $1
+        else
+            SetExitCodeOnError; exit
+        fi
     }
 
     # <summary> Output error given exception. </summary>
@@ -222,7 +227,7 @@
 ### validation functions ###
 # <summary> Validation logic </summary>
 # <code>
-    # <summary> Check if command exists, set exit code if false, and return boolean. </summary>
+    # <summary> Check if command exists, and return boolean. </summary>
     # <parameter name="$1"> command name </parameter>
     # <returns> boolean </returns>
     function CheckIfCommandExistsReturnBool
@@ -231,14 +236,12 @@
 
         if [[ $( command -v $1 ) != "" ]]; then
             bool=true
-        else
-            false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if directory exists, set exit code if false, and return boolean. </summary>
+    # <summary> Check if directory exists, and return boolean. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
     function CheckIfDirIsNotNullReturnBool
@@ -247,29 +250,26 @@
 
         if [[ -d $1 && $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
             bool=true
-        else
-            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is executable, and set exit code if false. </summary>
+    # <summary> Check if file is executable, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsExecutableReturnBool
     {
+        local bool=false
+
         if [[ -x $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
-            declare -lr bool=true
-        else
-            declare -lr bool=false
-            SetExitCodeIfFileIsNotExecutable; SaveThisExitCode
+            bool=true
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file exists, set exit code if false, and return boolean. </summary>
+    # <summary> Check if file exists, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileExistsReturnBool
@@ -278,14 +278,12 @@
 
         if [[ -e $1 ]]; then
             bool=true
-        else
-            false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is readable, set exit code if false, and return boolean. </summary>
+    # <summary> Check if file is readable, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsReadableReturnBool
@@ -294,14 +292,12 @@
 
         if [[ -r $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
-        else
-            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is writable, set exit code if false, and return boolean. </summary>
+    # <summary> Check if file is writable, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsWritableReturnBool
@@ -310,14 +306,12 @@
 
         if [[ -w $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
-        else
-            SetExitCodeIfFileIsNotWritable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if current user is sudo/root, set exit code if false, and return boolean. </summary>
+    # <summary> Check if current user is sudo/root, and return boolean. </summary>
     # <parameter name="$0"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfUserIsRootReturnBool
@@ -333,15 +327,13 @@
                 declare -lr str_file1=$( basename $0 )
                 echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
             fi
-
-            false; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if input parameter is null, set exit code if false, and return boolean. </summary>
-    # <parameter name="$1"> variable </parameter>
+    # <summary> Check if input parameter is null, and return boolean. </summary>
+    # <parameter name="$1"> a variable </parameter>
     # <returns> boolean </returns>
     function CheckIfVarIsNotNullReturnBool
     {
@@ -349,15 +341,13 @@
 
         if [[ ! -z "$1" ]]; then
             bool=true
-        else
-            SetExitCodeIfVarIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if input parameter is a valid number, set exit code if false, and return boolean. </summary>
-    # <parameter name="$1"> number variable </parameter>
+    # <summary> Check if input parameter is a valid number, and return boolean. </summary>
+    # <parameter name="$1"> a number </parameter>
     # <returns> boolean </returns>
     function CheckIfVarIsValidNumReturnBool
     {
@@ -365,8 +355,6 @@
 
         if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
             bool=true
-        else
-            SetExitCodeIfInputIsInvalid; SaveThisExitCode
         fi
 
         echo $bool
