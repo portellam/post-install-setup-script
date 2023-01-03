@@ -377,7 +377,7 @@
         SaveThisExitCode; EchoPassOrFailThisExitCode
     }
 
-    # <summary> Output status. </summary>
+    # <summary> Output status, and return exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> exit code </returns>
@@ -390,6 +390,26 @@
             true
         else
             SetExitCodeIfFileIsNotWritable
+        fi
+
+        SaveThisExitCode; EchoPassOrFailThisExitCode
+    }
+
+    # <summary> Output status, and return exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> file </parameter>
+    # <returns> exit code </returns>
+    function CheckIfTwoFilesAreSameReturnExitCode
+    {
+        echo -e "Verifying two files...\t"
+        declare lr bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
+
+        if [[ $bool == true ]]; then
+            echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+            true
+        else
+            echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+            false
         fi
 
         SaveThisExitCode; EchoPassOrFailThisExitCode
@@ -433,53 +453,72 @@
         echo $bool
     }
 
-    # <summary> Change ownership of given file to current user. </summary>
+    # <summary> Change ownership of given file to current user, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
-    # <returns> exit code </returns>
-    function ChangeOwnershipOfFileOrDirToCurrentUser
+    # <returns> boolean </returns>
+    function ChangeOwnershipOfFileOrDirToCurrentUserReturnBool
     {
+        local bool=false
+
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
-            chown -f $UID $1 || ( false; SaveThisExitCode )
-        else
-            false; SaveThisExitCode
+            bool=true
+            ( chown -f $UID $1 || bool=false ) &> /dev/null
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
     }
 
     # <summary> Check if two given files are the same, in composition. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
     # <returns> boolean </returns>
-    function CheckIfTwoFilesAreSame
+    function CheckIfTwoFilesAreSameReturnBool
     {
-        # echo -e "Verifying two files...\t"
-        declare -l bool=false
+        local bool=false
 
-        if [[ $( CheckIfFileIsReadableReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
-            if cmp -s "$1" "$2"; then
-                # echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-                bool=true
-            # else
-                # echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-                # false; SaveThisExitCode
-            fi
+        if [[ cmp -s "$1" "$2" && $( CheckIfFileIsReadableReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
+            bool=true
         fi
 
-        # EchoPassOrFailThisExitCode; ParseThisExitCode
         echo $bool
     }
 
-    # <summary> Check if two given files are the same, in composition. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <returns> exit code </returns>
-    function CreateBackupFromFile
+    # <summary> Check file checksum in given directory. </summary>
+    # <parameter name="$1"> directory </parameter>
+    # <parameter name="$2"> file </parameter>
+    function CheckIfFileExistsInDirReturnBool
     {
-        echo -en "Backing up file...\t"
-        declare -lr str_file1=$1
+        # <parameters>
+        local bool=false
+        declare -lr str_dir1=$( dirname $1 )
+        declare -alr arr_dir1=( $( ls -1v $str_dir | grep $2 | grep $str_suffix | uniq ) )
+        # </parameters>
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfFileIsReadableReturnBool $str_file1 &> /dev/null
+        for var_element1 in ${arr_dir1[@]}; do
+            if [[ $( CheckIfTwoFilesAreSameReturnBool $2 $var_element1 ) == true ]]; then
+                bool=true
+                break
+            fi
+        done
+
+        echo $bool
+    }
+
+    # <summary> Create latest backup of given file; Do not exceed static maximum, and return boolean. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> bool </returns>
+    function CreateBackupFromFileReturnBool
+    {
+        # <parameters>
+        local bool=false
+        declare -lr str_file1=$1
+        # </parameters>
+
+        # <summary> First code block. </summary>
+        while [[ ${int_thisExitCode} -eq 0 ]]; do
+            if [[ $( CheckIfFileIsReadableReturnBool $1 ) == false ]]; then
+                false; SaveThisExitCode
+            fi
 
             # <parameters>
             declare -lr str_suffix=".old"
@@ -488,62 +527,62 @@
             # </parameters>
 
             if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
-                cp $str_file1 "${str_file1}.0${str_suffix}" &> /dev/null || ( false; SaveThisExitCode )
-            else
-                # <parameters>
+                ( cp $str_file1 "${str_file1}.0${str_suffix}" || ( false; SaveThisExitCode ) ) &> /dev/null
+            fi
+
+            # <parameters>
                 declare -ir int_maxCount=5
                 local var_element1=${arr_dir1[0]}
                 var_element1=${var_element1%"${str_suffix}"}             # substitution
                 var_element1=${var_element1##*.}                         # ditto
-                # </parameters>
+            # </parameters>
 
-                CheckIfVarIsValidNumReturnBool $var_element1 &> /dev/null
-
-                for var_element1 in ${arr_dir1[@]}; do
-                    CheckIfTwoFilesAreSame $str_file1 $var_element1 &> /dev/null
-                done
-
-                # <summary>
-                # Before backup, delete all but some number of backup files.
-                # </summary>
-                while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
-                    if [[ -e ${arr_dir1[0]} ]]; then
-                        DeleteFile ${arr_dir1[0]} &> /dev/null
-                        break
-                    fi
-                done
-
-                # <summary>
-                # If *first* backup is same as original file, exit.
-                # </summary>
-                if cmp -s $1 ${arr_dir[0]}; then
-                    false; SaveThisExitCode
-                fi
-
-                # <parameters>
-                var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
-                var_element1=${var_element1##*.}                        # ditto
-                declare -il int_lastIndex=0
-                # </parameters>
-
-                CheckIfVarIsValidNumReturnBool $var_element1 &> /dev/null
-                declare -i int_lastIndex="${var_element1}"
-                (( int_lastIndex++ ))                                   # counter
-
-                # <summary> Source file is newer and different than backup, add to backups. </summary>
-                if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
-                    cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" &> /dev/null || ( false; SaveThisExitCode )
-                fi
+            # <summary> Validate counter. Parse all files, check for match. </summary>
+            if [[ $( CheckIfVarIsValidNumReturnBool $var_element1 ) == false || $( CheckIfFileExistsInDirReturnBool $str_dir1 $ ) == false ]]; then
+                false; SaveThisExitCode
             fi
 
             break
         done
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        # <summary> Second code block. </summary>
+        if [[ ${int_thisExitCode} -eq 0 ]]; then
+            # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
+            while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
+                bool=$( DeleteFile ${arr_dir1[0]} )
 
-        if [[ $int_thisExitCode -ne 0 ]]; then
-            echo -e "No changes from most recent backup."
+                # <summary> Break outside this one while loop, not any above. </summary>
+                if [[ $bool == true ]]; then
+                    break
+                fi
+            done
         fi
+
+        # <summary> Last code block; execute if prior validation passes. </summary>
+        while [[ $bool == false ]]; do
+            # <summary> If *first* backup is same as original file, exit. </summary>
+            bool=$( CheckIfTwoFilesAreSameReturnBool $1 ${arr_dir[0]} )
+
+            # <parameters>
+            var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
+            var_element1=${var_element1##*.}                        # ditto
+            declare -il int_lastIndex=0
+            # </parameters>
+
+            if [[ $( CheckIfVarIsValidNumReturnBool $var_element1 ) == true ]]; then
+                declare -i int_lastIndex="${var_element1}"
+                (( int_lastIndex++ ))                               # counter
+            fi
+
+            # <summary> Source file is newer and different than backup, add to backups. </summary>
+            if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
+                ( cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" || bool=true ) &> /dev/null
+            fi
+
+            break
+        done
+
+        echo $bool
     }
 
     # <summary> Creates a directory. </summary>
@@ -551,7 +590,6 @@
     # <returns> boolean </returns>
     function CreateDir
     {
-        # echo -en "Creating directory...\t"
         local bool=false
 
         if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == false ]]; then
@@ -559,7 +597,6 @@
             mkdir -p $1 &> /dev/null || bool=false
         fi
 
-        # EchoPassOrFailThisExitCode; ParseThisExitCode
         echo $bool
     }
 
@@ -568,7 +605,6 @@
     # <returns> boolean </returns>
     function CreateFile
     {
-        # echo -en "Creating file...\t"
         local bool=false
 
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
@@ -576,7 +612,6 @@
             touch $1 &> /dev/null || bool=false
         fi
 
-        # EchoPassOrFailThisExitCode; ParseThisExitCode
         echo $bool
     }
 
@@ -585,7 +620,6 @@
     # <returns> boolean </returns>
     function DeleteFile
     {
-        # echo -en "Deleting file...\t"
         local bool=false
 
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
@@ -593,20 +627,19 @@
             rm $1 &> /dev/null || bool=false
         fi
 
-        # EchoPassOrFailThisExitCode; ParseThisExitCode
         echo $bool
     }
 
     # <summary> Redirect to script directory. </summary>
-    # <parameter name="$str_thisDir"> directory </parameter>
     # <returns> boolean </returns>
     function GoToScriptDirectory
     {
         local bool=false
+        declare -lr str_dir=$( dirname $0 )
 
-        if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == true ]]; then
+        if [[ $( CheckIfDirIsNotNullReturnBool $str_dir ) == true ]]; then
             bool=true
-            cd $str_thisDir || bool=false
+            cd $str_dir || bool=false
         fi
 
         echo $bool
@@ -1435,9 +1468,8 @@
                 if [[ $( CheckIfDirIsNotNullReturnBool $str_scriptDir ) == true ]]; then
                     cd $str_scriptDir
                     local str_file1="/etc/hosts"
-                    CreateBackupFromFile $str_file1 &> /dev/null
 
-                    if [[ $int_thisExitCode -eq 0 ]]; then
+                    if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
                         cp hosts $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                     fi
                 fi
@@ -1452,9 +1484,7 @@
                     local str_file1="/etc/firefox-esr/firefox-esr.js"
 
                     make debian_locked.js &> /dev/null && (
-                        CreateBackupFromFile $str_file1 &> /dev/null
-
-                        if [[ $int_thisExitCode -eq 0 ]]; then
+                        if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
                             cp debian_locked.js $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
                         fi
                     )
@@ -1590,9 +1620,7 @@
         # </parameters>
 
         # <summary> Create backup or restore from backup. </summary>
-        CreateBackupFromFile $str_file1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
             while [[ $int_thisExitCode -eq 0 ]]; do
                 ReadInput "Include 'contrib' sources?"
                 str_sources+="contrib"
@@ -1752,21 +1780,25 @@
             declare -lr str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
             # </parameters>
 
-            while [[ $int_thisExitCode -eq 0 ]]; do
-                CheckIfFileExistsReturnBool $str_file1
-                CreateBackupFromFile $str_file1
-                AppendVarToFileReturnBool $str_file1 $str_output1
-                systemctl restart ssh || ( false; SaveThisExitCode )
-                break
-            done
+            if [[ (
+                $( CheckIfFileExistsReturnBool $str_file1 ) == true
+                && $( CreateBackupFromFileReturnBool $str_file1 ) == true
+                && $( AppendVarToFileReturnBool $str_file1 $str_output1 ) == true
+                && $( CheckIfFileExistsReturnBool $str_file1 ) == true
+                ) ]]; then
 
-            # while [[ $int_thisExitCode -eq 0 ]]; do
-            #     CheckIfFileExistsReturnBool $str_file2
-            #     CreateBackupFromFile $str_file2
-            #     AppendVarToFileReturnBool $str_file1 $str_output1
+                systemctl restart ssh || ( false; SaveThisExitCode )
+            fi
+
+            # if [[ (
+            #     $( CheckIfFileExistsReturnBool $str_file2 ) == true
+            #     && $( CreateBackupFromFileReturnBool $str_file2 ) == true
+            #     && $( AppendVarToFileReturnBool $str_file2 $str_output1 ) == true
+            #     && $( CheckIfFileExistsReturnBool $str_file2 ) == true
+            #     ) ]]; then
+
             #     systemctl restart sshd || ( false; SaveThisExitCode )
-            #     break
-            # done
+            # fi
         fi
     }
 
