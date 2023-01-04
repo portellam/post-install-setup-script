@@ -131,49 +131,60 @@
     # <returns> void </returns>
     function ParseThisExitCode
     {
-        case $int_thisExitCode in
-            # <summary> general errors </summary>
-            255)
-                echo -e "\e[33mError:\e[0m Unspecified error.";;
-            254)
-                echo -e "\e[33mException:\e[0m Null input.";;
+        # <parameters>
+        declare -lr var_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        # </parameters>
 
-            # <summary> file validation </summary>
-            253)
-                echo -e "\e[33mException:\e[0m File/Dir does not exist.";;
-            252)
-                echo -e "\e[33mException:\e[0m File/Dir is not readable.";;
-            251)
-                echo -e "\e[33mException:\e[0m File/Dir is not writable.";;
-            250)
-                echo -e "\e[33mException:\e[0m File/Dir is not executable.";;
+        if [[ $( CheckIfVarIsValidNumReturnBool $var_exitCode ) == false ]]; then
+            echo -e "\e[33mException:\e[0m Could not parse exit code."
+        else
+            case $var_exitCode in
+                # <summary> general errors </summary>
+                255)
+                    echo -e "\e[33mError:\e[0m Unspecified error.";;
+                254)
+                    echo -e "\e[33mException:\e[0m Null input.";;
 
-            # <summary> script specific </summary>
-            249)
-                echo -e "\e[33mException:\e[0m Invalid input.";;
-            248)
-                echo -e "\e[33mError:\e[0m Missed steps; missed execution of key subfunctions.";;
-            247)
-                echo -e "\e[33mError:\e[0m Missing components/variables.";;
-        esac
+                # <summary> file validation </summary>
+                253)
+                    echo -e "\e[33mException:\e[0m File/Dir does not exist.";;
+                252)
+                    echo -e "\e[33mException:\e[0m File/Dir is not readable.";;
+                251)
+                    echo -e "\e[33mException:\e[0m File/Dir is not writable.";;
+                250)
+                    echo -e "\e[33mException:\e[0m File/Dir is not executable.";;
+
+                # <summary> script specific </summary>
+                249)
+                    echo -e "\e[33mException:\e[0m Invalid input.";;
+                248)
+                    echo -e "\e[33mError:\e[0m Missed steps; missed execution of key subfunctions.";;
+                247)
+                    echo -e "\e[33mError:\e[0m Missing components/variables.";;
+            esac
+        fi
     }
 
-    # <summary> Updates global parameter. </summary>
+    # <summary> Updates global parameter. </summary>                # remove this as a dependency
     # <parameter name="$?"> exit code </parameter>
     # <returns> void </returns>
-    function SaveThisExitCode
-    {
-        int_thisExitCode=$?
-    }
+    # function SaveThisExitCode
+    # {
+    #     int_thisExitCode=$?
+    # }
 
     # <summary> Given last exit code, return a boolean. </summary>
     # <parameter name="$?"> exit code </parameter>
     # <returns> boolean </returns>
     function ParseThisExitCodeAsBool
     {
+        # <parameters>
+        declare -lr var_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         local bool=false
+        # </parameters>
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $( CheckIfVarIsValidNumReturnBool $var_exitCode ) == true && "$var_exitCode" -eq 0 ]]; then
             bool=true
         fi
 
@@ -364,7 +375,7 @@
 ### status functions ###
 # <summary> Operation status logic </summary>
 # <code>
-    # <summary> Output status, and return exit code. </summary>
+    # <summary> Output status, and set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array </parameter>
     # <returns> void </returns>
@@ -373,16 +384,13 @@
         echo -en "Writing to file...\t"
         declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
 
-        if [[ $bool == true ]]; then
-            true
-        else
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
             SetExitCodeIfFileIsNotWritable
         fi
-
-        SaveThisExitCode; EchoPassOrFailThisExitCode
     }
 
-    # <summary> Output status, and return exit code. </summary>
+    # <summary> Output status, and set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
@@ -391,16 +399,13 @@
         echo -en "Writing to file...\t"
         declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
 
-        if [[ $bool == true ]]; then
-            true
-        else
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
             SetExitCodeIfFileIsNotWritable
         fi
-
-        SaveThisExitCode; EchoPassOrFailThisExitCode
     }
 
-    # <summary> Output status, and return exit code. </summary>
+    # <summary> Output status, and set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
     # <returns> void </returns>
@@ -416,8 +421,6 @@
             echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             false
         fi
-
-        SaveThisExitCode; EchoPassOrFailThisExitCode
     }
 # </code>
 
@@ -649,22 +652,6 @@
 
         echo $bool
     }
-
-    # <summary> Reads a file. </summary>
-    # <parameter name="$1"> array of string </parameter>
-    # <parameter name="$2"> file </parameter>
-    # <returns> array </returns>
-    # function ReadFile
-    # {
-    #     echo -en "Reading file...\t"
-
-    #     if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
-    #         local -n arr_file1="$1"
-    #         readonly arr_file1=( $( cat $2 ) ) &> /dev/null || ( SetExitCodeIfFileIsNotReadable; SaveThisExitCode )
-    #     fi
-
-    #     EchoPassOrFailThisExitCode; ParseThisExitCode
-    # }
 
     # <summary> Ask for Yes/No answer, set exit code. Default selection is N/false. </summary>
     # <returns> void </returns>
@@ -946,7 +933,7 @@
         fi
     }
 
-    # <summary> Read from XML Data Object Module. </summary>
+    # <summary> Read from XML Data Object Module. </summary>        # instead of parsing/writing XML, use cut, awk, paste, grep, etc, with delimiters (';')
     # <returns> content variable </returns>
     # function ReadFromXMLDOM
     # {
@@ -954,7 +941,7 @@
     #     read -d \< $var_entity $var_content
     # }
 
-    # <summary> Read from XML Data Object Module. </summary>
+    # <summary> Read from XML Data Object Module. </summary>        # instead of parsing/writing XML, use cut, awk, paste, grep, etc, with delimiters (';')
     # <returns> content variable </returns>
     # function ReadFromXMLFile
     # {
@@ -968,13 +955,13 @@
     #     done < xhtmlfile.xhtml > titleOfXHTMLPage.txt
     # }
 
-    # <summary> Reset IFS. </summary>
+    # <summary> Reset IFS. </summary>                               # redundant
     # function SetInternalFieldSeparatorToDefault
     # {
     #     IFS=$var_IFS
     # }
 
-    # <summary>
+    # <summary>                                                     # redundant
     # Backup IFS and Set IFS to newline char.
     # NOTE: necessary for newline preservation in arrays and files.
     # </summary>
@@ -1011,9 +998,11 @@
             EchoPassOrFailThisBool false
         fi
 
+        # <summary> Set exit code </summary>
         if [[ $bool == false ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
-            false; SaveThisExitCode
+            false
+            # SaveThisExitCode
         fi
     }
 
