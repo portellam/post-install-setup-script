@@ -668,74 +668,77 @@
 
     # <summary> Ask for Yes/No answer, set exit code. Default selection is N/false. </summary>
     # <returns> void </returns>
-    function ReadInput
-    {
-        # <parameters> #
-        declare -il int_count=0
-        declare -lir int_maxCount=2
-        # </parameters> #
+    # function ReadInput
+    # {
+    #     # <parameters> #
+    #     declare -il int_count=0
+    #     declare -lir int_maxCount=2
+    #     # </parameters> #
 
-        true; SaveThisExitCode
+    #     true; SaveThisExitCode
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> After given number of attempts, input is set to default: false. </summary>
-            if [[ $int_count -gt $int_maxCount ]]; then
-                str_input1="N"
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                false; SaveThisExitCode; break
-            fi
+    #     while [[ $int_thisExitCode -eq 0 ]]; do
+    #         # <summary> After given number of attempts, input is set to default: false. </summary>
+    #         if [[ $int_count -gt $int_maxCount ]]; then
+    #             str_input1="N"
+    #             echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+    #             false; SaveThisExitCode; break
+    #         fi
 
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                echo -n "$1 "
-            fi
+    #         if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+    #             echo -n "$1 "
+    #         fi
 
-            echo -en "\e[30;43m[Y/n]:\e[0m "
-            read str_input1
-            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
+    #         echo -en "\e[30;43m[Y/n]:\e[0m "
+    #         read str_input1
+    #         str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
 
-            # <summary> Check if string is a valid input. </summary>
-            case $str_input1 in
-                "Y")
-                    break;;
-                "N")
-                    false; SaveThisExitCode; break;;
-            esac
+    #         # <summary> Check if string is a valid input. </summary>
+    #         case $str_input1 in
+    #             "Y")
+    #                 break;;
+    #             "N")
+    #                 false; SaveThisExitCode; break;;
+    #         esac
 
-            # <summary> Input is invalid, increment counter. </summary>
-            echo -en "\e[33mInvalid input.\e[0m "
-            (( int_count++ ))
-        done
-    }
+    #         # <summary> Input is invalid, increment counter. </summary>
+    #         echo -en "\e[33mInvalid input.\e[0m "
+    #         (( int_count++ ))
+    #     done
+    # }
 
     # <summary> Ask for Yes/No answer, return boolean. Default selection is N/false. </summary>
-    # <parameter name="$1"> boolean return value </parameter>
-    # <parameter name="$2"> output statement </parameter>
-    # <returns> boolean </returns>
+    # <parameter name="$1" name="$var_return"> boolean return value </parameter>
+    # <parameter name="$2"> nullable output statement </parameter>
+    # <returns> $var_return </returns>
     function ReadInputReturnBool
     {
         # <parameters> #
         local bool=false
         declare -il int_count=0
         declare -lir int_maxCount=3
+        declare -lr str_output=$2
         # </parameters> #
 
         while [[ $int_count -le $int_maxCount ]]; do
             # <summary> After given number of attempts, input is set to default: false. </summary>
             if [[ $int_count -ge $int_maxCount ]]; then
-                echo -en "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
+                var_return="N"
+                echo -en "Exceeded max attempts. Default selection: \e[30;42m$var_return\e[0m"
                 break
             fi
 
-            if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
-                echo -n "$1 "
+            if [[ $( CheckIfVarIsNotNullReturnBool $str_output ) == true ]]; then
+                echo -n "$str_output "
             fi
 
+            # <summary> Append output. </summary>
             echo -en "\e[30;43m[Y/n]:\e[0m "
-            read str_input1
-            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
+            read var_return
+            var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
 
             # <summary> Check if string is a valid input. </summary>
-            case $str_input1 in
+            case $var_return in
                 "Y")
                     bool=true; break;;
                 "N")
@@ -751,131 +754,195 @@
         var_return=$bool
     }
 
-    # <summary> Ask for multiple choice, up to eight choices. Default selection is first choice. </summary>
-    # <parameter name="$1"> variable return value </parameter>
-    # <parameter name="$2"> output statement </parameter>
-    # <returns> value </returns>
-    function ReadInputFromMultipleChoiceIgnoreCase
+    # <summary> Ask for multiple choice, up to eight choices. Ignore case; no input validation. Default selection is first choice. </summary>
+    # <parameter name="$var_return"> number return value </parameter>
+    # <parameter name="$1"> nullable output statement </parameter>
+    # <parameter name="$2"> multiple choice </parameter>
+    # <parameter name="$3"> multiple choice </parameter>
+    # <parameter name="$4"> multiple choice </parameter>
+    # <parameter name="$5"> multiple choice </parameter>
+    # <parameter name="$6"> multiple choice </parameter>
+    # <parameter name="$7"> multiple choice </parameter>
+    # <parameter name="$8"> multiple choice </parameter>
+    # <parameter name="$9"> multiple choice </parameter>
+    # <returns> $var_return </returns>
+    function ReadInputFromMultipleChoiceMatchCase
     {
         # <parameters> #
         declare -il int_count=0
-        declare -lir int_maxCount=2
+        declare -lir int_maxCount=3
+        declare -lr str_output=$1
+        declare -lr var_input1=$( echo $2 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input2=$( echo $3 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input3=$( echo $4 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input4=$( echo $5 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input5=$( echo $6 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input6=$( echo $7 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input7=$( echo $8 | tr '[:lower:]' '[:upper:]' )
+        declare -lr var_input8=$( echo $9 | tr '[:lower:]' '[:upper:]' )
         # </parameters> #
 
-        CheckIfVarIsNotNullReturnBool $2 &> /dev/null
+        # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
+        if [[
+            $( CheckIfVarIsNotNullReturnBool $var_input1 ) == false
+            || $( CheckIfVarIsNotNullReturnBool $var_input2 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input3 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input4 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input5 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input6 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input7 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $var_input8 ) == false
+            ]]; then
+            var_return=""
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> After given number of attempts, input is set to default: false. </summary>
-            if [[ $int_count -gt $int_maxCount ]]; then
-                str_input1="$2"
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                false; SaveThisExitCode; break
-            fi
+        # <summary> Prompt user for input. </summary>
+        else
+            while [[ $int_count -le $int_maxCount ]]; do
+                # <summary> After given number of attempts, input is set to default: first choice. </summary>
+                if [[ $int_count -ge $int_maxCount ]]; then
+                    var_return="$var_input1"
+                    echo -e "Exceeded max attempts. Default selection: \e[30;42m$var_input1\e[0m"
+                    break
+                fi
 
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                echo -en "$1 "
-            fi
+                # <summary> Append output. </summary>
+                if [[ $( CheckIfVarIsNotNullReturnBool $str_output ) == true ]]; then
+                    echo -en "$str_output "
+                fi
 
-            read str_input1
+                read var_return
+                var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
 
-            # <summary> Check if string is a valid input. </summary>
-            case $str_input1 in
-                $2|$3|$4|$5|$6|$7|$8|$9)
-                    true; SaveThisExitCode; break;
-            esac
+                # <summary> Check if string is a valid input. </summary>
+                case $var_return in
+                    $var_input1|$var_input2|$var_input3|$var_input4|$var_input5|$var_input6|$var_input7|$var_input8)
+                        break;
+                esac
 
-            # <summary> Input is invalid, increment counter. </summary>
-            echo -en "\e[33mInvalid input.\e[0m "
-            (( int_count++ ))
-        done
-
-        # <summary> Return value. </summary>
-        if [[ $( CheckIfVarIsNotNullReturnBool $str_input1 ) == true ]]; then
-            var_return=$str_input1
+                # <summary> Input is invalid, increment counter. </summary>
+                echo -en "\e[33mInvalid input.\e[0m "
+                (( int_count++ ))
+            done
         fi
     }
 
-    # <summary> Ask for multiple choice, up to eight choices. Default selection is first choice. </summary>
-    # <returns> void </returns>
-    function ReadInputFromMultipleChoiceUpperCase
+    # <summary> Ask for multiple choice, up to eight choices. Match case. Default selection is first choice. </summary>
+    # <parameter name="$var_return"> number return value </parameter>
+    # <parameter name="$1"> nullable output statement </parameter>
+    # <parameter name="$2"> multiple choice </parameter>
+    # <parameter name="$3"> multiple choice </parameter>
+    # <parameter name="$4"> multiple choice </parameter>
+    # <parameter name="$5"> multiple choice </parameter>
+    # <parameter name="$6"> multiple choice </parameter>
+    # <parameter name="$7"> multiple choice </parameter>
+    # <parameter name="$8"> multiple choice </parameter>
+    # <parameter name="$9"> multiple choice </parameter>
+    # <returns> $var_return </returns>
+    function ReadInputFromMultipleChoiceMatchCase
     {
         # <parameters> #
         declare -il int_count=0
-        declare -lir int_maxCount=2
+        declare -lir int_maxCount=3
+        declare -lr str_output=$1
         # </parameters> #
 
-        CheckIfVarIsNotNullReturnBool $2 &> /dev/null
+        # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
+        if [[
+            $( CheckIfVarIsNotNullReturnBool $2 ) == false
+            || $( CheckIfVarIsNotNullReturnBool $3 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $4 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $5 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $6 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $7 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $8 ) == false
+            # || $( CheckIfVarIsNotNullReturnBool $9 ) == false
+            ]]; then
+            var_return=""
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> After given number of attempts, input is set to default: false. </summary>
-            if [[ $int_count -gt $int_maxCount ]]; then
-                str_input1="$2"
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                false; SaveThisExitCode; break
-            fi
+        # <summary> Prompt user for input. </summary>
+        else
+            while [[ $int_count -le $int_maxCount  ]]; do
+                # <summary> After given number of attempts, input is set to default: first choice. </summary>
+                if [[ $int_count -ge $int_maxCount ]]; then
+                    var_return="$2"
+                    echo -e "Exceeded max attempts. Default selection: \e[30;42m$2\e[0m"
+                    break
+                fi
 
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                echo -en "$1 "
-            fi
+                # <summary> Append output. </summary>
+                if [[ $( CheckIfVarIsNotNullReturnBool $str_output ) == true ]]; then
+                    echo -en "$str_output "
+                fi
 
-            read str_input1
-            str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
+                read var_return
 
-            # <summary> Check if string is a valid input. </summary>
-            case $str_input1 in
-                $2|$3|$4|$5|$6|$7|$8|$9)
-                    true; SaveThisExitCode; break;
-            esac
+                # <summary> Check if string is a valid input. </summary>
+                case $var_return in
+                    $2|$3|$4|$5|$6|$7|$8|$9)
+                        break;
+                esac
 
-            # <summary> Input is invalid, increment counter. </summary>
-            echo -en "\e[33mInvalid input.\e[0m "
-            (( int_count++ ))
-        done
-
-        # <summary> Return value. </summary>
-        if [[ $( CheckIfVarIsNotNullReturnBool $str_input1 ) == true ]]; then
-            var_return=$str_input1
+                # <summary> Input is invalid, increment counter. </summary>
+                echo -en "\e[33mInvalid input.\e[0m "
+                (( int_count++ ))
+            done
         fi
     }
 
-    # <summary> Ask for number, within a given range. Default selection is first choice. </summary>
-    # <returns> int </returns>
+    # <summary> Ask for number, within a given range. Return empty value if given invalid scope parameters. </summary>
+    # <parameter name="$var_return"> number return value </parameter>
+    # <parameter name="$1"> absolute minimum </parameter>
+    # <parameter name="$2"> absolute maximum </parameter>
+    # <parameter name="$3"> nullable output statement </parameter>
+    # <returns> $var_return </returns>
     function ReadInputFromRangeOfNums
     {
         # <parameters> #
         declare -il int_count=0
-        declare -lir int_maxCount=2
+        declare -lir int_maxCount=3
+        declare -ilr int_max=$2
+        declare -ilr int_min=$1
+        declare -lr str_output=$3
         # </parameters> #
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            # <summary> After given number of attempts, input is set to default: min value. </summary>
-            if [[ $int_count -gt $int_maxCount ]]; then
-                str_input1=$2
-                echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-                break
-            fi
+        # <summary> Return null value if either extrema are not valid. </summary>
+        if [[
+            $( CheckIfVarIsValidNumReturnBool $int_min ) == false
+            && $( CheckIfVarIsValidNumReturnBool $int_max ) == false
+            ]]; then
+            var_return=""
 
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                echo -n "$1 "
-            fi
+        # <summary> Prompt user for input. </summary>
+        else
+            while [[ $int_count -le $int_maxCount ]]; do
+                # <summary> After given number of attempts, input is set to default: minimum. </summary>
+                if [[ $int_count -ge $int_maxCount ]]; then
+                    echo -en "Exceeded max attempts. Default selection: \e[30;42m$int_min\e[0m"
+                    var_return="$int_min"
+                    break
+                fi
 
-            read str_input1
+                # <summary> Append output. </summary>
+                if [[ $( CheckIfVarIsNotNullReturnBool $str_output ) == true ]]; then
+                    echo -n "$str_output "
+                fi
 
-            # <summary> Check if string is a valid integer and within given range. </summary>
-            if [[ $str_input1 -ge $2 && $str_input1 -le $3 && ( "${str_input1}" -ge "$(( ${str_input1} ))" ) ]] 2> /dev/null; then
-                break
-            fi
+                echo -en "\e[30;43m[Y/n]:\e[0m "
+                read var_return
 
-            # <summary> Input is invalid, increment counter. </summary>
-            echo -en "\e[33mInvalid input.\e[0m "
-            (( int_count++ ))
-        done
+                # <summary> Check if string is a valid number and within given range. </summary>
+                if [[
+                    $var_return -ge $int_min
+                    && $var_return -le $int_max
+                    && $( CheckIfVarIsValidNumReturnBool $var_return ) == true
+                    ]]; then
+                    break
+                fi
 
-        # <summary> Return value with stdout. </summary>
-        CheckIfVarIsNotNullReturnBool $str_input1 &> /dev/null
-
-        if [[ $int_thisExitCode -eq 0 ]]; then
-            echo $str_input1
+                # <summary> Input is invalid, increment counter. </summary>
+                echo -en "\e[33mInvalid input.\e[0m "
+                (( int_count++ ))
+            done
         fi
     }
 
@@ -1713,7 +1780,7 @@
         # <summary Apt sources </summary>
         # <parameters>
         local var_return=""
-        ReadInputFromMultipleChoiceIgnoreCase "Enter option: " "stable" "testing" "unstable" "backports"
+        ReadInputFromMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
         declare -lr str_branchName=$var_return
 
         declare -al arr_sources=(
