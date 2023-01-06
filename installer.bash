@@ -245,7 +245,7 @@
     {
         local bool=false
 
-        if [[ $( command -v $1 ) != "" ]]; then
+        if [[ $( command -v $1 ) != "" || $( command -v $1 ) == "/usr/bin/$1" ]]; then
             bool=true
         fi
 
@@ -369,88 +369,6 @@
         fi
 
         echo $bool
-    }
-# </code>
-
-### status functions ###
-# <summary> File operation logic with exit codes. </summary>
-# <code>
-    # <summary> Output status, and set exit code. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> array </parameter>
-    # <returns> void </returns>
-    function AppendArrayToFileReturnExitCode
-    {
-        echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
-
-        # <summary> Set exit code. </summary>
-        if [[ $bool == false ]]; then
-            SetExitCodeIfFileIsNotWritable
-        fi
-    }
-
-    # <summary> Output status, and set exit code. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> string </parameter>
-    # <returns> void </returns>
-    function AppendVarToFileReturnExitCode
-    {
-        echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
-
-        # <summary> Set exit code. </summary>
-        if [[ $bool == false ]]; then
-            SetExitCodeIfFileIsNotWritable
-        fi
-    }
-
-    # <summary> Output status, and set exit code. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> file </parameter>
-    # <returns> void </returns>
-    function CheckIfTwoFilesAreSameReturnExitCode
-    {
-        echo -en "Verifying two files...\t"
-        declare lr bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
-
-        if [[ $bool == true ]]; then
-            echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-            true
-        else
-            echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
-            false
-        fi
-    }
-
-    # <summary> Output status, and set exit code. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> array </parameter>
-    # <returns> void </returns>
-    function OverwriteArrayToFileReturnExitCode
-    {
-        echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( OverwriteArrayToFileReturnBool $1 $2 )
-
-        # <summary> Set exit code. </summary>
-        if [[ $bool == false ]]; then
-            SetExitCodeIfFileIsNotWritable
-        fi
-    }
-
-    # <summary> Output status, and set exit code. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> string </parameter>
-    # <returns> void </returns>
-    function OverwriteVarToFileReturnExitCode
-    {
-        echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( OverwriteVarToFileReturnBool $1 $2 )
-
-        # <summary> Set exit code. </summary>
-        if [[ $bool == false ]]; then
-            SetExitCodeIfFileIsNotWritable
-        fi
     }
 # </code>
 
@@ -682,47 +600,6 @@
 
         echo $bool
     }
-
-    # <summary> Ask for Yes/No answer, set exit code. Default selection is N/false. </summary>
-    # <returns> void </returns>
-    # function ReadInput
-    # {
-    #     # <parameters> #
-    #     declare -il int_count=0
-    #     declare -lir int_maxCount=2
-    #     # </parameters> #
-
-    #     true; SaveThisExitCode
-
-    #     while [[ $int_thisExitCode -eq 0 ]]; do
-    #         # <summary> After given number of attempts, input is set to default: false. </summary>
-    #         if [[ $int_count -gt $int_maxCount ]]; then
-    #             str_input1="N"
-    #             echo -e "Exceeded max attempts. Default selection: \e[30;42m$str_input1\e[0m"
-    #             false; SaveThisExitCode; break
-    #         fi
-
-    #         if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-    #             echo -n "$1 "
-    #         fi
-
-    #         echo -en "\e[30;43m[Y/n]:\e[0m "
-    #         read str_input1
-    #         str_input1=$( echo $str_input1 | tr '[:lower:]' '[:upper:]' )
-
-    #         # <summary> Check if string is a valid input. </summary>
-    #         case $str_input1 in
-    #             "Y")
-    #                 break;;
-    #             "N")
-    #                 false; SaveThisExitCode; break;;
-    #         esac
-
-    #         # <summary> Input is invalid, increment counter. </summary>
-    #         echo -en "\e[33mInvalid input.\e[0m "
-    #         (( int_count++ ))
-    #     done
-    # }
 
     # <summary> Ask for Yes/No answer, return boolean. Default selection is N/false. </summary>
     # <parameter name="$1" name="$var_return"> boolean return value </parameter>
@@ -963,63 +840,6 @@
         fi
     }
 
-    # <summary> Read from XML Data Object Module. </summary>        # instead of parsing/writing XML, use cut, awk, paste, grep, etc, with delimiters (';')
-    # <returns> content variable </returns>
-    # function ReadFromXMLDOM
-    # {
-    #     declare -lr IFS=$'\>'
-    #     read -d \< $var_entity $var_content
-    # }
-
-    # <summary> Read from XML Data Object Module. </summary>        # instead of parsing/writing XML, use cut, awk, paste, grep, etc, with delimiters (';')
-    # <returns> content variable </returns>
-    # function ReadFromXMLFile
-    # {
-    #     declare -al arr_file1=()
-
-    #     while ReadFromXMLDOM; do
-    #         if [[ $var_entity = "title" ]]; then
-    #             echo $var_content
-    #             exit
-    #         fi
-    #     done < xhtmlfile.xhtml > titleOfXHTMLPage.txt
-    # }
-
-    # <summary> Reset IFS. </summary>                               # redundant
-    # function SetInternalFieldSeparatorToDefault
-    # {
-    #     IFS=$var_IFS
-    # }
-
-    # <summary>                                                     # redundant
-    # Backup IFS and Set IFS to newline char.
-    # NOTE: necessary for newline preservation in arrays and files.
-    # </summary>
-    # function SetInternalFieldSeparatorToNewline
-    # {
-    #     var_IFS=$IFS
-    #     IFS=$'\n'
-    # }
-
-    # <summary> Overwrite file with contents of array. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> array of string </parameter>
-    # <returns> void </returns>
-    # function OverwriteArrayToFile                                     # refactor or consolidate, this looks like shite
-    # {
-    #     echo -en "Writing to file..."
-
-    #     DeleteFileReturnBool $1 &> /dev/null
-
-    #     # if [[ $int_thisExitCode -eq 0 ]]; then
-    #     #     AppendArrayToFileReturnBool $1 $2
-    #     # fi
-
-    #     if [[ $( DeleteFileReturnBool $1 ) == true ]]; then
-    #         AppendArrayToFileReturnBool $1 $2
-    #     fi
-    # }
-
     # <summary> Overwrite file with array, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array </parameter>
@@ -1052,6 +872,87 @@
         fi
 
         echo $bool
+    }
+# </code>
+
+# <summary> File operation logic with exit codes. </summary>
+# <code>
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> array </parameter>
+    # <returns> void </returns>
+    function AppendArrayToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> void </returns>
+    function AppendVarToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> file </parameter>
+    # <returns> void </returns>
+    function CheckIfTwoFilesAreSameReturnExitCode
+    {
+        echo -en "Verifying two files...\t"
+        declare lr bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
+
+        if [[ $bool == true ]]; then
+            echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+            true
+        else
+            echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
+            false
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> array </parameter>
+    # <returns> void </returns>
+    function OverwriteArrayToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( OverwriteArrayToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> void </returns>
+    function OverwriteVarToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( OverwriteVarToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
+        fi
     }
 # </code>
 
@@ -1303,72 +1204,84 @@
     # <returns> void </returns>
     function InstallCommands
     {
-        echo -e "Checking for commands..."
+        echo -en "Checking for commands... "
 
-        # <summary> Install a given command. </summary>
+        # <summary> Install a given command, return boolean. </summary>
         # <parameter name="$1"> command_to_use </parameter>
         # <parameter name="$2"> required_packages </parameter>
-        # <returns> void </returns>
-        function InstallThisCommand
+        # <returns> boolean </returns>
+        function InstallCommands_InstallThisCommandReturnBoolean
         {
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true && $( CheckIfVarIsNotNullReturnBool $2 ) == true && $( CheckIfCommandExistsReturnBool $1 ) == false ]]; then
-                echo -en "Installing '$1'...\t"
-                apt install -y $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            local bool=false
 
-                if [[ $( CheckIfCommandExistsReturnBool $1 ) == false ]]; then
-                    SetExitCodeIfPassNorFail; SaveThisExitCode
-                fi
-
-                EchoPassOrFailThisExitCode
+            if [[
+                $( CheckIfVarIsNotNullReturnBool $1 ) == true
+                && $( CheckIfVarIsNotNullReturnBool $2 ) == true
+                && $( CheckIfCommandExistsReturnBool $1 ) == false
+                ]]; then
+                bool=true
+                apt install -y $2 &> /dev/null || bool=false
             fi
+
+            if [[ $( CheckIfCommandExistsReturnBool $1 ) == true ]]; then
+                bool=true
+            fi
+
+            echo $bool
         }
 
         TestNetwork &> /dev/null
 
-        # if [[ $int_thisExitCode -eq 0 ]]; then
-        if [[ $int_thisExitCode -eq 0 && $( CheckCurrentDistro ) == true ]]; then
-            InstallThisCommand "xmllint" "xml-core xmlstarlet"
-            bool_is_xmllint_installed=$( ParseThisExitCodeAsBool )
+        if [[ $( CheckCurrentDistro ) == true ]]; then
+            bool_is_xmllint_installed=$( InstallCommands_InstallThisCommandReturnBoolean "xmllint" "xml-core xmlstarlet" )
 
             # InstallThisCommand "command_to_use" "required_packages"
             # boolean_to_set=$( ParseThisExitCodeAsBool )
         else
-            false; SaveThisExitCode
+            false
         fi
 
-        EchoPassOrFailThisExitCode "Checking for commands..."; ParseThisExitCode; echo
+        EchoPassOrFailThisExitCode;
+        # ParseThisExitCode;
+        echo
     }
 
     # <summary> Install from Debian repositories. </summary>
     # <returns> void </returns>
     function InstallFromDebianRepos
     {
-        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-        ReadInput "Auto-accept install prompts? "
+        # <parameters>
+        local str_args=""
+        local var_return=false
+        # </parameters>
 
-        case "$int_thisExitCode" in
-            0)
-                local str_args="-y";;
-            *)
-                local str_args="";;
-        esac
+        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
+        ReadInputReturnBool $var_return "Auto-accept install prompts? "
+
+        if [[ $var_return == true ]]; then
+            str_args="-y"
+        fi
 
         # <summary> Update and upgrade local packages </summary>
         apt clean
         apt update
 
         # <summary> Desktop environment checks </summary>
+        # <parameters>
         local str_aptCheck=""
         str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
+        # </parameters>
 
         if [[ $str_aptCheck != "" ]]; then
             apt install -y plasma-discover-backend-flatpak
         fi
 
+        # <parameters>
         str_aptCheck=""
         str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
+        # </parameters>
 
-        if [[ $str_aptCheck != "" ]]; then
+        if [[ $( CheckIfVarIsNotNullReturnBool $str_aptCheck ) == true ]]; then
             apt install -y gnome-software-plugin-flatpak
         fi
 
@@ -1394,7 +1307,11 @@
         # <summary> Select and Install software sorted by type. </summary>
         function InstallFromDebianRepos_InstallByType
         {
-            if [[ $1 != "" ]]; then
+            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+                # <parameters>
+                local var_return=false
+                # </parameters>
+
                 echo -e $2
 
                 if [[ $1 == *" "* ]]; then
@@ -1408,9 +1325,9 @@
                     echo -e "\t$1"
                 fi
 
-                ReadInput
+                ReadInput $var_return
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
+                if [[ $var_return == true ]]; then
                     str_aptAll+="$1 "
                 fi
 
@@ -1430,7 +1347,7 @@
         InstallFromDebianRepos_InstallByType $str_aptTools "Select software tools?"
         InstallFromDebianRepos_InstallByType $str_aptVGAdrivers "Select VGA drivers?"
 
-        if [[ $str_aptAll != "" ]]; then
+        if [[ $( CheckIfVarIsNotNullReturnBool $str_aptAll ) == true ]]; then
             apt install $str_args $str_aptAll
         fi
 
@@ -2230,11 +2147,7 @@
 ### global parameters ###
 # <summary> Variables to be used throughout the program. </summary>
 # <code>
-    readonly var_IFS=$IFS
-    IFS=$'\n'
-    declare -r str_thisDir=$( dirname $0 )
     declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
-    declare -r str_pwd=$( pwd )
     declare -r str_warning="\e[33mWARNING:\e[0m"" "
 
     # <summary> Necessary for exit code preservation, for conditional statements. </summary>
@@ -2242,8 +2155,6 @@
 
     # <summary> Checks </summary>
     readonly bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
-    true; SaveThisExitCode  # TODO: remove exit code checks, then remove this.
-
     bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
 
@@ -2263,6 +2174,5 @@
     fi
 
     # <summary> Post-execution clean up. </summary>
-    IFS=$var_IFS
     ExitWithThisExitCode
 # </code>
