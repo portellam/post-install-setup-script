@@ -136,7 +136,7 @@
         # </parameters>
 
         if [[ $( CheckIfVarIsValidNumReturnBool $var_exitCode ) == false ]]; then
-            echo -e "\e[33mException:\e[0m Could not parse exit code."
+            echo -e "\e[33mException:\e[0m Exit code is not valid."
         else
             case $var_exitCode in
                 # <summary> general errors </summary>
@@ -373,7 +373,7 @@
 # </code>
 
 ### status functions ###
-# <summary> Operation status logic </summary>
+# <summary> File operation logic with exit codes. </summary>
 # <code>
     # <summary> Output status, and set exit code. </summary>
     # <parameter name="$1"> file </parameter>
@@ -381,7 +381,7 @@
     # <returns> void </returns>
     function AppendArrayToFileReturnExitCode
     {
-        echo -en "Writing to file...\t"
+        echo -en "Writing to file '$1'...\t"
         declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
@@ -396,7 +396,7 @@
     # <returns> void </returns>
     function AppendVarToFileReturnExitCode
     {
-        echo -en "Writing to file...\t"
+        echo -en "Writing to file '$1'...\t"
         declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
@@ -411,7 +411,7 @@
     # <returns> void </returns>
     function CheckIfTwoFilesAreSameReturnExitCode
     {
-        echo -e "Verifying two files...\t"
+        echo -en "Verifying two files...\t"
         declare lr bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
 
         if [[ $bool == true ]]; then
@@ -420,6 +420,36 @@
         else
             echo -e 'False Match.\n\t"%s"\n\t"%s"' "$1" "$2"
             false
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> array </parameter>
+    # <returns> void </returns>
+    function OverwriteArrayToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( OverwriteArrayToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
+        fi
+    }
+
+    # <summary> Output status, and set exit code. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> void </returns>
+    function OverwriteVarToFileReturnExitCode
+    {
+        echo -en "Writing to file '$1'...\t"
+        declare lr bool=$( OverwriteVarToFileReturnBool $1 $2 )
+
+        # <summary> Set exit code. </summary>
+        if [[ $bool == false ]]; then
+            SetExitCodeIfFileIsNotWritable
         fi
     }
 # </code>
@@ -439,7 +469,7 @@
         if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
             bool=true
             local -n arr_file1="$2"
-            ( printf "%s\n" "${arr_file1[@]}" || bool=false ) &> /dev/null
+            ( printf "%s\n" "${arr_file1[@]}" >> $1 || bool=false ) &> /dev/null
         fi
 
         echo $bool
@@ -971,41 +1001,6 @@
     #     IFS=$'\n'
     # }
 
-    # <summary> Test network connection to Internet; Ping DNS servers by address and name, and set exit code. </summary>
-    # <returns> void </returns>
-    function TestNetwork
-    {
-        # <summary>
-        local bool=true
-        declare -alr arr_server1=( "8.8.8.8", "www.google.com" )
-        declare -alr arr_server2=( "1.1.1.1", "www.yandex.com" )
-
-        echo -en "Testing Internet connection...\t"
-
-        if [[ ( ping -q -c 1 ${arr_server1[0]} &> /dev/null || ping -q -c 1 ${arr_server2[1]} &> /dev/null ) ]]; then
-            EchoPassOrFailThisBool true
-        else
-            bool=false
-            EchoPassOrFailThisBool false
-        fi
-
-        echo -en "Testing connection to DNS...\t"
-
-        if [[ ( ping -q -c 1 ${arr_server1[0]} &> /dev/null && ping -q -c 1 ${arr_server2[1]} &> /dev/null ) ]]; then
-            EchoPassOrFailThisBool true
-        else
-            bool=false
-            EchoPassOrFailThisBool false
-        fi
-
-        # <summary> Set exit code </summary>
-        if [[ $bool == false ]]; then
-            echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
-            false
-            # SaveThisExitCode
-        fi
-    }
-
     # <summary> Overwrite file with contents of array. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array of string </parameter>
@@ -1025,30 +1020,38 @@
     #     fi
     # }
 
-    # <summary> Overwrite file with contents of variable. </summary>
+    # <summary> Overwrite file with array, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> string </parameter>
-    # <returns> void </returns>
-    function OverwriteVarToFile
+    # <parameter name="$2"> array </parameter>
+    # <returns> boolean </returns>
+    function OverwriteArrayToFileReturnBool
     {
         declare -lr IFS=$'\n'
-        echo -en "Writing to file..."
+        local bool=false
 
-        while [[ $int_thisExitCode -eq 0 ]]; do
-            CheckIfVarIsNotNullReturnBool $1 &> /dev/null
-            CheckIfVarIsNotNullReturnBool $2 &> /dev/null
-            CheckIfFileExistsReturnBool $1 &> /dev/null
-            CheckIfFileIsReadableReturnBool $1 &> /dev/null
-            CheckIfFileIsWritableReturnBool $1 &> /dev/null
-            ( echo -e $2 > $1 ) &> /dev/null || ( false; SaveThisExitCode )
-            break
-        done
-
-        if [[ $( DeleteFileReturnBool $1 ) == true ]]; then
-            AppendArrayToFileReturnBool $1 $2
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            bool=true
+            local -n arr_file1="$2"
+            ( printf "%s\n" "${arr_file1[@]}" > $1 || bool=false ) &> /dev/null
         fi
 
-        EchoPassOrFailThisExitCode; ParseThisExitCode
+        echo $bool
+    }
+
+    # <summary> Overwrite file with string, and return boolean. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> string </parameter>
+    # <returns> boolean </returns>
+    function OverwriteVarToFileReturnBool
+    {
+        local bool=false
+
+        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
+            bool=true
+            ( echo -e $2 > $1 || bool=false ) &> /dev/null
+        fi
+
+        echo $bool
     }
 # </code>
 
