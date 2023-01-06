@@ -1325,7 +1325,7 @@
                     echo -e "\t$1"
                 fi
 
-                ReadInput $var_return
+                ReadInputReturnBool $var_return
 
                 if [[ $var_return == true ]]; then
                     str_aptAll+="$1 "
@@ -1355,6 +1355,8 @@
         apt autoremove $str_args
         EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
+
+    # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBoolean"
 
     # <summary> Install from Flathub software repositories. </summary>
     # <returns> void </returns>
