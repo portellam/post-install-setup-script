@@ -1,8 +1,10 @@
 #!/bin/bash sh
 
+### disclaimer ###
 #
 # Author(s):    Alex Portell <github.com/portellam>
 #
+###
 
 ### notes ###
 # <summary>
@@ -24,6 +26,7 @@
 # use awk, grep, cut, paste
 #
 # </summary>
+###
 
 ### exit code functions ###
 # <summary> Return statement logic. </summary>
@@ -166,13 +169,13 @@
         fi
     }
 
-    # <summary> Updates global parameter. </summary>                # remove this as a dependency
+    # <summary> Updates global parameter. </summary>
     # <parameter name="$?"> exit code </parameter>
     # <returns> void </returns>
-    # function SaveThisExitCode
-    # {
-    #     int_thisExitCode=$?
-    # }
+    function SaveThisExitCode
+    {
+        int_exitCode=$?
+    }
 
     # <summary> Given last exit code, return a boolean. </summary>
     # <parameter name="$?"> exit code </parameter>
@@ -234,6 +237,7 @@
         }
     # </code>
 # </code>
+###
 
 ### validation functions ###
 # <summary> Validation logic </summary>
@@ -245,14 +249,19 @@
     {
         local bool=false
 
-        if [[ $( command -v $1 ) != "" || $( command -v $1 ) == "/usr/bin/$1" ]]; then
+        if [[
+            $( CheckIfVarIsNotNullReturnBool $1 ) == true
+            && (
+                $( command -v $1 ) != ""
+                || $( command -v $1 ) == "/usr/bin/$1"
+            ) ]]; then
             bool=true
         fi
 
         echo $bool
     }
 
-    # <summary> Check if directory exists, and return boolean. </summary>
+    # <summary> Check if directory exists, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
     function CheckIfDirIsNotNullReturnBool
@@ -261,12 +270,14 @@
 
         if [[ -d $1 && $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
             bool=true
+        else
+            SetExitCodeIfVarIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is executable, and return boolean. </summary>
+    # <summary> Check if file is executable, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsExecutableReturnBool
@@ -275,12 +286,14 @@
 
         if [[ -x $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
+        else
+            SetExitCodeIfFileIsNotExecutable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file exists, and return boolean. </summary>
+    # <summary> Check if file exists, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileExistsReturnBool
@@ -289,12 +302,14 @@
 
         if [[ -e $1 ]]; then
             bool=true
+        else
+            SetExitCodeIfFileOrDirIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is readable, and return boolean. </summary>
+    # <summary> Check if file is readable, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsReadableReturnBool
@@ -303,12 +318,14 @@
 
         if [[ -r $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
+        else
+            SetExitCodeIfFileIsNotReadable; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if file is writable, and return boolean. </summary>
+    # <summary> Check if file is writable, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CheckIfFileIsWritableReturnBool
@@ -317,6 +334,8 @@
 
         if [[ -w $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
+        else
+            SetExitCodeIfFileIsNotWritable; SaveThisExitCode
         fi
 
         echo $bool
@@ -343,7 +362,7 @@
         echo $bool
     }
 
-    # <summary> Check if input parameter is null, and return boolean. </summary>
+    # <summary> Check if input parameter is null, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> a variable </parameter>
     # <returns> boolean </returns>
     function CheckIfVarIsNotNullReturnBool
@@ -352,12 +371,14 @@
 
         if [[ ! -z "$1" ]]; then
             bool=true
+        else
+            SetExitCodeIfVarIsNull; SaveThisExitCode
         fi
 
         echo $bool
     }
 
-    # <summary> Check if input parameter is a valid number, and return boolean. </summary>
+    # <summary> Check if input parameter is a valid number, and return boolean. If false, set exit code. </summary>
     # <parameter name="$1"> a number </parameter>
     # <returns> boolean </returns>
     function CheckIfVarIsValidNumReturnBool
@@ -366,11 +387,14 @@
 
         if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
             bool=true
+        else
+            SetExitCodeIfInputIsInvalid; SaveThisExitCode
         fi
 
         echo $bool
     }
 # </code>
+##
 
 ### general functions ###
 # <summary> File operation logic </summary>
@@ -471,7 +495,7 @@
         # </parameters>
 
         # <summary> First code block. </summary>
-        while [[ ${int_thisExitCode} -eq 0 ]]; do
+        while [[ ${int_exitCode} -eq 0 ]]; do
             if [[ $( CheckIfFileIsReadableReturnBool $1 ) == false ]]; then
                 false; SaveThisExitCode
             fi
@@ -502,7 +526,7 @@
         done
 
         # <summary> Second code block. </summary>
-        if [[ ${int_thisExitCode} -eq 0 ]]; then
+        if [[ ${int_exitCode} -eq 0 ]]; then
             # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
             while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
                 bool=$( DeleteFileReturnBool ${arr_dir1[0]} )
@@ -588,7 +612,7 @@
 
     # <summary> Redirect to script directory. </summary>
     # <returns> boolean </returns>
-    function GoToScriptDirectory
+    function GoToScriptDirectoryReturnBool
     {
         local bool=false
         declare -lr str_dir=$( dirname $0 )
@@ -877,7 +901,7 @@
 
 # <summary> File operation logic with exit codes. </summary>
 # <code>
-    # <summary> Output status, and set exit code. </summary>
+    # <summary> Output statement. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array </parameter>
     # <returns> void </returns>
@@ -892,7 +916,7 @@
         fi
     }
 
-    # <summary> Output status, and set exit code. </summary>
+    # <summary> Output statement. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
@@ -907,7 +931,7 @@
         fi
     }
 
-    # <summary> Output status, and set exit code. </summary>
+    # <summary> Output statement. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
     # <returns> void </returns>
@@ -925,7 +949,7 @@
         fi
     }
 
-    # <summary> Output status, and set exit code. </summary>
+    # <summary> Output statement. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> array </parameter>
     # <returns> void </returns>
@@ -940,7 +964,7 @@
         fi
     }
 
-    # <summary> Output status, and set exit code. </summary>
+    # <summary> Output statement. If false, set exit code. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> string </parameter>
     # <returns> void </returns>
@@ -955,6 +979,7 @@
         fi
     }
 # </code>
+###
 
 ### program functions ###
 # <summary>
@@ -986,17 +1011,17 @@
         fi
         # </parameters>
 
-        GoToScriptDirectory &> /dev/null
+        GoToScriptDirectoryReturnBool &> /dev/null
         # <summary> Set working directory to script root folder. </summary>
         CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_exitCode -eq 0 ]]; then
             for var_element1 in $( ls *-cron ); do
                 ReadInput "Append '${var_element1}'?"
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
+                if [[ $int_exitCode -eq 0 ]]; then
                     for var_element2 in ${arr_requiredPackages[@]}; do
 
                         # <summary>
@@ -1016,7 +1041,7 @@
         fi
 
         # <summary> Restart service. </summary>
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_exitCode -eq 0 ]]; then
             systemctl enable cron &> /dev/null || ( false; SaveThisExitCode )
             systemctl restart cron &> /dev/null || ( false; SaveThisExitCode )
         fi
@@ -1041,7 +1066,7 @@
         {
             CheckIfFileExistsReturnBool $2 &> /dev/null
 
-            while [[ $int_thisExitCode -eq 0 ]]; do
+            while [[ $int_exitCode -eq 0 ]]; do
                 cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                 chown root $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                 chmod +x $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
@@ -1054,7 +1079,7 @@
         cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
 
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_exitCode -eq 0 ]]; then
             # <summary> Copy binaries to system. </summary>
             for var_element1 in ${arr_dir1[@]}; do
                 local str_file1="/usr/sbin/${var_element1}"
@@ -1069,11 +1094,11 @@
 
                 AppendServices_AppendFile $var_element1 $str_file1
 
-                if [[ $int_thisExitCode -eq 0 ]]; then
+                if [[ $int_exitCode -eq 0 ]]; then
                     systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
                     ReadInput "Enable/disable '${var_element1}'?"
 
-                    case $int_thisExitCode in
+                    case $int_exitCode in
                         0)
                             systemctl enable ${var_element1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode );;
                         *)
@@ -1171,7 +1196,7 @@
                 else
                     ReadInput "Clone repo '$str_repo'?"
 
-                    if [[ $int_thisExitCode -eq 0 ]]; then
+                    if [[ $int_exitCode -eq 0 ]]; then
                         cd ${str_dir1}${str_userName}
                         git clone https://github.com/$str_repo || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
                         echo
@@ -1179,7 +1204,7 @@
                 fi
 
                 # <summary> Save status of operations and reset exit code. </summary>
-                if [[ $int_thisExitCode -eq 131 ]]; then
+                if [[ $int_exitCode -eq 131 ]]; then
                     bool_gitCloneHasFailed=true
                 fi
 
@@ -1371,7 +1396,7 @@
         else
             ReadInput "Auto-accept install prompts? "
 
-            case "$int_thisExitCode" in
+            case "$int_exitCode" in
                 0)
                     local str_args="-y";;
                 *)
@@ -1412,7 +1437,7 @@
 
                         ReadInput
 
-                        if [[ $int_thisExitCode -eq 0 ]]; then
+                        if [[ $int_exitCode -eq 0 ]]; then
                             str_flatpakAll+="$1 "
                         fi
 
@@ -1455,7 +1480,7 @@
                 ReadInput "Execute script '${str_dir2}$2'?"
                 chmod +x $2 &> /dev/null
 
-                if [[ $int_thisExitCode -eq 0 && $( CheckIfFileIsExecutableReturnBool $2 ) == true ]]; then
+                if [[ $int_exitCode -eq 0 && $( CheckIfFileIsExecutableReturnBool $2 ) == true ]]; then
                     # <summary> sudo/root v. user </summary>
                     if [[ $bool_isUserRoot == true ]]; then
                         sudo bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
@@ -1468,7 +1493,7 @@
             fi
 
             # <summary> Save status of operations and reset exit code. </summary>
-            if [[ $int_thisExitCode -eq 131 ]]; then
+            if [[ $int_exitCode -eq 131 ]]; then
                 bool_gitCloneHasFailed=true
             fi
 
@@ -1584,7 +1609,7 @@
         else
             ReadInput "Auto-accept install prompts? "
 
-            case "$int_thisExitCode" in
+            case "$int_exitCode" in
                 0)
                     local str_args="-y";;
                 *)
@@ -1621,7 +1646,7 @@
 
                         ReadInput
 
-                        if [[ $int_thisExitCode -eq 0 ]]; then
+                        if [[ $int_exitCode -eq 0 ]]; then
                             str_snapAll+="$1 "
                         fi
 
@@ -1659,7 +1684,7 @@
 
         # <summary> Create backup or restore from backup. </summary>
         if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
-            while [[ $int_thisExitCode -eq 0 ]]; do
+            while [[ $int_exitCode -eq 0 ]]; do
                 ReadInput "Include 'contrib' sources?"
                 str_sources+="contrib"
                 break
@@ -1668,7 +1693,7 @@
             true; SaveThisExitCode
 
             # <summary> Setup optional sources. </summary>
-            while [[ $int_thisExitCode -eq 0 ]]; do
+            while [[ $int_exitCode -eq 0 ]]; do
                 ReadInput "Include 'non-free' sources?"
                 str_sources+=" non-free"
                 break
@@ -1764,7 +1789,7 @@
         esac
 
         # <summary> Update packages on system. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
+        while [[ $int_exitCode -eq 0 ]]; do
             apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
             apt update || ( SetExitCodeOnError; SaveThisExitCode )
             apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
@@ -1785,7 +1810,7 @@
         fi
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
-        while [[ $int_thisExitCode -eq 0 ]]; do
+        while [[ $int_exitCode -eq 0 ]]; do
             ReadInput "Modify SSH?"
 
             # <parameters>
@@ -1811,7 +1836,7 @@
         done
 
         # <summary> Write to system files. </summary>
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_exitCode -eq 0 ]]; then
             # <parameters>
             declare -lr str_file1="/etc/ssh/ssh_config"
             # declare -lr str_file2="/etc/ssh/sshd_config"
@@ -1866,7 +1891,7 @@
             ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             # <summary> Yes. </summary>
-            if [[ $int_thisExitCode -eq 0 && (
+            if [[ $int_exitCode -eq 0 && (
                 $( DeleteFileReturnBool ${arr_files1[0]} ) == true
                 && $( AppendVarToFileReturnBool ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
                 && $( DeleteFileReturnBool ${arr_files1[1]} ) == true
@@ -1902,7 +1927,7 @@
         if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
             ReadInput "Setup '/etc/sysctl.conf' with defaults?"
 
-            if [[ $int_thisExitCode -eq 0 && (
+            if [[ $int_exitCode -eq 0 && (
                 ! ( cp $str_file1 $str_file2 )
                 || ! (cat $str_file2 >> $str_file1 )
                 ) ]]; then
@@ -1912,7 +1937,7 @@
 
         ReadInput "Setup firewall with UFW?"
 
-        if [[ $int_thisExitCode -eq 0 ]]; then
+        if [[ $int_exitCode -eq 0 ]]; then
             bool=$( CheckIfCommandExistsReturnBool "ufw" )
 
             if [[ $bool == false ]]; then
@@ -1998,6 +2023,7 @@
         EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode; echo
     }
 # </code>
+###
 
 ### main functions ###
 # <summary> Middleman logic between Program logic and Main code. </summary>
@@ -2118,7 +2144,7 @@
             ModifyDebianRepos
             TestNetwork &> /dev/null
 
-            if [[ $int_thisExitCode -eq 0 ]]; then
+            if [[ $int_exitCode -eq 0 ]]; then
                 InstallFromDebianRepos
                 InstallFromFlathubRepos
                 InstallFromSnapRepos
@@ -2135,7 +2161,7 @@
         if [[ $( CheckIfCommandExistsReturnBool "git" ) == true ]]; then
             TestNetwork &> /dev/null
 
-            if [[ $int_thisExitCode -eq 0 ]]; then
+            if [[ $int_exitCode -eq 0 ]]; then
                 CloneOrUpdateGitRepositories
             fi
 
@@ -2145,6 +2171,7 @@
         fi
     }
 # </code>
+###
 
 ### global parameters ###
 # <summary> Variables to be used throughout the program. </summary>
@@ -2153,12 +2180,13 @@
     declare -r str_warning="\e[33mWARNING:\e[0m"" "
 
     # <summary> Necessary for exit code preservation, for conditional statements. </summary>
-    declare -i int_thisExitCode=$?
+    declare -i int_exitCode=$?
 
     # <summary> Checks </summary>
     readonly bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
     bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
+###
 
 ### main ###
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
@@ -2178,3 +2206,4 @@
     # <summary> Post-execution clean up. </summary>
     ExitWithThisExitCode
 # </code>
+###
