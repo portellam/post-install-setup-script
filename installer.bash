@@ -696,17 +696,17 @@
     function ReadInputFromMultipleChoiceMatchCase
     {
         # <parameters> #
-        declare -il int_count=0
-        declare -lir int_maxCount=3
+        declare -i int_count=0
+        declare -ir int_maxCount=3
         declare -r str_output=$1
-        declare -lr var_input1=$2
-        declare -lr var_input2=$3
-        declare -lr var_input3=$4
-        declare -lr var_input4=$5
-        declare -lr var_input5=$6
-        declare -lr var_input6=$7
-        declare -lr var_input7=$8
-        declare -lr var_input8=$9
+        declare -ru var_input1=$2
+        declare -ru var_input2=$3
+        declare -ru var_input3=$4
+        declare -ru var_input4=$5
+        declare -ru var_input5=$6
+        declare -ru var_input6=$7
+        declare -ru var_input7=$8
+        declare -ru var_input8=$9
         # </parameters> #
 
         # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
