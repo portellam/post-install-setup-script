@@ -8,6 +8,14 @@
 
 ### notes ###
 # <summary>
+#
+# declare -l is NOT declare a local parameter
+# it is lowercase
+# likewise, declare -u is uppercase
+#
+# set proper declare options for all vars
+#   review PDF
+#
 # -use alias commands?
 #
 # -do not over-rely on existing functions for file manipulation, better to use commands than hope logic works as intended.
@@ -653,6 +661,7 @@
             # <summary> Append output. </summary>
             echo -en "\e[30;43m[Y/n]:\e[0m "
             read var_return
+            declare -l var_return=$var_return
             var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
 
             # <summary> Check if string is a valid input. </summary>
@@ -689,15 +698,15 @@
         # <parameters> #
         declare -il int_count=0
         declare -lir int_maxCount=3
-        declare -lr str_output=$1
-        declare -lr var_input1=$( echo $2 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input2=$( echo $3 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input3=$( echo $4 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input4=$( echo $5 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input5=$( echo $6 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input6=$( echo $7 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input7=$( echo $8 | tr '[:lower:]' '[:upper:]' )
-        declare -lr var_input8=$( echo $9 | tr '[:lower:]' '[:upper:]' )
+        declare -r str_output=$1
+        declare -lr var_input1=$2
+        declare -lr var_input2=$3
+        declare -lr var_input3=$4
+        declare -lr var_input4=$5
+        declare -lr var_input5=$6
+        declare -lr var_input6=$7
+        declare -lr var_input7=$8
+        declare -lr var_input8=$9
         # </parameters> #
 
         # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
@@ -982,9 +991,7 @@
 ###
 
 ### program functions ###
-# <summary>
-# Logic specific to the purpose of this program or repository.
-# </summary>
+# <summary> Logic specific to the purpose of this program or repository. </summary>
 # <code>
     # <summary> Crontab </summary>
     # <returns> void </returns>
@@ -2176,15 +2183,15 @@
 ### global parameters ###
 # <summary> Variables to be used throughout the program. </summary>
 # <code>
-    declare -r str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
-    declare -r str_warning="\e[33mWARNING:\e[0m"" "
+    declare -gr str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+    declare -gr str_warning="\e[33mWARNING:\e[0m"" "
 
     # <summary> Necessary for exit code preservation, for conditional statements. </summary>
-    declare -i int_exitCode=$?
+    declare -gi int_exitCode=$?
 
     # <summary> Checks </summary>
-    readonly bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
-    bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
+    declare -gr bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
+    declare -g bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
 ###
 
