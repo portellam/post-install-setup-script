@@ -964,7 +964,7 @@
     function AppendArrayToFileReturnExitCode
     {
         echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( AppendArrayToFileReturnBool $1 $2 )
+        local readonly bool=$( AppendArrayToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
         if [[ $bool == false ]]; then
@@ -979,7 +979,7 @@
     function AppendVarToFileReturnExitCode
     {
         echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( AppendVarToFileReturnBool $1 $2 )
+        local readonly bool=$( AppendVarToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
         if [[ $bool == false ]]; then
@@ -994,7 +994,7 @@
     function CheckIfTwoFilesAreSameReturnExitCode
     {
         echo -en "Verifying two files...\t"
-        declare lr bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
+        local readonly bool=$( CheckIfTwoFilesAreSameReturnBool $1 $2 )
 
         if [[ $bool == true ]]; then
             echo -e 'Positive Match.\n\t"%s"\n\t"%s"' "$1" "$2"
@@ -1012,7 +1012,7 @@
     function OverwriteArrayToFileReturnExitCode
     {
         echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( OverwriteArrayToFileReturnBool $1 $2 )
+        local readonly bool=$( OverwriteArrayToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
         if [[ $bool == false ]]; then
@@ -1027,7 +1027,7 @@
     function OverwriteVarToFileReturnExitCode
     {
         echo -en "Writing to file '$1'...\t"
-        declare lr bool=$( OverwriteVarToFileReturnBool $1 $2 )
+        local readonly bool=$( OverwriteVarToFileReturnBool $1 $2 )
 
         # <summary> Set exit code. </summary>
         if [[ $bool == false ]]; then
