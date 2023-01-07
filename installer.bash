@@ -84,16 +84,18 @@
     }
 
     # <summary> Append output with string, and output pass or fail statement given exit code. </summary>
-    # <parameter name="$1"> exit code </parameter>
-    # <parameter name="$2"> string </parameter>
+    # <parameter name="$?"> exit code </parameter>
+    # <parameter name="$1"> string </parameter>
     # <returns> void </returns>
     function EchoPassOrFailThisExitCode
     {
-        if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
-            echo -en "$2 "
+        local declare -ir int_exitCode=$?
+
+        if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+            echo -en "$1 "
         fi
 
-        case "$1" in
+        case "$int_exitCode" in
             0)
                 echo -e "\e[32mSuccessful.\e[0m";;
             131)
@@ -104,12 +106,16 @@
     }
 
     # <summary> Append output with string, and output pass or fail statement given exit code. </summary>
-    # <parameter name="$1"> exit code </parameter>
-    # <parameter name="$2"> string </parameter>
+    # <parameter name="$?"> exit code </parameter>
+    # <parameter name="$1"> string </parameter>
     # <returns> void </returns>
     function EchoPassOrFailThisTestCase
     {
-        case "$1" in
+        # <parameters>
+        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        # </parameters>
+
+        case "$int_exitCode" in
             0)
                 echo -en "\e[32mPASS:\e[0m""\t";;
             *)
@@ -124,14 +130,18 @@
     }
 
     # <summary> Exit bash session/script with current exit code. </summary>
-    # <parameter name="$1"> exit code </parameter>
+    # <parameter name="$?"> exit code </parameter>
     # <returns> void </returns>
     function ExitWithThisExitCode
     {
+        # <parameters>
+        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        # </parameters>
+
         echo -e "Exiting."
 
-        if [[ $( CheckIfVarIsValidNumReturnBool $1 ) == true ]]; then
-            exit $1
+        if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == true ]]; then
+            exit $int_exitCode
         else
             SetExitCodeOnError; exit
         fi
@@ -149,7 +159,7 @@
         if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == false ]]; then
             echo -e "\e[33mException:\e[0m Exit code is not valid."
         else
-            case $int_exitCode in
+            case "$int_exitCode" in
                 # <summary> general errors </summary>
                 255)
                     echo -e "\e[33mError:\e[0m Unspecified error.";;
@@ -376,7 +386,7 @@
             echo -en "${str_warning}Script must execute as root."
 
             if [[ $( CheckIfFileExistsReturnBool $0 ) == false ]]; then
-                declare -lr str_file1=$( basename $0 )
+                local readonly str_file1=$( basename $0 )
                 echo -e " In terminal, run:\n\t'sudo bash ${str_file1}'"
             fi
         fi
@@ -677,8 +687,8 @@
     }
 
     # <summary> Ask for Yes/No answer, return boolean.  If input is not valid, return false. </summary>
-    # <parameter name="$1" name="$var_return"> boolean return value </parameter>
-    # <parameter name="$2"> nullable output statement </parameter>
+    # <parameter name="$var_return"> boolean return value </parameter>
+    # <parameter name="$1"> nullable output statement </parameter>
     # <returns> $var_return </returns>
     function ReadInputReturnBool
     {
@@ -686,7 +696,7 @@
         local bool=false
         local declare -i int_count=0
         local declare -ir int_maxCount=3
-        local readonly str_output=$2
+        local readonly str_output=$1
         # </parameters>
 
         while [[ $int_count -le $int_maxCount ]]; do
@@ -1037,6 +1047,8 @@
 # </code>
 ###
 
+### NOTE: continue refactor from here inside!!!
+
 ### program functions ###
 # <summary> Logic specific to the purpose of this program or repository. </summary>
 # <code>
@@ -1047,42 +1059,49 @@
         echo -e "Appending cron entries..."
 
         # <parameters>
-        declare -lr str_dir1="/etc/cron.d/"
+        local bool=true
+        local readonly str_dir1="/etc/cron.d/"
 
         # <summary>
         # List of packages that have cron files (see below).
         # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
         # </summary>
-        declare -a arr_requiredPackages=(
+        local declare -a arr_requiredPackages=(
             "flatpak"
             "ntpdate"
             "rsync"
             "snap"
         )
 
-        if [[ $( command -v unattended-upgrades ) == "" ]]; then
+        if [[ $( CheckIfCommandExistsReturnBool "unattended-upgrades" ) == false ]]; then
             arr_requiredPackages+=("apt")
         fi
         # </parameters>
 
-        GoToScriptDirectoryReturnBool &> /dev/null
-        # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
+        # <summary> First code block. </summary>
+        while [[ $bool == true ]]; do
+            bool=$( GoToScriptDirectoryReturnBool )
 
+            # <summary> Set working directory to script root folder. </summary>
+            bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
+            cd $str_filesDir &> /dev/null || bool=false
+            break
+        done
 
-        if [[ $int_exitCode -eq 0 ]]; then
+        # <summary> Second code block. </summary>
+        if [[ $bool == true ]]; then
             for var_element1 in $( ls *-cron ); do
-                ReadInput "Append '${var_element1}'?"
+                local var_return=""
+                ReadInputReturnBool $var_return "Append '${var_element1}'?"
 
-                if [[ $int_exitCode -eq 0 ]]; then
+                if [[ $var_return == true ]]; then
                     for var_element2 in ${arr_requiredPackages[@]}; do
 
                         # <summary>
                         # Match given cron file, append only if package exists in system.
                         # </summary>
                         if [[ ${var_element1} == *"${var_element2}"* ]]; then
-                            if [[ $( command -v ${var_element2} ) != "" ]]; then
+                            if [[ $( CheckIfCommandExistsReturnBool ${var_element2} ) == true ]]; then
                                 cp $var_element1 ${str_dir1}${var_element1}
                                 # echo -e "Appended file '${var_element1}'."
                             else
@@ -1095,9 +1114,15 @@
         fi
 
         # <summary> Restart service. </summary>
-        if [[ $int_exitCode -eq 0 ]]; then
-            systemctl enable cron &> /dev/null || ( false; SaveThisExitCode )
-            systemctl restart cron &> /dev/null || ( false; SaveThisExitCode )
+        while [[ $bool == true ]]; do
+            ( systemctl enable cron || bool=false ) &> /dev/null
+            ( systemctl restart cron || bool=false ) &> /dev/null
+            break
+        done
+
+        # <summary> If false, set exit code. </summary>
+        if [[ $bool == false ]]; then
+            false
         fi
 
         EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode; echo
@@ -1110,30 +1135,33 @@
         echo -e "Appending files to Systemd..."
 
         # <parameters>
-        declare -lr str_pattern=".service"
+        local bool=true
+        local readonly str_pattern=".service"
         declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
         declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
         # </parameters>
 
-        # <summary> Copy files and set permissions. </summary>
+        # <summary> Copy files and set permissions, and return boolean. </summary>
+        # <returns> boolean </returns>
         function AppendServices_AppendFile
         {
-            CheckIfFileExistsReturnBool $2 &> /dev/null
+            local bool=$( CheckIfFileExistsReturnBool $2 &> /dev/null )
 
-            while [[ $int_exitCode -eq 0 ]]; do
-                cp $1 $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                chown root $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                chmod +x $2 &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+            while [[ $bool == true ]]; do
+                ( cp $1 $2 || bool=false ) &> /dev/null
+                ( chown root $2 || bool=false ) &> /dev/null
+                ( chmod +x $2 || bool=false ) &> /dev/null
+
+                # <summary> Set working directory to script root folder. </summary>
+                bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
+                ( cd $str_filesDir || bool=false ) &> /dev/null
                 break
             done
+
+            echo $bool
         }
 
-        # <summary> Set working directory to script root folder. </summary>
-        CheckIfDirIsNotNullReturnBool $str_filesDir &> /dev/null
-        cd $str_filesDir &> /dev/null || ( false; SaveThisExitCode )
-
-
-        if [[ $int_exitCode -eq 0 ]]; then
+        if [[ $bool == true ]]; then
             # <summary> Copy binaries to system. </summary>
             for var_element1 in ${arr_dir1[@]}; do
                 local str_file1="/usr/sbin/${var_element1}"
@@ -1148,37 +1176,37 @@
 
                 AppendServices_AppendFile $var_element1 $str_file1
 
-                if [[ $int_exitCode -eq 0 ]]; then
-                    systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+                if [[ $bool == true ]]; then
+                    ( systemctl daemon-reload || bool=false ) &> /dev/null
+                    local var_return=""
                     ReadInput "Enable/disable '${var_element1}'?"
 
-                    case $int_exitCode in
-                        0)
-                            systemctl enable ${var_element1} &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode );;
-                        *)
-                            systemctl disable ${var_element1} &> /dev/null;;
-                    esac
+                    if [[ $var_return == true ]]; then
+                        ( systemctl enable ${var_element1} || bool=false ) &> /dev/null
+                    else
+                        ( systemctl disable ${var_element1} || bool=false ) &> /dev/null
+                    fi
                 fi
             done
 
-            systemctl daemon-reload &> /dev/null || ( SetExitCodeOnError; SaveThisExitCode )
+            ( systemctl daemon-reload || bool=false ) &> /dev/null
+        fi
+
+        # <summary> If false, set exit code. </summary>
+        if [[ $bool == false ]]; then
+            false; SaveThisExitCode
         fi
 
         EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
     }
 
     # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
-    # <returns> boolean </returns>
+    # <returns> void </returns>
     function CheckCurrentDistro
     {
-        if [[ $( CheckIfCommandExistsReturnBool "apt" ) == true ]]; then
-            declare -lr bool=true
-        else
-            declare -lr bool=false
+        if [[ $bool_isDistroDebianBased == false ]]; then
             echo -e "${str_warning}Unrecognized Linux distribution; Apt not installed. Skipping..."
         fi
-
-        echo $bool
     }
 
     # <summary> Clone given GitHub repositories. </summary>
@@ -1188,13 +1216,13 @@
         echo -e "Cloning Git repos..."
 
         # <parameters>
-        declare -l bool_gitCloneHasFailed=false
+        local bool=true
         # </parameters>
 
         # <summary> sudo/root v. user </summary>
         if [[ $bool_isUserRoot == true ]]; then
             # <parameters>
-            declare -lr str_dir1="/root/source/"
+            local readonly str_dir1="/root/source/"
 
             # <summary>
             # List of useful Git repositories.
@@ -1212,7 +1240,7 @@
             # </parameters>
         else
             # <parameters>
-            declare -lr str_dir1=$( echo ~/ )"source/"
+            local readonly str_dir1=$( echo ~/ )"source/"
 
             # <summary>
             # List of useful Git repositories.
@@ -1228,55 +1256,56 @@
             # </parameters>
         fi
 
-        CreateDirReturnBool $str_dir1 &> /dev/null
-        chmod -R +w $str_dir1 &> /dev/null
+        bool=$( CreateDirReturnBool $str_dir1 )
+        ( chmod -R +w $str_dir1 || bool=false ) &> /dev/null
 
         if [[ $( CheckIfFileIsWritableReturnBool $str_dir1 ) == true ]]; then
             for str_repo in ${arr_repo[@]}; do
-                cd $str_dir1
+                # <summary> Reset toggle for next execution. </summary>
+                bool=true
 
-                # <parameters>
-                local str_userName=$( echo $str_repo | cut -d "/" -f1 )
-                # </parameters>
+                ( cd $str_dir1 || bool=false ) &> /dev/null
 
-                CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
+                # <summary> Should code execution fail at any point, skip to next repo. </summary>
+                while [[ $bool == true ]]; then
+                    # <parameters>
+                    local str_userName=$( echo $str_repo | cut -d "/" -f1 )
+                    # </parameters>
 
-                # <summary> Update existing GitHub repository. </summary>
-                if [[ $( CheckIfDirIsNotNullReturnBool ${str_dir1}${str_repo} ) == true ]]; then
-                    cd ${str_dir1}${str_repo}
-                    git pull &> /dev/null || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
+                    CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
 
-                # <summary> Clone new GitHub repository. </summary>
-                else
-                    ReadInput "Clone repo '$str_repo'?"
+                    # <summary> Update existing GitHub repository. </summary>
+                    if [[ $( CheckIfDirIsNotNullReturnBool ${str_dir1}${str_repo} ) == true ]]; then
+                        cd ${str_dir1}${str_repo}
+                        ( git pull || bool=false ) &> /dev/null
 
-                    if [[ $int_exitCode -eq 0 ]]; then
-                        cd ${str_dir1}${str_userName}
-                        git clone https://github.com/$str_repo || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-                        echo
+                    # <summary> Clone new GitHub repository. </summary>
+                    else
+                        local var_return=""
+                        ReadInput "Clone repo '$str_repo'?"
+
+                        if [[ $var_return == true ]]; then
+                            ( cd ${str_dir1}${str_userName} || bool=false ) &> /dev/null
+                            ( git clone https://github.com/$str_repo || bool=false ) &> /dev/null
+                            echo
+                        fi
                     fi
-                fi
+                done
 
-                # <summary> Save status of operations and reset exit code. </summary>
-                if [[ $int_exitCode -eq 131 ]]; then
-                    bool_gitCloneHasFailed=true
-                fi
-
-                true; SaveThisExitCode
+                break
             done
         fi
 
-        if [[ $bool_gitCloneHasFailed == true ]]; then
-            SetExitCodeIfPassNorFail; SaveThisExitCode
+        # <summary> If false, set exit code. </summary>
+        if [[ $bool == false ]]; then
+            false; SaveThisExitCode
         fi
 
-        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode
+        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
 
-        if [[ $bool_gitCloneHasFailed == true ]]; then
+        if [[ $bool == false ]]; then
             echo -e "One or more Git repositories were not cloned."
         fi
-
-        echo
     }
 
     # <summary> Install necessary commands/packages for this program. </summary>
@@ -1299,7 +1328,7 @@
                 && $( CheckIfCommandExistsReturnBool $1 ) == false
                 ]]; then
                 bool=true
-                apt install -y $2 &> /dev/null || bool=false
+                ( apt install -y $2 || bool=false ) &> /dev/null
             fi
 
             if [[ $( CheckIfCommandExistsReturnBool $1 ) == true ]]; then
@@ -1309,9 +1338,8 @@
             echo $bool
         }
 
-        TestNetwork &> /dev/null
-
         if [[ $( CheckCurrentDistro ) == true ]]; then
+            TestNetwork &> /dev/null
             bool_is_xmllint_installed=$( InstallCommands_InstallThisCommandReturnBoolean "xmllint" "xml-core xmlstarlet" )
 
             # InstallThisCommand "command_to_use" "required_packages"
@@ -1324,6 +1352,8 @@
         # ParseThisExitCode;
         echo
     }
+
+    ### NOTE: continue refactor from here down!!!
 
     # <summary> Install from Debian repositories. </summary>
     # <returns> void </returns>
@@ -1369,18 +1399,18 @@
         # <summary> APT packages sorted by type. </summary>
         # <parameters>
         local str_aptAll=""
-        declare -lr str_aptDeveloper=""
-        declare -lr str_aptDrivers="steam-devices"
-        declare -lr str_aptGames=""
-        declare -lr str_aptInternet="firefox-esr filezilla"
-        declare -lr str_aptMedia="vlc"
-        declare -lr str_aptOffice="libreoffice"
-        declare -lr str_aptPrismBreak=""
-        declare -lr str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-        declare -lr str_aptSuites="debian-edu-install science-all"
-        declare -lr str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
-        declare -lr str_aptUnsorted=""
-        declare -lr str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        local readonly str_aptDeveloper=""
+        local readonly str_aptDrivers="steam-devices"
+        local readonly str_aptGames=""
+        local readonly str_aptInternet="firefox-esr filezilla"
+        local readonly str_aptMedia="vlc"
+        local readonly str_aptOffice="libreoffice"
+        local readonly str_aptPrismBreak=""
+        local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+        local readonly str_aptSuites="debian-edu-install science-all"
+        local readonly str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        local readonly str_aptUnsorted=""
+        local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
 
         # <summary> Select and Install software sorted by type. </summary>
@@ -1435,7 +1465,7 @@
         EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 
-    # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBoolean"
+    # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBool"
 
     # <summary> Install from Flathub software repositories. </summary>
     # <returns> void </returns>
@@ -1467,8 +1497,8 @@
             # <summary> Flatpak packages sorted by type. </summary>
             # <parameters>
             local str_flatpakAll=""
-            declare -lr str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-            declare -lr str_flatpakPrismBreak="" # include from all, monero etc.
+            local readonly str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
+            local readonly str_flatpakPrismBreak="" # include from all, monero etc.
             # </parameters>
 
             # <summary> Select and Install software sorted by type. </summary>
@@ -1559,9 +1589,9 @@
 
         # <summary> sudo/root v. user </summary>
         if [[ $bool_isUserRoot == true ]]; then
-            declare -lr str_dir1="/root/source/"
+            local readonly str_dir1="/root/source/"
         else
-            declare -lr str_dir1="~/source/"
+            local readonly str_dir1="~/source/"
         fi
         # </parameters>
 
@@ -1677,7 +1707,7 @@
             # <summary> Snap packages sorted by type. </summary>
             # <parameters>
             local str_snapAll=""
-            declare -lr str_snapUnsorted=""
+            local readonly str_snapUnsorted=""
             # </parameters>
 
             # <summary> Select and Install software sorted by type. </summary>
@@ -1729,11 +1759,11 @@
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
         # <parameters>
-        declare -lr str_file1="/etc/apt/sources.list"
+        local readonly str_file1="/etc/apt/sources.list"
         local str_sources=""
-        declare -lr str_newFile1="${str_file1}.new"
-        declare -lr str_releaseName=$( lsb_release -sc )
-        declare -lr str_releaseVer=$( lsb_release -sr )
+        local readonly str_newFile1="${str_file1}.new"
+        local readonly str_releaseName=$( lsb_release -sc )
+        local readonly str_releaseVer=$( lsb_release -sr )
         # </parameters>
 
         # <summary> Create backup or restore from backup. </summary>
@@ -1771,7 +1801,7 @@
         # <parameters>
         local var_return=""
         ReadInputFromMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
-        declare -lr str_branchName=$var_return
+        local readonly str_branchName=$var_return
 
         declare -al arr_sources=(
             "# debian $str_branchName"
@@ -1831,7 +1861,7 @@
         esac
 
         # <summary> Output to sources file. </summary>
-        declare -lr str_file2="/etc/apt/sources.list.d/$str_branchName.list"
+        local readonly str_file2="/etc/apt/sources.list.d/$str_branchName.list"
         DeleteFileReturnBool $str_file2 &> /dev/null
         CreateFileReturnBool $str_file2 &> /dev/null
 
@@ -1892,9 +1922,9 @@
         # <summary> Write to system files. </summary>
         if [[ $int_exitCode -eq 0 ]]; then
             # <parameters>
-            declare -lr str_file1="/etc/ssh/ssh_config"
-            # declare -lr str_file2="/etc/ssh/sshd_config"
-            declare -lr str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
+            local readonly str_file1="/etc/ssh/ssh_config"
+            # local readonly str_file2="/etc/ssh/sshd_config"
+            local readonly str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
             # </parameters>
 
             if [[ (
@@ -1928,12 +1958,12 @@
         # <parameters>
         local bool=false
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
-        declare -lr arr_files1=(
+        local readonly arr_files1=(
             "/etc/modprobe.d/disable-usb-storage.conf"
             "/etc/modprobe.d/disable-firewire.conf"
             "/etc/modprobe.d/disable-thunderbolt.conf"
         )
-        declare -lr str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
         # </parameters>
 
         # <summary> Set working directory to script root folder. </summary>
@@ -2038,7 +2068,7 @@
             else
                 local var_return=""
                 ModifySSH $var_return
-                declare -lr bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_altSSH} )
+                local readonly bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_altSSH} )
 
                 # <summary> If alternate choice is provided, attempt to make changes. Exit early at failure. </summary>
                 if [[ $bool == true && (
@@ -2237,6 +2267,7 @@
     declare -gi int_exitCode=$?
 
     # <summary> Checks </summary>
+    declare -gr bool_isDistroDebianBased=$( CheckIfCommandExistsReturnBool "apt" )
     declare -gr bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
     declare -g bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
