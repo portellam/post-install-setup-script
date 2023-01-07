@@ -1127,12 +1127,8 @@
             break
         done
 
-        # <summary> If false, set exit code. </summary>
-        if [[ $bool == false ]]; then
-            false
-        fi
-
-        EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode; echo
+        # <summary> Set exit code. </summary>
+        $bool; EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode; echo
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -1199,12 +1195,8 @@
             ( systemctl daemon-reload || bool=false ) &> /dev/null
         fi
 
-        # <summary> If false, set exit code. </summary>
-        if [[ $bool == false ]]; then
-            false; SaveThisExitCode
-        fi
-
-        EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
+        # <summary> Set exit code. </summary>
+        $bool; EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
     }
 
     # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
@@ -1303,12 +1295,8 @@
             done
         fi
 
-        # <summary> If false, set exit code. </summary>
-        if [[ $bool == false ]]; then
-            false; SaveThisExitCode
-        fi
-
-        EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
+        # <summary> Set exit code. </summary>
+        $bool; EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
 
         if [[ $bool == false ]]; then
             echo -e "One or more Git repositories were not cloned."
@@ -1320,6 +1308,10 @@
     function InstallCommands
     {
         echo -en "Checking for commands... "
+
+        # <parameters>
+        local bool=$( CheckCurrentDistro )
+        # </parameters>
 
         # <summary> Install a given command, return boolean. </summary>
         # <parameter name="$1"> command_to_use </parameter>
@@ -1345,8 +1337,8 @@
             echo $bool
         }
 
-        if [[ $( CheckCurrentDistro ) == true ]]; then
-            TestNetwork &> /dev/null
+        while [[ $bool == true ]]; do
+            ( TestNetwork || bool=false ) &> /dev/null
             bool_is_xmllint_installed=$( InstallCommands_InstallThisCommandReturnBoolean "xmllint" "xml-core xmlstarlet" )
             bool_is_flatpak_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "flatpak" "flatpak" )
             bool_is_ntpdate_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "ntpdate" "ntpdate" )
@@ -1355,9 +1347,18 @@
 
             # InstallThisCommand "command_to_use" "required_packages"
             # boolean_to_set=$( ParseThisExitCodeAsBool )
-        else
-            false
-        fi
+        done
+
+        # <summary> Set exit code. </summary>
+        while [[ "$?" == 0 ]]; do
+            $bool
+            $bool_is_xmllint_installed
+            $bool_is_flatpak_Installed
+            $bool_is_ntpdate_Installed
+            $bool_is_rsync_Installed
+            $bool_is_snap_Installed
+            break
+        done
 
         EchoPassOrFailThisExitCode;
         # ParseThisExitCode;
@@ -1412,7 +1413,7 @@
         # <parameters>
         local str_aptAll=""
         local readonly str_aptRequired="systemd-timesyncd"
-        local readonly str_aptCommands="curl flashrom git lm-sensors neofetch unzip wget youtube-dl"
+        local readonly str_aptCommands="curl flashrom lm-sensors neofetch unzip wget youtube-dl"
         local readonly str_aptCompatibilty="java-common python3 qemu virt-manager wine"
         local readonly str_aptDeveloper=""
         local readonly str_aptDrivers="apcupsd rtl-sdr steam-devices"
@@ -1421,17 +1422,20 @@
         local readonly str_aptMedia="vlc"
         local readonly str_aptOffice="libreoffice"
         local readonly str_aptPrismBreak=""
+        local readonly str_aptRepos="git flatpak snap"
         local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
         local readonly str_aptSuites="debian-edu-install science-all"
         local readonly str_aptTools="bleachbit cockpit grub-customizer synaptic zram-tools"
         local readonly str_aptUnsorted=""
         local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        str_aptAll+="${str_aptRequired} "
         # </parameters>
 
         # <summary> Select and Install software sorted by type. </summary>
         # <parameter name="$str_aptAll"> total list of packages to install </parameter>
         # <parameter name="$1"> this list packages to install </parameter>
         # <parameter name="$2"> output statement </parameter>
+        # <returns> $str_aptAll </returns>
         function InstallFromDebianRepos_InstallByType
         {
             if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
@@ -1462,13 +1466,16 @@
             fi
         }
 
-        InstallFromDebianRepos_InstallByType $str_aptUnsorted "Select given software?"
+        # InstallFromDebianRepos_InstallByType $str_aptUnsorted "Select given software?"
+        InstallFromDebianRepos_InstallByType $str_aptCommands "Select Terminal commands?"
+        InstallFromDebianRepos_InstallByType $str_aptCompatibilty "Select compatibility libraries?"
         InstallFromDebianRepos_InstallByType $str_aptDeveloper "Select Development software?"
         InstallFromDebianRepos_InstallByType $str_aptGames "Select games?"
         InstallFromDebianRepos_InstallByType $str_aptInternet "Select Internet software?"
         InstallFromDebianRepos_InstallByType $str_aptMedia "Select multi-media software?"
         InstallFromDebianRepos_InstallByType $str_aptOffice "Select office software?"
-        InstallFromDebianRepos_InstallByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+        # InstallFromDebianRepos_InstallByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
+        InstallFromDebianRepos_InstallByType $str_aptRepos "Select software repositories?"
         InstallFromDebianRepos_InstallByType $str_aptSecurity "Select security tools?"
         InstallFromDebianRepos_InstallByType $str_aptSuites "Select software suites?"
         InstallFromDebianRepos_InstallByType $str_aptTools "Select software tools?"
