@@ -143,13 +143,13 @@
     function ParseThisExitCode
     {
         # <parameters>
-        declare -lr var_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        declare -lr int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         # </parameters>
 
-        if [[ $( CheckIfVarIsValidNumReturnBool $var_exitCode ) == false ]]; then
+        if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == false ]]; then
             echo -e "\e[33mException:\e[0m Exit code is not valid."
         else
-            case $var_exitCode in
+            case $int_exitCode in
                 # <summary> general errors </summary>
                 255)
                     echo -e "\e[33mError:\e[0m Unspecified error.";;
@@ -191,11 +191,11 @@
     function ParseThisExitCodeAsBool
     {
         # <parameters>
-        declare -lr var_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        declare -r int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         local bool=false
         # </parameters>
 
-        if [[ $( CheckIfVarIsValidNumReturnBool $var_exitCode ) == true && "$var_exitCode" -eq 0 ]]; then
+        if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == true && "$int_exitCode" -eq 0 ]]; then
             bool=true
         fi
 
@@ -456,7 +456,7 @@
         echo $bool
     }
 
-    # <summary> Check if two given files are the same, in composition. </summary>
+    # <summary> Check if two given files are the same, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <parameter name="$2"> file </parameter>
     # <returns> boolean </returns>
@@ -464,14 +464,18 @@
     {
         local bool=false
 
-        if [[ cmp -s "$1" "$2" && $( CheckIfFileIsReadableReturnBool $1 ) == true && $( CheckIfFileIsReadableReturnBool $2 ) == true ]]; then
+        if [[
+            $( cmp -s "$1" "$2" )
+            && $( CheckIfFileIsReadableReturnBool $1 ) == true
+            && $( CheckIfFileIsReadableReturnBool $2 ) == true
+            ]]; then
             bool=true
         fi
 
         echo $bool
     }
 
-    # <summary> Check file checksum in given directory. </summary>
+    # <summary> Check if given file exists in given directory, and return boolean. </summary>
     # <parameter name="$1"> directory </parameter>
     # <parameter name="$2"> file </parameter>
     function CheckIfFileExistsInDirReturnBool
@@ -492,7 +496,7 @@
         echo $bool
     }
 
-    # <summary> Create latest backup of given file; Do not exceed static maximum, and return boolean. </summary>
+    # <summary> Create latest backup of given file (do not exceed given maximum count), and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> bool </returns>
     function CreateBackupFromFileReturnBool
@@ -573,7 +577,7 @@
         echo $bool
     }
 
-    # <summary> Creates a directory. </summary>
+    # <summary> Create directory, and return boolean. </summary>
     # <parameter name="$1"> directory </parameter>
     # <returns> boolean </returns>
     function CreateDirReturnBool
@@ -588,7 +592,7 @@
         echo $bool
     }
 
-    # <summary> Creates a file. </summary>
+    # <summary> Create file, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function CreateFileReturnBool
@@ -603,7 +607,7 @@
         echo $bool
     }
 
-    # <summary> Deletes a file. </summary>
+    # <summary> Delete file, and return boolean. </summary>
     # <parameter name="$1"> file </parameter>
     # <returns> boolean </returns>
     function DeleteFileReturnBool
@@ -633,7 +637,7 @@
         echo $bool
     }
 
-    # <summary> Ask for Yes/No answer, return boolean. Default selection is N/false. </summary>
+    # <summary> Ask for Yes/No answer, return boolean.  If input is not valid, return false. </summary>
     # <parameter name="$1" name="$var_return"> boolean return value </parameter>
     # <parameter name="$2"> nullable output statement </parameter>
     # <returns> $var_return </returns>
@@ -681,7 +685,7 @@
         var_return=$bool
     }
 
-    # <summary> Ask for multiple choice, up to eight choices. Ignore case; no input validation. Default selection is first choice. </summary>
+    # <summary> Ask for multiple choice, up to eight choices. Ignore case.  If input is not valid, return first choice. </summary>
     # <parameter name="$var_return"> number return value </parameter>
     # <parameter name="$1"> nullable output statement </parameter>
     # <parameter name="$2"> multiple choice </parameter>
@@ -693,7 +697,7 @@
     # <parameter name="$8"> multiple choice </parameter>
     # <parameter name="$9"> multiple choice </parameter>
     # <returns> $var_return </returns>
-    function ReadInputFromMultipleChoiceMatchCase
+    function ReadInputFromMultipleChoiceUpperCase
     {
         # <parameters> #
         declare -i int_count=0
@@ -738,7 +742,7 @@
                 fi
 
                 read var_return
-                var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
+                declare -u var_return=$var_return
 
                 # <summary> Check if string is a valid input. </summary>
                 case $var_return in
@@ -753,7 +757,7 @@
         fi
     }
 
-    # <summary> Ask for multiple choice, up to eight choices. Match case. Default selection is first choice. </summary>
+    # <summary> Ask for multiple choice, up to eight choices. Match exact case. If input is not valid, return first choice. </summary>
     # <parameter name="$var_return"> number return value </parameter>
     # <parameter name="$1"> nullable output statement </parameter>
     # <parameter name="$2"> multiple choice </parameter>
@@ -816,7 +820,7 @@
         fi
     }
 
-    # <summary> Ask for number, within a given range. Return empty value if given invalid scope parameters. </summary>
+    # <summary> Ask for a number, within a given range, and return a number. If input is not valid, return minimum value. </summary>
     # <parameter name="$var_return"> number return value </parameter>
     # <parameter name="$1"> absolute minimum </parameter>
     # <parameter name="$2"> absolute maximum </parameter>
@@ -825,11 +829,11 @@
     function ReadInputFromRangeOfNums
     {
         # <parameters> #
-        declare -il int_count=0
-        declare -lir int_maxCount=3
-        declare -ilr int_max=$2
-        declare -ilr int_min=$1
-        declare -lr str_output=$3
+        declare -i int_count=0
+        declare -ir int_maxCount=3
+        declare -ir int_max=$2
+        declare -ir int_min=$1
+        declare -r str_output=$3
         # </parameters> #
 
         # <summary> Return null value if either extrema are not valid. </summary>
