@@ -1371,6 +1371,7 @@
     function InstallFromDebianRepos
     {
         # <parameters>
+        local bool=true
         local str_args=""
         local var_return=false
         # </parameters>
@@ -1384,7 +1385,7 @@
 
         # <summary> Update and upgrade local packages </summary>
         apt clean
-        apt update
+        apt update || bool=false
 
         # <summary> Desktop environment checks </summary>
         # <parameters>
@@ -1393,7 +1394,7 @@
         # </parameters>
 
         if [[ $str_aptCheck != "" ]]; then
-            apt install -y plasma-discover-backend-flatpak
+            apt install -y plasma-discover-backend-flatpak || bool=false
         fi
 
         # <parameters>
@@ -1402,7 +1403,7 @@
         # </parameters>
 
         if [[ $( CheckIfVarIsNotNullReturnBool $str_aptCheck ) == true ]]; then
-            apt install -y gnome-software-plugin-flatpak
+            apt install -y gnome-software-plugin-flatpak || bool=false
         fi
 
         echo    # output padding
@@ -1410,8 +1411,11 @@
         # <summary> APT packages sorted by type. </summary>
         # <parameters>
         local str_aptAll=""
+        local readonly str_aptRequired="systemd-timesyncd"
+        local readonly str_aptCommands="curl flashrom git lm-sensors neofetch unzip wget youtube-dl"
+        local readonly str_aptCompatibilty="java-common python3 qemu virt-manager wine"
         local readonly str_aptDeveloper=""
-        local readonly str_aptDrivers="steam-devices"
+        local readonly str_aptDrivers="apcupsd rtl-sdr steam-devices"
         local readonly str_aptGames=""
         local readonly str_aptInternet="firefox-esr filezilla"
         local readonly str_aptMedia="vlc"
@@ -1419,12 +1423,15 @@
         local readonly str_aptPrismBreak=""
         local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
         local readonly str_aptSuites="debian-edu-install science-all"
-        local readonly str_aptTools="apcupsd bleachbit cockpit curl flashrom git grub-customizer java-common lm-sensors neofetch python3 qemu rtl-sdr synaptic unzip virt-manager wget wine youtube-dl zram-tools"
+        local readonly str_aptTools="bleachbit cockpit grub-customizer synaptic zram-tools"
         local readonly str_aptUnsorted=""
         local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
         # </parameters>
 
         # <summary> Select and Install software sorted by type. </summary>
+        # <parameter name="$str_aptAll"> total list of packages to install </parameter>
+        # <parameter name="$1"> this list packages to install </parameter>
+        # <parameter name="$2"> output statement </parameter>
         function InstallFromDebianRepos_InstallByType
         {
             if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
@@ -1435,10 +1442,10 @@
                 echo -e $2
 
                 if [[ $1 == *" "* ]]; then
-                    declare -il int_i=1
+                    local declare -i int_i=1
 
-                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                    while [[ $( echo $1 | cut -d ' ' -f $int_i ) ]]; do
+                        echo -e "\t"$( echo $1 | cut -d ' ' -f $int_i )
                         (( int_i++ ))                                   # counter
                     done
                 else
@@ -1468,12 +1475,13 @@
         InstallFromDebianRepos_InstallByType $str_aptVGAdrivers "Select VGA drivers?"
 
         if [[ $( CheckIfVarIsNotNullReturnBool $str_aptAll ) == true ]]; then
-            apt install $str_args $str_aptAll
+            apt install $str_args $str_aptAll || bool=false
         fi
 
         # <summary> Clean up </summary>
-        apt autoremove $str_args
-        EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
+        # apt autoremove $str_args || bool=false
+
+        $bool; EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
 
     # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBool"
