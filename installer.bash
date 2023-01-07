@@ -1178,8 +1178,8 @@
 
                 if [[ $bool == true ]]; then
                     ( systemctl daemon-reload || bool=false ) &> /dev/null
-                    local var_return=""
-                    ReadInput "Enable/disable '${var_element1}'?"
+                    local var_return=false
+                    ReadInputReturnBool "Enable/disable '${var_element1}'?"
 
                     if [[ $var_return == true ]]; then
                         ( systemctl enable ${var_element1} || bool=false ) &> /dev/null
@@ -1281,8 +1281,8 @@
 
                     # <summary> Clone new GitHub repository. </summary>
                     else
-                        local var_return=""
-                        ReadInput "Clone repo '$str_repo'?"
+                        local var_return=false
+                        ReadInputReturnBool "Clone repo '$str_repo'?"
 
                         if [[ $var_return == true ]]; then
                             ( cd ${str_dir1}${str_userName} || bool=false ) &> /dev/null
@@ -1478,7 +1478,9 @@
             echo -e "${str_warning}Flatpak not installed. Skipping..."
             false; SaveThisExitCode
         else
-            ReadInput "Auto-accept install prompts? "
+            local var_return=false
+
+            ReadInputReturnBool "Auto-accept install prompts? "
 
             case "$int_exitCode" in
                 0)
@@ -1561,7 +1563,8 @@
             fi
 
             if [[ $( CheckIfFileExistsReturnBool $2 ) == true ]]; then
-                ReadInput "Execute script '${str_dir2}$2'?"
+                local var_return=false
+                ReadInputReturnBool "Execute script '${str_dir2}$2'?"
                 chmod +x $2 &> /dev/null
 
                 if [[ $int_exitCode -eq 0 && $( CheckIfFileIsExecutableReturnBool $2 ) == true ]]; then
@@ -1691,7 +1694,8 @@
             echo -e "${str_warning}Snap not installed. Skipping..."
             false; SaveThisExitCode
         else
-            ReadInput "Auto-accept install prompts? "
+            local var_return=false
+            ReadInputReturnBool "Auto-accept install prompts? "
 
             case "$int_exitCode" in
                 0)
@@ -1759,6 +1763,7 @@
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
         # <parameters>
+        local var_return=false
         local readonly str_file1="/etc/apt/sources.list"
         local str_sources=""
         local readonly str_newFile1="${str_file1}.new"
@@ -1769,7 +1774,7 @@
         # <summary> Create backup or restore from backup. </summary>
         if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
             while [[ $int_exitCode -eq 0 ]]; do
-                ReadInput "Include 'contrib' sources?"
+                ReadInputReturnBool "Include 'contrib' sources?"
                 str_sources+="contrib"
                 break
             done
@@ -1778,7 +1783,7 @@
 
             # <summary> Setup optional sources. </summary>
             while [[ $int_exitCode -eq 0 ]]; do
-                ReadInput "Include 'non-free' sources?"
+                ReadInputReturnBool "Include 'non-free' sources?"
                 str_sources+=" non-free"
                 break
             done
@@ -1895,7 +1900,8 @@
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
         while [[ $int_exitCode -eq 0 ]]; do
-            ReadInput "Modify SSH?"
+            local var_return=false
+            ReadInputReturnBool "Modify SSH?"
 
             # <parameters>
             declare -il int_count=0
@@ -1956,6 +1962,7 @@
         echo -e "Configuring system security..."
 
         # <parameters>
+        local var_return=false
         local bool=false
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
         local readonly arr_files1=(
@@ -1972,7 +1979,7 @@
 
         # <summary> Write output to files. </summary>
         if [[ $bool == true ]]; then
-            ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+            ReadInputReturnBool "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             # <summary> Yes. </summary>
             if [[ $int_exitCode -eq 0 && (
@@ -2009,7 +2016,7 @@
         # fix here
 
         if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
-            ReadInput "Setup '/etc/sysctl.conf' with defaults?"
+            ReadInputReturnBool "Setup '/etc/sysctl.conf' with defaults?"
 
             if [[ $int_exitCode -eq 0 && (
                 ! ( cp $str_file1 $str_file2 )
@@ -2019,7 +2026,7 @@
             fi
         done
 
-        ReadInput "Setup firewall with UFW?"
+        ReadInputReturnBool "Setup firewall with UFW?"
 
         if [[ $int_exitCode -eq 0 ]]; then
             bool=$( CheckIfCommandExistsReturnBool "ufw" )
