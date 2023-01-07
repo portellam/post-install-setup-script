@@ -137,13 +137,13 @@
         fi
     }
 
-    # <summary> Output error given exception. </summary>
+    # <summary> Output error given exception. Call this function after an exit code statement. </summary>
     # <parameter name="$?"> exit code </parameter>
     # <returns> void </returns>
     function ParseThisExitCode
     {
         # <parameters>
-        declare -lr int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         # </parameters>
 
         if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == false ]]; then
@@ -191,7 +191,7 @@
     function ParseThisExitCodeAsBool
     {
         # <parameters>
-        declare -r int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
+        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         local bool=false
         # </parameters>
 
@@ -255,7 +255,9 @@
     # <returns> boolean </returns>
     function CheckIfCommandExistsReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[
             $( CheckIfVarIsNotNullReturnBool $1 ) == true
@@ -274,7 +276,9 @@
     # <returns> boolean </returns>
     function CheckIfDirIsNotNullReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ -d $1 && $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
             bool=true
@@ -290,7 +294,9 @@
     # <returns> boolean </returns>
     function CheckIfFileIsExecutableReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ -x $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -306,7 +312,9 @@
     # <returns> boolean </returns>
     function CheckIfFileExistsReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ -e $1 ]]; then
             bool=true
@@ -322,7 +330,9 @@
     # <returns> boolean </returns>
     function CheckIfFileIsReadableReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ -r $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -338,7 +348,9 @@
     # <returns> boolean </returns>
     function CheckIfFileIsWritableReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ -w $1 && $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -354,7 +366,9 @@
     # <returns> boolean </returns>
     function CheckIfUserIsRootReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( whoami ) == "root" ]]; then
             bool=true
@@ -375,7 +389,9 @@
     # <returns> boolean </returns>
     function CheckIfVarIsNotNullReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ ! -z "$1" ]]; then
             bool=true
@@ -391,7 +407,9 @@
     # <returns> boolean </returns>
     function CheckIfVarIsValidNumReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ "$1" -eq "$(( $1 ))" ]] 2> /dev/null; then
             bool=true
@@ -413,8 +431,10 @@
     # <returns> boolean </returns>
     function AppendArrayToFileReturnBool
     {
-        declare -lr IFS=$'\n'
+        # <parameters>
+        local readonly IFS=$'\n'
         local bool=false
+        # <parameters>
 
         if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
             bool=true
@@ -431,7 +451,9 @@
     # <returns> boolean </returns>
     function AppendVarToFileReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
             bool=true
@@ -446,7 +468,9 @@
     # <returns> boolean </returns>
     function ChangeOwnershipOfFileOrDirToCurrentUserReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -462,7 +486,9 @@
     # <returns> boolean </returns>
     function CheckIfTwoFilesAreSameReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[
             $( cmp -s "$1" "$2" )
@@ -482,8 +508,8 @@
     {
         # <parameters>
         local bool=false
-        declare -lr str_dir1=$( dirname $1 )
-        declare -alr arr_dir1=( $( ls -1v $str_dir | grep $2 | grep $str_suffix | uniq ) )
+        local readonly str_dir1=$( dirname $1 )
+        local declare -ar arr_dir1=( $( ls -1v $str_dir | grep $2 | grep $str_suffix | uniq ) )
         # </parameters>
 
         for var_element1 in ${arr_dir1[@]}; do
@@ -502,73 +528,78 @@
     function CreateBackupFromFileReturnBool
     {
         # <parameters>
-        local bool=false
-        declare -lr str_file1=$1
+        local bool=true
+        local readonly str_file1=$1
         # </parameters>
 
         # <summary> First code block. </summary>
-        while [[ ${int_exitCode} -eq 0 ]]; do
+        while [[ $bool == true ]]; do
             if [[ $( CheckIfFileIsReadableReturnBool $1 ) == false ]]; then
-                false; SaveThisExitCode
+                bool=false
             fi
 
             # <parameters>
-            declare -lr str_suffix=".old"
-            declare -lr str_dir1=$( dirname $1 )
-            declare -alr arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
+            local readonly str_suffix=".old"
+            local readonly str_dir1=$( dirname $1 )
+            local declare -a arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
             # </parameters>
 
+            # <summary> Create new backup if none exist. </summary>
             if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
-                ( cp $str_file1 "${str_file1}.0${str_suffix}" || ( false; SaveThisExitCode ) ) &> /dev/null
+                ( cp $str_file1 "${str_file1}.0${str_suffix}" || bool=false ) &> /dev/null
             fi
 
             # <parameters>
-                declare -ir int_maxCount=5
-                local var_element1=${arr_dir1[0]}
-                var_element1=${var_element1%"${str_suffix}"}             # substitution
-                var_element1=${var_element1##*.}                         # ditto
+            declare -ir int_maxCount=5
+            local var_element1=${arr_dir1[0]}
+            var_element1=${var_element1%"${str_suffix}"}             # substitution
+            var_element1=${var_element1##*.}                         # ditto
             # </parameters>
 
             # <summary> Validate counter. Parse all files, check for match. </summary>
             if [[ $( CheckIfVarIsValidNumReturnBool $var_element1 ) == false || $( CheckIfFileExistsInDirReturnBool $str_dir1 $ ) == false ]]; then
-                false; SaveThisExitCode
+                bool=false
             fi
 
             break
         done
 
         # <summary> Second code block. </summary>
-        if [[ ${int_exitCode} -eq 0 ]]; then
+        if [[ $bool == true ]]; then
+
             # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
             while [[ ${#arr_dir1[@]} -ge $int_maxCount ]]; do
-                bool=$( DeleteFileReturnBool ${arr_dir1[0]} )
 
                 # <summary> Break outside this one while loop, not any above. </summary>
-                if [[ $bool == true ]]; then
+                if [[ $( DeleteFileReturnBool ${arr_dir1[0]} ) == true ]]; then
                     break
                 fi
+
+                arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
             done
         fi
 
         # <summary> Last code block; execute if prior validation passes. </summary>
-        while [[ $bool == false ]]; do
+        while [[ $bool == true ]]; do
             # <summary> If *first* backup is same as original file, exit. </summary>
-            bool=$( CheckIfTwoFilesAreSameReturnBool $1 ${arr_dir[0]} )
+            if [[ $( CheckIfTwoFilesAreSameReturnBool $1 ${arr_dir[0]} ) == true ]]; then
+                break
+            fi
 
             # <parameters>
             var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
             var_element1=${var_element1##*.}                        # ditto
-            declare -il int_lastIndex=0
+            local declare -i int_lastIndex=0
             # </parameters>
 
             if [[ $( CheckIfVarIsValidNumReturnBool $var_element1 ) == true ]]; then
-                declare -i int_lastIndex="${var_element1}"
+                local declare -i int_lastIndex="${var_element1}"
                 (( int_lastIndex++ ))                               # counter
             fi
 
             # <summary> Source file is newer and different than backup, add to backups. </summary>
             if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
-                ( cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" || bool=true ) &> /dev/null
+                ( cp $str_file1 "${str_file1}.${int_lastIndex}${str_suffix}" || bool=false ) &> /dev/null
             fi
 
             break
@@ -582,7 +613,9 @@
     # <returns> boolean </returns>
     function CreateDirReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == false ]]; then
             bool=true
@@ -597,7 +630,9 @@
     # <returns> boolean </returns>
     function CreateFileReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -612,7 +647,9 @@
     # <returns> boolean </returns>
     function DeleteFileReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfFileExistsReturnBool $1 ) == true ]]; then
             bool=true
@@ -626,8 +663,10 @@
     # <returns> boolean </returns>
     function GoToScriptDirectoryReturnBool
     {
+        # <parameters>
         local bool=false
-        declare -lr str_dir=$( dirname $0 )
+        local readonly str_dir=$( dirname $0 )
+        # </parameters>
 
         if [[ $( CheckIfDirIsNotNullReturnBool $str_dir ) == true ]]; then
             bool=true
@@ -643,12 +682,12 @@
     # <returns> $var_return </returns>
     function ReadInputReturnBool
     {
-        # <parameters> #
+        # <parameters>
         local bool=false
-        declare -il int_count=0
-        declare -lir int_maxCount=3
-        declare -lr str_output=$2
-        # </parameters> #
+        local declare -i int_count=0
+        local declare -ir int_maxCount=3
+        local readonly str_output=$2
+        # </parameters>
 
         while [[ $int_count -le $int_maxCount ]]; do
             # <summary> After given number of attempts, input is set to default: false. </summary>
@@ -665,8 +704,8 @@
             # <summary> Append output. </summary>
             echo -en "\e[30;43m[Y/n]:\e[0m "
             read var_return
-            declare -l var_return=$var_return
-            var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
+            declare -u var_return=$var_return
+            # var_return=$( echo $var_return | tr '[:lower:]' '[:upper:]' )
 
             # <summary> Check if string is a valid input. </summary>
             case $var_return in
@@ -699,19 +738,19 @@
     # <returns> $var_return </returns>
     function ReadInputFromMultipleChoiceUpperCase
     {
-        # <parameters> #
-        declare -i int_count=0
-        declare -ir int_maxCount=3
-        declare -r str_output=$1
-        declare -ru var_input1=$2
-        declare -ru var_input2=$3
-        declare -ru var_input3=$4
-        declare -ru var_input4=$5
-        declare -ru var_input5=$6
-        declare -ru var_input6=$7
-        declare -ru var_input7=$8
-        declare -ru var_input8=$9
-        # </parameters> #
+        # <parameters>
+        local declare -i int_count=0
+        local declare -ir int_maxCount=3
+        local readonly str_output=$1
+        local declare -ru var_input1=$2
+        local declare -ru var_input2=$3
+        local declare -ru var_input3=$4
+        local declare -ru var_input4=$5
+        local declare -ru var_input5=$6
+        local declare -ru var_input6=$7
+        local declare -ru var_input7=$8
+        local declare -ru var_input8=$9
+        # </parameters>
 
         # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
         if [[
@@ -771,11 +810,11 @@
     # <returns> $var_return </returns>
     function ReadInputFromMultipleChoiceMatchCase
     {
-        # <parameters> #
-        declare -il int_count=0
-        declare -lir int_maxCount=3
-        declare -lr str_output=$1
-        # </parameters> #
+        # <parameters>
+        local declare -i int_count=0
+        local declare -ir int_maxCount=3
+        local readonly str_output=$1
+        # </parameters>
 
         # <summary> It's not multiple choice if there aren't two or more choices; Input validation is not necessary here. </summary>
         if [[
@@ -828,13 +867,13 @@
     # <returns> $var_return </returns>
     function ReadInputFromRangeOfNums
     {
-        # <parameters> #
-        declare -i int_count=0
-        declare -ir int_maxCount=3
-        declare -ir int_max=$2
-        declare -ir int_min=$1
-        declare -r str_output=$3
-        # </parameters> #
+        # <parameters>
+        local declare -i int_count=0
+        local declare -ir int_maxCount=3
+        local declare -ir int_max=$2
+        local declare -ir int_min=$1
+        local readonly str_output=$3
+        # </parameters>
 
         # <summary> Return null value if either extrema are not valid. </summary>
         if [[
@@ -883,8 +922,10 @@
     # <returns> boolean </returns>
     function OverwriteArrayToFileReturnBool
     {
-        declare -lr IFS=$'\n'
+        # <parameters>
+        local readonly IFS=$'\n'
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
             bool=true
@@ -901,7 +942,9 @@
     # <returns> boolean </returns>
     function OverwriteVarToFileReturnBool
     {
+        # <parameters>
         local bool=false
+        # </parameters>
 
         if [[ $( CheckIfVarIsNotNullReturnBool $2 ) == true ]]; then
             bool=true
