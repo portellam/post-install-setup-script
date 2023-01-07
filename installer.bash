@@ -1066,16 +1066,23 @@
         # List of packages that have cron files (see below).
         # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
         # </summary>
-        local declare -a arr_requiredPackages=(
-            "flatpak"
-            "ntpdate"
-            "rsync"
-            "snap"
-        )
+        local declare -a arr_requiredPackages=()
 
-        if [[ $( CheckIfCommandExistsReturnBool "unattended-upgrades" ) == false ]]; then
-            arr_requiredPackages+=("apt")
-        fi
+        case true in
+            $bool_is_flatpak_Installed )
+                arr_requiredPackages+=( "flatpak" );;
+            $bool_is_ntpdate_Installed )
+                arr_requiredPackages+=( "ntpdate" );;
+            $bool_is_rsync_Installed )
+                arr_requiredPackages+=( "rsync" );;
+            $bool_is_snap_Installed )
+                arr_requiredPackages+=( "snap" );;
+        esac
+
+        case false in
+            $( CheckIfCommandExistsReturnBool "unattended-upgrades" ) )
+                arr_requiredPackages+=( "apt" );;
+        esac
         # </parameters>
 
         # <summary> First code block. </summary>
@@ -1341,6 +1348,10 @@
         if [[ $( CheckCurrentDistro ) == true ]]; then
             TestNetwork &> /dev/null
             bool_is_xmllint_installed=$( InstallCommands_InstallThisCommandReturnBoolean "xmllint" "xml-core xmlstarlet" )
+            bool_is_flatpak_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "flatpak" "flatpak" )
+            bool_is_ntpdate_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "ntpdate" "ntpdate" )
+            bool_is_rsync_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "rsync" "rsync" )
+            bool_is_snap_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "snap" "snap" )
 
             # InstallThisCommand "command_to_use" "required_packages"
             # boolean_to_set=$( ParseThisExitCodeAsBool )
@@ -2276,6 +2287,10 @@
     # <summary> Checks </summary>
     declare -gr bool_isDistroDebianBased=$( CheckIfCommandExistsReturnBool "apt" )
     declare -gr bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
+    declare -g bool_is_flatpak_Installed=$( CheckIfCommandExistsReturnBool "flatpak" )
+    declare -g bool_is_ntpdate_Installed=$( CheckIfCommandExistsReturnBool "ntpdate" )
+    declare -g bool_is_rsync_Installed=$( CheckIfCommandExistsReturnBool "rsync" )
+    declare -g bool_is_snap_Installed=$( CheckIfCommandExistsReturnBool "snap" )
     declare -g bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
 ###
