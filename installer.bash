@@ -1712,6 +1712,7 @@
     function InstallFromGitRepos
     {
         # <summary> Prompt user to execute script or skip. </summary>
+        # <returns> void </returns>
         function ExecuteScript
         {
             # <parameters>
@@ -2435,6 +2436,8 @@
         esac
     }
 
+    ### NOTE: continue refactor from here up!!!
+
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> void </returns>
     function ExecuteSystemSetup
@@ -2452,12 +2455,9 @@
         if [[ $( CheckCurrentDistro ) == true ]]; then
             ModifyDebianRepos
             TestNetwork &> /dev/null
-
-            if [[ $int_exitCode -eq 0 ]]; then
-                InstallFromDebianRepos
-                InstallFromFlathubRepos
-                # InstallFromSnapRepos
-            fi
+            InstallFromDebianRepos
+            InstallFromFlathubRepos
+            # InstallFromSnapRepos
         fi
 
         echo -e "\n${str_warning}If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
@@ -2469,11 +2469,7 @@
     {
         if [[ $( CheckIfCommandExistsReturnBool "git" ) == true ]]; then
             TestNetwork &> /dev/null
-
-            if [[ $int_exitCode -eq 0 ]]; then
-                CloneOrUpdateGitRepositories
-            fi
-
+            CloneOrUpdateGitRepositories
             InstallFromGitRepos
         else
             echo -e "\n${str_warning}Git is not installed on this system."
@@ -2501,7 +2497,7 @@
 # <summary> If you need to a summary to describe this code-block's purpose, you're not gonna make it. </summary>
 # <code>
     # <summary> Pre-execution checks. </summary>
-    # InstallCommands &> /dev/null
+    InstallCommands # &> /dev/null
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     if [[ $bool_isUserRoot == true ]]; then
