@@ -201,8 +201,8 @@
     function ParseThisExitCodeAsBool
     {
         # <parameters>
-        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         local bool=false
+        local declare -ir int_exitCode=$?     # This local variable shall not be placed after any line, otherwise unintended behavior will occur.
         # </parameters>
 
         if [[ $( CheckIfVarIsValidNumReturnBool $int_exitCode ) == true && "$int_exitCode" -eq 0 ]]; then
@@ -442,7 +442,7 @@
     function AppendArrayToFileReturnBool
     {
         # <parameters>
-        local readonly IFS=$'\n'
+        IFS=$'\n'
         local bool=false
         # <parameters>
 
@@ -519,7 +519,7 @@
         # <parameters>
         local bool=false
         local readonly str_dir1=$( dirname $1 )
-        local declare -ar arr_dir1=( $( ls -1v $str_dir | grep $2 | grep $str_suffix | uniq ) )
+        local declare -ar arr_dir1=( $( ls -1v $str_dir1 | grep $2 | grep $str_suffix | uniq ) )
         # </parameters>
 
         for var_element1 in ${arr_dir1[@]}; do
@@ -549,9 +549,9 @@
             fi
 
             # <parameters>
-            local readonly str_suffix=".old"
             local readonly str_dir1=$( dirname $1 )
-            local declare -a arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
+            local readonly str_suffix=".old"
+            local declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $str_file1 | grep $str_suffix | uniq ) )
             # </parameters>
 
             # <summary> Create new backup if none exist. </summary>
@@ -933,7 +933,7 @@
     function OverwriteArrayToFileReturnBool
     {
         # <parameters>
-        local readonly IFS=$'\n'
+        IFS=$'\n'
         local bool=false
         # </parameters>
 
@@ -1171,8 +1171,8 @@
         # <parameters>
         local bool=true
         local readonly str_pattern=".service"
-        declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
-        declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
+        local declare -ar arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        local declare -ar arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
         # </parameters>
 
         if [[ $bool == true ]]; then
@@ -1239,7 +1239,7 @@
             # List of useful Git repositories.
             # Example: "username/reponame"
             # </summary>
-            declare -alr arr_repo=(
+            local declare -ar arr_repo=(
                 "corna/me_cleaner"
                 "dt-zero/me_cleaner"
                 "foundObjects/zram-swap"
@@ -1257,7 +1257,7 @@
             # List of useful Git repositories.
             # Example: "username/reponame"
             # </summary>
-            declare -alr arr_repo=(
+            local declare -ar arr_repo=(
                 "awilliam/rom-parser"
                 #"pixelplanetdev/4chan-flag-filter"
                 #"pyllyukko/user.js"
@@ -1363,7 +1363,7 @@
         fi
 
         # <summary> Set exit code. </summary>
-        while [[ "$?" == 0 ]]; do
+        while [[ "$?" -eq 0 ]]; do
             $bool
             $bool_is_xmllint_installed
             $bool_is_flatpak_Installed
@@ -1546,7 +1546,7 @@
             # apt autoremove $str_args || bool=false
         done
 
-        $bool; EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
+        $bool; EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
 
     # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBool"
@@ -1566,7 +1566,7 @@
                 echo -e $2
 
                 if [[ $1 == *" "* ]]; then
-                    declare -il int_i=1
+                    local declare -i int_i=1
 
                     while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
                         echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
@@ -1705,54 +1705,60 @@
         $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
 
-    ### NOTE: continue refactor from here down!!!
-
     # <summary> Install from Git repositories. </summary>
     # <returns> void </returns>
     function InstallFromGitRepos
     {
         # <summary> Prompt user to execute script or skip. </summary>
+        # <parameter name="$bool"> check if any script failed to execute </parameter>
+        # <parameter name="$1"> script directory </parameter>
+        # <parameter name="$2"> script to execute </parameter>
         # <returns> void </returns>
         function ExecuteScript
         {
+            echo -e "Executing Git script..."
+
             # <parameters>
+            local bool_execSuccessful=true
             # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
             local str_dir2=$( basename $1 )"/"
             # </parameters>
 
-            if [[ $( CheckIfDirIsNotNullReturnBool $1 ) == true ]]; then
-                cd $1
-            fi
+            while [[ $bool == true ]]; do
+                bool_execSuccessful=$( CheckIfDirIsNotNullReturnBool $1 )
+                cd $1 || bool=false
+                bool_execSuccessful=$( CheckIfFileExistsReturnBool $2 )
 
-            if [[ $( CheckIfFileExistsReturnBool $2 ) == true ]]; then
                 local var_return=false
                 ReadInputReturnBool "Execute script '${str_dir2}$2'?"
-                chmod +x $2 &> /dev/null
 
-                if [[ $int_exitCode -eq 0 && $( CheckIfFileIsExecutableReturnBool $2 ) == true ]]; then
+                if [[ $var_return == true ]]; then
+                    ( chmod +x $2 || bool=false ) &> /dev/null
+                    bool_execSuccessful=$( CheckIfFileIsExecutableReturnBool $2 )
+
                     # <summary> sudo/root v. user </summary>
                     if [[ $bool_isUserRoot == true ]]; then
-                        sudo bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                        ( sudo bash $2 || bool_execSuccessful=false ) &> /dev/null
                     else
-                        bash $2 || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                        ( bash $2 || bool_execSuccessful=false ) &> /dev/null
                     fi
-
-                    cd $str_dir1
                 fi
-            fi
+            done
 
-            # <summary> Save status of operations and reset exit code. </summary>
-            if [[ $int_exitCode -eq 131 ]]; then
-                bool_gitCloneHasFailed=true
-            fi
+            cd $str_dir1 || false
 
-            true; SaveThisExitCode; echo
+            # <summary> Set exit code. </summary>
+            $bool_execSuccessful; ParseThisExitCode "Executing Git script..."; echo
+
+            if [[ $bool_execSuccessful == false ]]; then
+                bool=$bool_execSuccessful
+            fi
         }
 
         echo -e "Executing Git scripts..."
 
         # <parameters>
-        declare -l bool_execHasFailed=false
+        local bool=true
 
         # <summary> sudo/root v. user </summary>
         if [[ $bool_isUserRoot == true ]]; then
@@ -1764,7 +1770,6 @@
 
         # <summary> Test this on a fresh install </summary>
         if [[ $( CheckIfDirIsNotNullReturnBool $str_dir1 ) == true ]]; then
-
             # <summary> sudo/root v. user </summary>
             if [[ $bool_isUserRoot == true ]]; then
 
@@ -1784,7 +1789,7 @@
                     local str_file1="/etc/hosts"
 
                     if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
-                        cp hosts $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                        ( cp hosts $str_file1 || bool=false ) &> /dev/null
                     fi
                 fi
 
@@ -1799,7 +1804,7 @@
 
                     make debian_locked.js &> /dev/null && (
                         if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
-                            cp debian_locked.js $str_file1 &> /dev/null || ( SetExitCodeIfPassNorFail && SaveThisExitCode )
+                            ( cp debian_locked.js $str_file1 || bool=false ) &> /dev/null
                         fi
                     )
                 fi
@@ -1834,18 +1839,20 @@
             fi
         fi
 
-        if [[ $bool_execHasFailed == true ]]; then
-            SetExitCodeIfPassNorFail; SaveThisExitCode
+        if [[ $bool == false ]]; then
+            SetExitCodeIfPassNorFail
         fi
 
         EchoPassOrFailThisExitCode "Executing Git scripts..."; ParseThisExitCode
 
-        if [[ $bool_execHasFailed == true ]]; then
+        if [[ $bool_execSuccessful == false ]]; then
             echo -e "One or more Git scripts were not executed."
         fi
 
         echo
     }
+
+    ### NOTE: continue refactor from here down!!!
 
     # <summary> Install from Snap software repositories. </summary>
     # <returns> void </returns>
@@ -1862,7 +1869,7 @@
     #             echo -e $2
 
     #             if [[ $1 == *" "* ]]; then
-    #                 declare -il int_i=1
+    #                 local declare -i int_i=1
 
     #                 while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
     #                     echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
@@ -1977,38 +1984,34 @@
     # <returns> void </returns>
     function ModifyDebianRepos
     {
-        IFS=$'\n'
-
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
         # <parameters>
-        local var_return=false
+        IFS=$'\n'
+        local bool=true
         local readonly str_file1="/etc/apt/sources.list"
-        local str_sources=""
         local readonly str_newFile1="${str_file1}.new"
         local readonly str_releaseName=$( lsb_release -sc )
         local readonly str_releaseVer=$( lsb_release -sr )
+        local str_sources=""
+        local var_return=false
         # </parameters>
 
         # <summary> Create backup or restore from backup. </summary>
         if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
-            while [[ $int_exitCode -eq 0 ]]; do
-                ReadInputReturnBool "Include 'contrib' sources?"
-                str_sources+="contrib"
-                break
-            done
+            ReadInputReturnBool "Include 'contrib' sources?"
 
-            true; SaveThisExitCode
+            if [[ $var_return == true ]]; then
+                str_sources+="contrib"
+            fi
 
             # <summary> Setup optional sources. </summary>
-            while [[ $int_exitCode -eq 0 ]]; do
-                ReadInputReturnBool "Include 'non-free' sources?"
-                str_sources+=" non-free"
-                break
-            done
-        fi
+            ReadInputReturnBool "Include 'non-free' sources?"
 
-        true; SaveThisExitCode
+            if [[ $var_return == true ]]; then
+                str_sources+=" non-free"
+            fi
+        fi
 
         # <summary> Setup mandatory sources. </summary>
         # <summary> User prompt </summary>
@@ -2023,11 +2026,10 @@
 
         # <summary Apt sources </summary>
         # <parameters>
-        local var_return=""
         ReadInputFromMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
         local readonly str_branchName=$var_return
 
-        declare -al arr_sources=(
+        local declare -a arr_sources=(
             "# debian $str_branchName"
             "# See https://wiki.debian.org/SourcesList for more information."
             "deb http://deb.debian.org/debian/ $str_branchName main $str_sources"
@@ -2044,7 +2046,7 @@
 
         # <summary> Write to file. </summary>
         if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
-            declare -al arr_file1=()
+            local declare -a arr_file1=()
 
             while read var_element1; do
                 if [[ $var_element1 != "#"* ]]; then
@@ -2052,7 +2054,7 @@
                 fi
 
                 arr_file1+=( $var_element1 )
-            done < $str_file1
+            done < $str_file1 || bool=false
 
             # for var_element1 in ${arr_file1[@]}; do
             #     # AppendVarToFileReturnBool $str_file1 $var_element1 &> /dev/null
@@ -2064,7 +2066,7 @@
         case $str_branchName in
             # <summary> Current branch with backports. </summary>
             "backports")
-                declare -al arr_sources=(
+                local declare -a arr_sources=(
                     "# debian $str_releaseVer/$str_releaseName"
                     "# See https://wiki.debian.org/SourcesList for more information."
                     "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
@@ -2086,21 +2088,19 @@
 
         # <summary> Output to sources file. </summary>
         local readonly str_file2="/etc/apt/sources.list.d/$str_branchName.list"
-        DeleteFileReturnBool $str_file2 &> /dev/null
-        CreateFileReturnBool $str_file2 &> /dev/null
+        # DeleteFileReturnBool $str_file2 &> /dev/null
+        # CreateFileReturnBool $str_file2 &> /dev/null
 
         case $str_branchName in
             "backports"|"testing"|"unstable")
-                printf "%s\n" "${arr_sources[@]}" > $str_file2 &> /dev/null
-                SaveThisExitCode
-                ;;
+                OverwriteArrayToFileReturnBool $str_file2 "${arr_sources[@]}";;
         esac
 
         # <summary> Update packages on system. </summary>
-        while [[ $int_exitCode -eq 0 ]]; do
-            apt clean || ( SetExitCodeIfPassNorFail; SaveThisExitCode )
-            apt update || ( SetExitCodeOnError; SaveThisExitCode )
-            apt full-upgrade || ( SetExitCodeOnError; SaveThisExitCode )
+        while [[ "$?" -eq 0 ]]; do
+            apt clean || SetExitCodeIfPassNorFail
+            apt update || SetExitCodeOnError
+            apt full-upgrade || SetExitCodeOnError
             break
         done
 
@@ -2123,13 +2123,13 @@
             ReadInputReturnBool "Modify SSH?"
 
             # <parameters>
-            declare -il int_count=0
+            local declare -i int_count=0
             # </parameters>
 
             while [[ $int_count -lt 3 ]]; do
                 # <parameters>
                 local str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
-                declare -il int_altSSH="${str_altSSH}"
+                local declare -i int_altSSH="${str_altSSH}"
                 # </parameters>
 
                 if [[ $int_altSSH -eq 22 || $int_altSSH -gt 10000 ]]; then
