@@ -2442,10 +2442,10 @@
         declare -g str_altSSH=""
         # </parameters>
 
-        # ModifySecurity
-        # ModifySSH
+        ModifySecurity
+        ModifySSH
         AppendServices
-        # AppendCron
+        AppendCron
     }
 
     # <summary> Execute setup of all software repositories. </summary>
