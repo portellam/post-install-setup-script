@@ -1066,18 +1066,29 @@
         # List of packages that have cron files (see below).
         # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
         # </summary>
-        local declare -a arr_requiredPackages=()
+        local declare -ar arr_packagesWanted=(
+            "flatpak"
+            # "ntpdate"                         # NOTE: superceded by 'systemd-timesyncd'
+            "rsync"
+            "snap"
+        )
 
-        case true in
-            $bool_is_flatpak_Installed )
-                arr_requiredPackages+=( "flatpak" );;
-            $bool_is_ntpdate_Installed )
-                arr_requiredPackages+=( "ntpdate" );;
-            $bool_is_rsync_Installed )
-                arr_requiredPackages+=( "rsync" );;
-            $bool_is_snap_Installed )
-                arr_requiredPackages+=( "snap" );;
-        esac
+        local declare -a arr_requiredFound=()
+
+        # <summary> Add command to list if it is installed. </summary>
+        for var_element1 in ${arr_packagesWanted[@]}; do
+            # <parameters>
+            local bool_isInstalled=$( CheckIfCommandExistsReturnBool $var_element1 )
+            # </parameters>
+
+            if [[ $bool_isInstalled == false ]]; then
+                bool_isInstalled=$( InstallThisCommandReturnBool $var_element1 )
+            fi
+
+            if [[ $bool_isInstalled == true ]]; then
+                arr_requiredFound+=( "${var_element1}" )
+            fi
+        done
 
         case false in
             $( CheckIfCommandExistsReturnBool "unattended-upgrades" ) )
@@ -1098,8 +1109,8 @@
         # <summary> Second code block. </summary>
         if [[ $bool == true ]]; then
             for var_element1 in $( ls *-cron ); do
-                local var_return=""
-                ReadInputReturnBool $var_return "Append '${var_element1}'?"
+                local var_return=false
+                ReadInputReturnBool "Append '${var_element1}'?"
 
                 if [[ $var_return == true ]]; then
                     for var_element2 in ${arr_requiredPackages[@]}; do
@@ -1135,15 +1146,6 @@
     # <returns> void </returns>
     function AppendServices
     {
-        echo -e "Appending files to Systemd..."
-
-        # <parameters>
-        local bool=true
-        local readonly str_pattern=".service"
-        declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
-        declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
-        # </parameters>
-
         # <summary> Copy files and set permissions, and return boolean. </summary>
         # <returns> boolean </returns>
         function AppendServices_AppendFile
@@ -1163,6 +1165,15 @@
 
             echo $bool
         }
+
+        echo -e "Appending files to Systemd..."
+
+        # <parameters>
+        local bool=true
+        local readonly str_pattern=".service"
+        declare -alr arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+        declare -alr arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
+        # </parameters>
 
         if [[ $bool == true ]]; then
             # <summary> Copy binaries to system. </summary>
@@ -1199,6 +1210,7 @@
         $bool; EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
     }
 
+    # TODO: add support for parsing and recognizing other popular Linux distros.
     # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
     # <returns> void </returns>
     function CheckCurrentDistro
@@ -1303,7 +1315,33 @@
         fi
     }
 
-    # <summary> Install necessary commands/packages for this program. </summary>
+    # TODO: add support for parsing and recognizing other popular Linux distros.
+    # <summary> Install a given command using native package manager, return boolean. </summary>
+    # <parameter name="$1"> command_to_use </parameter>
+    # <parameter name="$2"> required_packages </parameter>
+    # <returns> boolean </returns>
+    function InstallThisCommandReturnBool
+    {
+        local bool=false
+
+        if [[
+            $( CheckIfVarIsNotNullReturnBool $1 ) == true
+            && $( CheckIfVarIsNotNullReturnBool $2 ) == true
+            && $( CheckIfCommandExistsReturnBool $1 ) == false
+            ]]; then
+            bool=true
+            ( apt install -y $2 || bool=false ) &> /dev/null
+        fi
+
+        if [[ $( CheckIfCommandExistsReturnBool $1 ) == true ]]; then
+            bool=true
+        fi
+
+        echo $bool
+    }
+
+    # TODO: add support for parsing and recognizing other popular Linux distros.
+    # <summary> Install necessary commands/packages using native package manager, for this program. </summary>
     # <returns> void </returns>
     function InstallCommands
     {
@@ -1313,48 +1351,23 @@
         local bool=$( CheckCurrentDistro )
         # </parameters>
 
-        # <summary> Install a given command, return boolean. </summary>
-        # <parameter name="$1"> command_to_use </parameter>
-        # <parameter name="$2"> required_packages </parameter>
-        # <returns> boolean </returns>
-        function InstallCommands_InstallThisCommandReturnBoolean
-        {
-            local bool=false
+        ( TestNetwork || bool=false ) &> /dev/null
 
-            if [[
-                $( CheckIfVarIsNotNullReturnBool $1 ) == true
-                && $( CheckIfVarIsNotNullReturnBool $2 ) == true
-                && $( CheckIfCommandExistsReturnBool $1 ) == false
-                ]]; then
-                bool=true
-                ( apt install -y $2 || bool=false ) &> /dev/null
-            fi
-
-            if [[ $( CheckIfCommandExistsReturnBool $1 ) == true ]]; then
-                bool=true
-            fi
-
-            echo $bool
-        }
-
-        while [[ $bool == true ]]; do
-            ( TestNetwork || bool=false ) &> /dev/null
-            bool_is_xmllint_installed=$( InstallCommands_InstallThisCommandReturnBoolean "xmllint" "xml-core xmlstarlet" )
-            bool_is_flatpak_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "flatpak" "flatpak" )
-            bool_is_ntpdate_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "ntpdate" "ntpdate" )
-            bool_is_rsync_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "rsync" "rsync" )
-            bool_is_snap_Installed=$( InstallCommands_InstallThisCommandReturnBoolean "snap" "snap" )
+        if [[ $bool == true ]]; then
+            local bool_is_xmllint_installed=$( InstallThisCommandReturnBool "xmllint" "xml-core xmlstarlet" )
+            local bool_is_flatpak_Installed=$( InstallThisCommandReturnBool "flatpak" "flatpak" )
+            local bool_is_rsync_Installed=$( InstallThisCommandReturnBool "rsync" "rsync" )
+            local bool_is_snap_Installed=$( InstallThisCommandReturnBool "snap" "snap" )
 
             # InstallThisCommand "command_to_use" "required_packages"
             # boolean_to_set=$( ParseThisExitCodeAsBool )
-        done
+        fi
 
         # <summary> Set exit code. </summary>
         while [[ "$?" == 0 ]]; do
             $bool
             $bool_is_xmllint_installed
             $bool_is_flatpak_Installed
-            $bool_is_ntpdate_Installed
             $bool_is_rsync_Installed
             $bool_is_snap_Installed
             break
@@ -1367,70 +1380,11 @@
 
     ### NOTE: continue refactor from here down!!!
 
+    # TODO: add support for parsing and recognizing other popular Linux distros.
     # <summary> Install from Debian repositories. </summary>
     # <returns> void </returns>
     function InstallFromDebianRepos
     {
-        # <parameters>
-        local bool=true
-        local str_args=""
-        local var_return=false
-        # </parameters>
-
-        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-        ReadInputReturnBool $var_return "Auto-accept install prompts? "
-
-        if [[ $var_return == true ]]; then
-            str_args="-y"
-        fi
-
-        # <summary> Update and upgrade local packages </summary>
-        apt clean
-        apt update || bool=false
-
-        # <summary> Desktop environment checks </summary>
-        # <parameters>
-        local str_aptCheck=""
-        str_aptCheck=$( apt list --installed plasma-desktop lxqt )      # Qt DE (KDE-plasma, LXQT)
-        # </parameters>
-
-        if [[ $str_aptCheck != "" ]]; then
-            apt install -y plasma-discover-backend-flatpak || bool=false
-        fi
-
-        # <parameters>
-        str_aptCheck=""
-        str_aptCheck=$( apt list --installed gnome xfwm4 )              # GNOME DE (gnome, XFCE)
-        # </parameters>
-
-        if [[ $( CheckIfVarIsNotNullReturnBool $str_aptCheck ) == true ]]; then
-            apt install -y gnome-software-plugin-flatpak || bool=false
-        fi
-
-        echo    # output padding
-
-        # <summary> APT packages sorted by type. </summary>
-        # <parameters>
-        local str_aptAll=""
-        local readonly str_aptRequired="systemd-timesyncd"
-        local readonly str_aptCommands="curl flashrom lm-sensors neofetch unzip wget youtube-dl"
-        local readonly str_aptCompatibilty="java-common python3 qemu virt-manager wine"
-        local readonly str_aptDeveloper=""
-        local readonly str_aptDrivers="apcupsd rtl-sdr steam-devices"
-        local readonly str_aptGames=""
-        local readonly str_aptInternet="firefox-esr filezilla"
-        local readonly str_aptMedia="vlc"
-        local readonly str_aptOffice="libreoffice"
-        local readonly str_aptPrismBreak=""
-        local readonly str_aptRepos="git flatpak snap"
-        local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-        local readonly str_aptSuites="debian-edu-install science-all"
-        local readonly str_aptTools="bleachbit cockpit grub-customizer synaptic zram-tools"
-        local readonly str_aptUnsorted=""
-        local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-        str_aptAll+="${str_aptRequired} "
-        # </parameters>
-
         # <summary> Select and Install software sorted by type. </summary>
         # <parameter name="$str_aptAll"> total list of packages to install </parameter>
         # <parameter name="$1"> this list packages to install </parameter>
@@ -1466,6 +1420,60 @@
             fi
         }
 
+
+        # <parameters>
+        local bool=true
+        local str_args=""
+        local var_return=false
+        # </parameters>
+
+        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
+        ReadInputReturnBool "Auto-accept install prompts? "
+
+        if [[ $var_return == true ]]; then
+            str_args="-y"
+        fi
+
+        # <summary> Update and upgrade local packages </summary>
+        apt clean
+        apt update || bool=false
+
+        # <summary> Desktop environment checks </summary>
+        # Qt DE (KDE-plasma, LXQT)
+        if [[ $( apt list --installed plasma-desktop lxqt ) != "" ]]; then
+            apt install -y plasma-discover-backend-flatpak || bool=false
+        fi
+
+        # GNOME DE (gnome, XFCE)
+        if [[ $( apt list --installed gnome xfwm4 ) != "" ]]; then
+            apt install -y gnome-software-plugin-flatpak || bool=false
+        fi
+
+        echo    # output padding
+
+        # <summary> APT packages sorted by type. </summary>
+        # <parameters>
+        local str_aptAll=""
+        local readonly str_aptRequired="systemd-timesyncd"
+        local readonly str_aptCommands="curl flashrom lm-sensors neofetch unzip wget youtube-dl"
+        local readonly str_aptCompatibilty="java-common python3 qemu virt-manager wine"
+        local readonly str_aptDeveloper=""
+        local readonly str_aptDrivers="apcupsd rtl-sdr steam-devices"
+        local readonly str_aptGames=""
+        local readonly str_aptInternet="firefox-esr filezilla"
+        local readonly str_aptMedia="vlc"
+        local readonly str_aptOffice="libreoffice"
+        local readonly str_aptPrismBreak=""
+        local readonly str_aptRepos="git flatpak snap"
+        local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+        local readonly str_aptSuites="debian-edu-install science-all"
+        local readonly str_aptTools="bleachbit cockpit grub-customizer synaptic zram-tools"
+        local readonly str_aptUnsorted=""
+        local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+        str_aptAll+="${str_aptRequired} "
+        # </parameters>
+
+        # <summary> Select and Install software sorted by type. </summary>
         # InstallFromDebianRepos_InstallByType $str_aptUnsorted "Select given software?"
         InstallFromDebianRepos_InstallByType $str_aptCommands "Select Terminal commands?"
         InstallFromDebianRepos_InstallByType $str_aptCompatibilty "Select compatibility libraries?"
@@ -1497,16 +1505,53 @@
     # <returns> void </returns>
     function InstallFromFlathubRepos
     {
+        # <summary> Select and Install software sorted by type. </summary>
+        function InstallFromFlathubRepos_InstallByType
+        {
+            if [[ $1 != "" ]]; then
+                echo -e $2
+
+                if [[ $1 == *" "* ]]; then
+                    declare -il int_i=1
+
+                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                        (( int_i++ ))                                   # counter
+                    done
+                else
+                    echo -e "\t$1"
+                fi
+
+                ReadInput
+
+                if [[ $int_exitCode -eq 0 ]]; then
+                    str_flatpakAll+="$1 "
+                fi
+
+                echo    # output padding
+            fi
+        }
+
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
-        # <summary> Flatpak </summary>
-        if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == true ]]; then
-            echo -e "${str_warning}Flatpak not installed. Skipping..."
-            false; SaveThisExitCode
-        else
-            local var_return=false
+        # <parameters>
+        local bool=true
+        local str_args=""
+        local var_return=false
+        # </parameters>
 
+        # <summary> Flatpak </summary>
+        if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == false ]]; then
+            echo -e "${str_warning}Flatpak not installed. Skipping..."
+
+            bool=$( InstallThisCommandReturnBool "flatpak" )
+        fi
+
+        if [[ $bool == true ]]; then
+            # <parameters>
+            local var_return=false
             ReadInputReturnBool "Auto-accept install prompts? "
+            # </parameters>
 
             case "$int_exitCode" in
                 0)
@@ -1530,41 +1575,13 @@
             # </parameters>
 
             # <summary> Select and Install software sorted by type. </summary>
-            # <code>
-                function InstallFromFlathubRepos_InstallByType
-                {
-                    if [[ $1 != "" ]]; then
-                        echo -e $2
+            InstallFromFlathubRepos_InstallByType $str_flatpakUnsorted "Select given Flatpak software?"
+            InstallFromFlathubRepos_InstallByType $str_flatpakPrismBreak "Select recommended Prism Break Flatpak software?"
 
-                        if [[ $1 == *" "* ]]; then
-                            declare -il int_i=1
-
-                            while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                                echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                                (( int_i++ ))                                   # counter
-                            done
-                        else
-                            echo -e "\t$1"
-                        fi
-
-                        ReadInput
-
-                        if [[ $int_exitCode -eq 0 ]]; then
-                            str_flatpakAll+="$1 "
-                        fi
-
-                        echo    # output padding
-                    fi
-                }
-
-                InstallFromFlathubRepos_InstallByType $str_flatpakUnsorted "Select given Flatpak software?"
-                InstallFromFlathubRepos_InstallByType $str_flatpakPrismBreak "Select recommended Prism Break Flatpak software?"
-
-                if [[ $str_flatpakAll != "" ]]; then
-                    echo -e "Install selected Flatpak apps?"
-                    apt install $str_args $str_aptAll
-                fi
-            # </code>
+            if [[ $str_flatpakAll != "" ]]; then
+                echo -e "Install selected Flatpak apps?"
+                apt install $str_args $str_aptAll
+            fi
         fi
 
         EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
@@ -1574,8 +1591,6 @@
     # <returns> void </returns>
     function InstallFromGitRepos
     {
-        echo -e "Executing Git scripts..."
-
         # <summary> Prompt user to execute script or skip. </summary>
         function ExecuteScript
         {
@@ -1612,6 +1627,8 @@
 
             true; SaveThisExitCode; echo
         }
+
+        echo -e "Executing Git scripts..."
 
         # <parameters>
         declare -l bool_execHasFailed=false
@@ -1713,6 +1730,32 @@
     # <returns> void </returns>
     function InstallFromSnapRepos
     {
+        function InstallFromSnapRepos_InstallByType
+        {
+            if [[ $1 != "" ]]; then
+                echo -e $2
+
+                if [[ $1 == *" "* ]]; then
+                    declare -il int_i=1
+
+                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+                        (( int_i++ ))                                   # counter
+                    done
+                else
+                    echo -e "\t$1"
+                fi
+
+                ReadInput
+
+                if [[ $int_exitCode -eq 0 ]]; then
+                    str_snapAll+="$1 "
+                fi
+
+                echo    # output padding
+            fi
+        }
+
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
         # <summary> Snap </summary>
@@ -1741,40 +1784,12 @@
             # </parameters>
 
             # <summary> Select and Install software sorted by type. </summary>
-            # <code>
-                function InstallFromSnapRepos_InstallByType
-                {
-                    if [[ $1 != "" ]]; then
-                        echo -e $2
+            InstallFromSnapRepos_InstallByType $str_snapUnsorted "Select given Snap software?"
 
-                        if [[ $1 == *" "* ]]; then
-                            declare -il int_i=1
-
-                            while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                                echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                                (( int_i++ ))                                   # counter
-                            done
-                        else
-                            echo -e "\t$1"
-                        fi
-
-                        ReadInput
-
-                        if [[ $int_exitCode -eq 0 ]]; then
-                            str_snapAll+="$1 "
-                        fi
-
-                        echo    # output padding
-                    fi
-                }
-
-                InstallFromSnapRepos_InstallByType $str_snapUnsorted "Select given Snap software?"
-
-                if [[ $str_snapAll != "" ]]; then
-                    echo -e "Install selected Snap apps?"
-                    apt install $str_args $str_snapAll
-                fi
-            # </code>
+            if [[ $str_snapAll != "" ]]; then
+                echo -e "Install selected Snap apps?"
+                apt install $str_args $str_snapAll
+            fi
         fi
 
         EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
@@ -2302,11 +2317,6 @@
     # <summary> Checks </summary>
     declare -gr bool_isDistroDebianBased=$( CheckIfCommandExistsReturnBool "apt" )
     declare -gr bool_isUserRoot=$( CheckIfUserIsRootReturnBool )
-    declare -g bool_is_flatpak_Installed=$( CheckIfCommandExistsReturnBool "flatpak" )
-    declare -g bool_is_ntpdate_Installed=$( CheckIfCommandExistsReturnBool "ntpdate" )
-    declare -g bool_is_rsync_Installed=$( CheckIfCommandExistsReturnBool "rsync" )
-    declare -g bool_is_snap_Installed=$( CheckIfCommandExistsReturnBool "snap" )
-    declare -g bool_is_xmllint_installed=$( CheckIfCommandExistsReturnBool "xmllint" )
 # </code>
 ###
 
