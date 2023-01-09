@@ -1359,8 +1359,7 @@
             local bool_is_rsync_Installed=$( InstallThisCommandReturnBool "rsync" "rsync" )
             local bool_is_snap_Installed=$( InstallThisCommandReturnBool "snap" "snap" )
 
-            # InstallThisCommand "command_to_use" "required_packages"
-            # boolean_to_set=$( ParseThisExitCodeAsBool )
+            # local bool_is_X_installed =$( InstallThisCommandReturnBool "x" "and_sometimes_y" )
         fi
 
         # <summary> Set exit code. </summary>
@@ -1378,18 +1377,16 @@
         echo
     }
 
-    ### NOTE: continue refactor from here down!!!
-
     # TODO: add support for parsing and recognizing other popular Linux distros.
     # <summary> Install from Debian repositories. </summary>
     # <returns> void </returns>
     function InstallFromDebianRepos
     {
         # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="$str_aptAll"> total list of packages to install </parameter>
+        # <parameter name="${arr_apt_toInstall[@]}"> total list of packages to install </parameter>
         # <parameter name="$1"> this list packages to install </parameter>
         # <parameter name="$2"> output statement </parameter>
-        # <returns> $str_aptAll </returns>
+        # <returns> ${arr_apt_toInstall[@]} </returns>
         function InstallFromDebianRepos_InstallByType
         {
             if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
@@ -1413,13 +1410,12 @@
                 ReadInputReturnBool $var_return
 
                 if [[ $var_return == true ]]; then
-                    str_aptAll+="$1 "
+                    arr_apt_toInstall+=( "$1" )
                 fi
 
                 echo    # output padding
             fi
         }
-
 
         # <parameters>
         local bool=true
@@ -1434,67 +1430,121 @@
             str_args="-y"
         fi
 
-        # <summary> Update and upgrade local packages </summary>
-        apt clean
-        apt update || bool=false
+        while [[ $bool == true ]]; do
+            # <summary> Update and upgrade local packages </summary>
+            apt clean
+            apt update || bool=false
 
-        # <summary> Desktop environment checks </summary>
-        # Qt DE (KDE-plasma, LXQT)
-        if [[ $( apt list --installed plasma-desktop lxqt ) != "" ]]; then
-            apt install -y plasma-discover-backend-flatpak || bool=false
-        fi
+            # <summary> Desktop environment checks </summary>
+            # Qt DE (KDE-plasma, LXQT)
+            if [[ $( apt list --installed plasma-desktop lxqt ) != "" ]]; then
+                apt install -y plasma-discover-backend-flatpak || bool=false
+            fi
 
-        # GNOME DE (gnome, XFCE)
-        if [[ $( apt list --installed gnome xfwm4 ) != "" ]]; then
-            apt install -y gnome-software-plugin-flatpak || bool=false
-        fi
+            # GNOME DE (gnome, XFCE)
+            if [[ $( apt list --installed gnome xfwm4 ) != "" ]]; then
+                apt install -y gnome-software-plugin-flatpak || bool=false
+            fi
 
-        echo    # output padding
+            echo    # output padding
 
-        # <summary> APT packages sorted by type. </summary>
-        # <parameters>
-        local str_aptAll=""
-        local readonly str_aptRequired="systemd-timesyncd"
-        local readonly str_aptCommands="curl flashrom lm-sensors neofetch unzip wget youtube-dl"
-        local readonly str_aptCompatibilty="java-common python3 qemu virt-manager wine"
-        local readonly str_aptDeveloper=""
-        local readonly str_aptDrivers="apcupsd rtl-sdr steam-devices"
-        local readonly str_aptGames=""
-        local readonly str_aptInternet="firefox-esr filezilla"
-        local readonly str_aptMedia="vlc"
-        local readonly str_aptOffice="libreoffice"
-        local readonly str_aptPrismBreak=""
-        local readonly str_aptRepos="git flatpak snap"
-        local readonly str_aptSecurity="apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-        local readonly str_aptSuites="debian-edu-install science-all"
-        local readonly str_aptTools="bleachbit cockpit grub-customizer synaptic zram-tools"
-        local readonly str_aptUnsorted=""
-        local readonly str_aptVGAdrivers="nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-        str_aptAll+="${str_aptRequired} "
-        # </parameters>
+            # <summary> APT packages sorted by type. </summary>
+            # <parameters>
+            local declare -a arr_apt_toInstall=(
+                ""
+            )
 
-        # <summary> Select and Install software sorted by type. </summary>
-        # InstallFromDebianRepos_InstallByType $str_aptUnsorted "Select given software?"
-        InstallFromDebianRepos_InstallByType $str_aptCommands "Select Terminal commands?"
-        InstallFromDebianRepos_InstallByType $str_aptCompatibilty "Select compatibility libraries?"
-        InstallFromDebianRepos_InstallByType $str_aptDeveloper "Select Development software?"
-        InstallFromDebianRepos_InstallByType $str_aptGames "Select games?"
-        InstallFromDebianRepos_InstallByType $str_aptInternet "Select Internet software?"
-        InstallFromDebianRepos_InstallByType $str_aptMedia "Select multi-media software?"
-        InstallFromDebianRepos_InstallByType $str_aptOffice "Select office software?"
-        # InstallFromDebianRepos_InstallByType $str_aptPrismBreak "Select recommended \"Prism break\" software?"
-        InstallFromDebianRepos_InstallByType $str_aptRepos "Select software repositories?"
-        InstallFromDebianRepos_InstallByType $str_aptSecurity "Select security tools?"
-        InstallFromDebianRepos_InstallByType $str_aptSuites "Select software suites?"
-        InstallFromDebianRepos_InstallByType $str_aptTools "Select software tools?"
-        InstallFromDebianRepos_InstallByType $str_aptVGAdrivers "Select VGA drivers?"
+            # NOTE: update here!
+            local declare -ar arr_apt_Required=(
+                "systemd-timesyncd"
+            )
 
-        if [[ $( CheckIfVarIsNotNullReturnBool $str_aptAll ) == true ]]; then
-            apt install $str_args $str_aptAll || bool=false
-        fi
+            local declare -ar arr_apt_Commands=(
+                "curl flashrom lm-sensors neofetch unzip wget youtube-dl"
+            )
 
-        # <summary> Clean up </summary>
-        # apt autoremove $str_args || bool=false
+            local declare -ar arr_apt_Compatibilty=(
+                "java-common python3 qemu virt-manager wine"
+            )
+
+            local declare -ar arr_apt_Developer=(
+                ""
+            )
+
+            local declare -ar arr_apt_Drivers=(
+                "apcupsd rtl-sdr steam-devices"
+            )
+
+            local declare -ar arr_apt_Games=(
+                ""
+            )
+
+            local declare -ar arr_apt_Internet=(
+                "firefox-esr filezilla"
+            )
+
+            local declare -ar arr_apt_Media=(
+                "vlc"
+            )
+
+            local declare -ar arr_apt_Office=(
+                "libreoffice"
+            )
+
+            local declare -ar arr_apt_PrismBreak=(
+                ""
+            )
+
+            local declare -ar arr_apt_Repos=(
+                "git flatpak snap"
+            )
+
+            local declare -ar arr_apt_Security=(
+                "apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+            )
+
+            local declare -ar arr_apt_Suites=(
+                "debian-edu-install science-all"
+            )
+
+            local declare -ar arr_apt_Tools=(
+                "bleachbit cockpit grub-customizer synaptic zram-tools"
+            )
+
+            local declare -ar arr_apt_VGAdrivers=(
+                "nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+            )
+
+            local declare -ar arr_apt_Unsorted=(
+                ""
+            )
+
+            arr_apt_toInstall+="${str_apt_Required} "
+            # </parameters>
+
+            # <summary> Select and Install software sorted by type. </summary>
+            # InstallFromDebianRepos_InstallByType ${arr_apt_Unsorted[@]} "Select given software?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Commands[@]}  "Select Terminal commands?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Compatibilty[@]}  "Select compatibility libraries?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Developer[@]}  "Select Development software?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Games[@]}  "Select games?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Internet[@]}  "Select Internet software?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Media[@]}  "Select multi-media software?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Office[@]}  "Select office software?"
+            # InstallFromDebianRepos_InstallByType ${arr_apt_PrismBreak[@]}  "Select recommended \"Prism break\" software?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Repos[@]}  "Select software repositories?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Security[@]}  "Select security tools?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Suites[@]}  "Select software suites?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_Tools[@]}  "Select software tools?"
+            InstallFromDebianRepos_InstallByType ${arr_apt_VGAdrivers[@]}  "Select VGA drivers?"
+
+            if [[ $( CheckIfVarIsNotNullReturnBool ${arr_apt_toInstall[@]} ) == true ]]; then
+                apt install $str_args ${arr_apt_toInstall[@]} || bool=false
+            fi
+
+            # <summary> Clean up </summary>
+            # apt autoremove $str_args || bool=false
+        done
 
         $bool; EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode
     }
@@ -1506,6 +1556,10 @@
     function InstallFromFlathubRepos
     {
         # <summary> Select and Install software sorted by type. </summary>
+        # <parameter name="${arr_flatpak_toInstall[@]}"> total list of packages to install </parameter>
+        # <parameter name="$1"> this list packages to install </parameter>
+        # <parameter name="$2"> output statement </parameter>
+        # <returns> ${arr_flatpak_toInstall[@]} </returns>
         function InstallFromFlathubRepos_InstallByType
         {
             if [[ $1 != "" ]]; then
@@ -1525,7 +1579,7 @@
                 ReadInput
 
                 if [[ $int_exitCode -eq 0 ]]; then
-                    str_flatpakAll+="$1 "
+                    arr_flatpak_toInstall+=( "$1" )
                 fi
 
                 echo    # output padding
@@ -1547,45 +1601,111 @@
             bool=$( InstallThisCommandReturnBool "flatpak" )
         fi
 
-        if [[ $bool == true ]]; then
+        while [[ $bool == true ]]; do
             # <parameters>
+            local str_args=""
             local var_return=false
             ReadInputReturnBool "Auto-accept install prompts? "
             # </parameters>
 
-            case "$int_exitCode" in
-                0)
-                    local str_args="-y";;
-                *)
-                    local str_args="";;
-            esac
+            if [[ $var_return == true ]]; then
+                str_args="-y"
+            fi
 
             # <summary> Add remote repository. </summary>
-            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || bool=false
 
             # <summary> Update local packages. </summary>
-            flatpak update $str_args
+            flatpak update $str_args || bool=false
             echo    # output padding
 
             # <summary> Flatpak packages sorted by type. </summary>
             # <parameters>
-            local str_flatpakAll=""
-            local readonly str_flatpakUnsorted="com.adobe.Flash-Player-Projector com.calibre_ebook.calibre com.makemkv.MakeMKV com.obsproject.Studio com.poweriso.PowerISO com.stremio.Stremio com.valvesoftware.Steam com.valvesoftware.SteamLink com.visualstudio.code com.vscodium.codium fr.handbrake.ghb io.github.Hexchat io.gitlab.librewolf-community nz.mega.MEGAsync org.bunkus.mkvtoolnix-gui org.filezillaproject.Filezilla org.freedesktop.LinuxAudio.Plugins.TAP org.freedesktop.LinuxAudio.Plugins.swh org.freedesktop.Platform org.freedesktop.Platform.Compat.i386 org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL.default org.freedesktop.Platform.GL32.default org.freedesktop.Platform.GL32.nvidia-460-91-03 org.freedesktop.Platform.VAAPI.Intel.i386 org.freedesktop.Platform.ffmpeg-full org.freedesktop.Platform.openh264 org.freedesktop.Sdk org.getmonero.Monero org.gnome.Platform org.gtk.Gtk3theme.Breeze org.kde.KStyle.Adwaita org.kde.Platform org.kde.digikam org.kde.kdenlive org.keepassxc.KeePassXC org.libreoffice.LibreOffice org.mozilla.Thunderbird org.openshot.OpenShot org.videolan.VLC org.videolan.VLC.Plugin.makemkv org.libretro.RetroArch"
-            local readonly str_flatpakPrismBreak="" # include from all, monero etc.
+            local declare -a arr_flatpak_toInstall=()
+
+            # NOTE: update here!
+            local declare -ar arr_flatpak_Compatibility=(
+                "org.freedesktop.Platform"
+                "org.freedesktop.Platform.Compat.i386"
+                "org.freedesktop.Platform.GL.default"
+                "org.freedesktop.Platform.GL32.default"
+                "org.freedesktop.Platform.GL32.nvidia-460-91-03"
+                "org.freedesktop.Platform.VAAPI.Intel.i386"
+            )
+
+            local declare -ar arr_flatpak_Developer=(
+                "com.visualstudio.code"
+                "com.vscodium.codium"
+            )
+
+            local declare -ar arr_flatpak_Games=(
+                "org.libretro.RetroArch"
+                "com.valvesoftware.Steam"
+                "com.valvesoftware.SteamLink"
+            )
+
+            local declare -ar arr_flatpak_Internet=(
+                "org.filezillaproject.Filezilla"
+                "io.gitlab.librewolf-community"
+                "nz.mega.MEGAsync"
+                "com.obsproject.Studio"
+            )
+
+            local declare -ar arr_flatpak_Media=(
+                "org.freedesktop.LinuxAudio.Plugins.TAP"
+                "org.freedesktop.LinuxAudio.Plugins.swh"
+                "com.stremio.Stremio"
+                "org.videolan.VLC"
+                "org.videolan.VLC.Plugin.makemkv"
+            )
+
+            local declare -ar arr_flatpak_Office=(
+                "org.libreoffice.LibreOffice"
+                "org.mozilla.Thunderbird"
+            )
+
+            local declare -ar arr_flatpak_PrismBreak=(
+                "org.getmonero.Monero"
+            )
+
+            local declare -ar arr_flatpak_Tools=(
+                "org.openshot.OpenShot"
+                "org.kde.digikam"
+                "org.kde.kdenlive"
+                "org.keepassxc.KeePassXC"
+                "org.freedesktop.Platform.openh264"
+                "org.freedesktop.Platform.ffmpeg-full"
+                "org.bunkus.mkvtoolnix-gui"
+                "com.adobe.Flash-Player-Projector"
+                "com.calibre_ebook.calibre"
+                "com.makemkv.MakeMKV"
+                "com.poweriso.PowerISO"
+                "fr.handbrake.ghb io.github.Hexchat"
+            )
+
+            local declare -ar arr_flatpak_Unsorted=(
+                "org.freedesktop.Sdk"
+                "org.gnome.Platform"
+                "org.gtk.Gtk3theme.Breeze"
+                "org.kde.KStyle.Adwaita"
+                "org.kde.Platform"
+            )
             # </parameters>
 
             # <summary> Select and Install software sorted by type. </summary>
-            InstallFromFlathubRepos_InstallByType $str_flatpakUnsorted "Select given Flatpak software?"
-            InstallFromFlathubRepos_InstallByType $str_flatpakPrismBreak "Select recommended Prism Break Flatpak software?"
+            InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
+            InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
 
-            if [[ $str_flatpakAll != "" ]]; then
+            if [[ $( CheckIfVarIsNotNullReturnBool ${arr_flatpak_toInstall[@]} ) == true ]]; then
                 echo -e "Install selected Flatpak apps?"
-                apt install $str_args $str_aptAll
+                apt install $str_args ${arr_flatpak_toInstall[@]} || bool=false
             fi
-        fi
+        done
 
-        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
+        $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
     }
+
+    ### NOTE: continue refactor from here down!!!
 
     # <summary> Install from Git repositories. </summary>
     # <returns> void </returns>
@@ -1728,72 +1848,129 @@
 
     # <summary> Install from Snap software repositories. </summary>
     # <returns> void </returns>
-    function InstallFromSnapRepos
-    {
-        function InstallFromSnapRepos_InstallByType
-        {
-            if [[ $1 != "" ]]; then
-                echo -e $2
+    # function InstallFromSnapRepos
+    # {
+    #     # <summary> Select and Install software sorted by type. </summary>
+    #     # <parameter name="${arr_snap_toInstall[@]}"> total list of packages to install </parameter>
+    #     # <parameter name="$1"> this list packages to install </parameter>
+    #     # <parameter name="$2"> output statement </parameter>
+    #     # <returns> ${arr_snap_toInstall[@]} </returns>
+    #     function InstallFromSnapRepos_InstallByType
+    #     {
+    #         if [[ $1 != "" ]]; then
+    #             echo -e $2
 
-                if [[ $1 == *" "* ]]; then
-                    declare -il int_i=1
+    #             if [[ $1 == *" "* ]]; then
+    #                 declare -il int_i=1
 
-                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                        (( int_i++ ))                                   # counter
-                    done
-                else
-                    echo -e "\t$1"
-                fi
+    #                 while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+    #                     echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+    #                     (( int_i++ ))                                   # counter
+    #                 done
+    #             else
+    #                 echo -e "\t$1"
+    #             fi
 
-                ReadInput
+    #             ReadInput
 
-                if [[ $int_exitCode -eq 0 ]]; then
-                    str_snapAll+="$1 "
-                fi
+    #             if [[ $int_exitCode -eq 0 ]]; then
+    #                 arr_snap_toInstall+=( "$1" )
+    #             fi
 
-                echo    # output padding
-            fi
-        }
+    #             echo    # output padding
+    #         fi
+    #     }
 
-        echo -e "Installing from alternative $( uname -o ) repositories..."
+    #     echo -e "Installing from alternative $( uname -o ) repositories..."
 
-        # <summary> Snap </summary>
-        if [[ $( command -v snap ) != "/usr/bin/snap" ]]; then
-            echo -e "${str_warning}Snap not installed. Skipping..."
-            false; SaveThisExitCode
-        else
-            local var_return=false
-            ReadInputReturnBool "Auto-accept install prompts? "
+    #     # <parameters>
+    #     local bool=true
+    #     local str_args=""
+    #     local var_return=false
+    #     # </parameters>
 
-            case "$int_exitCode" in
-                0)
-                    local str_args="-y";;
-                *)
-                    local str_args="";;
-            esac
+    #     # <summary> snap </summary>
+    #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
+    #         echo -e "${str_warning}Snap not installed. Skipping..."
 
-            # <summary> Update local packages. </summary>
-            flatpak update $str_args
-            echo    # output padding
+    #         bool=$( InstallThisCommandReturnBool "snap" )
+    #     fi
 
-            # <summary> Snap packages sorted by type. </summary>
-            # <parameters>
-            local str_snapAll=""
-            local readonly str_snapUnsorted=""
-            # </parameters>
+    #     while [[ $bool == true ]]; do
+    #         # <parameters>
+    #         local str_args=""
+    #         local var_return=false
+    #         ReadInputReturnBool "Auto-accept install prompts? "
+    #         # </parameters>
 
-            # <summary> Select and Install software sorted by type. </summary>
-            InstallFromSnapRepos_InstallByType $str_snapUnsorted "Select given Snap software?"
+    #         if [[ $var_return == true ]]; then
+    #             str_args="-y"
+    #         fi
 
-            if [[ $str_snapAll != "" ]]; then
-                echo -e "Install selected Snap apps?"
-                apt install $str_args $str_snapAll
-            fi
-        fi
+    #         # <summary> Add remote repository. </summary>
 
-        EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
-    }
+    #         # <summary> Update local packages. </summary>
+    #         snap update $str_args || bool=false
+    #         echo    # output padding
+
+    #         # <summary> Snap packages sorted by type. </summary>
+    #         # <parameters>
+    #         local declare -a arr_snap_toInstall=()
+
+    #         # NOTE: update here!
+    #         local declare -ar arr_snap_Compatibility=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Developer=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Games=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Internet=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Media=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Office=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_PrismBreak=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Tools=(
+    #             ""
+    #         )
+
+    #         local declare -ar arr_snap_Unsorted=(
+    #             "org.freedesktop.Sdk"
+    #             "org.gnome.Platform"
+    #             "org.gtk.Gtk3theme.Breeze"
+    #             "org.kde.KStyle.Adwaita"
+    #             "org.kde.Platform"
+    #         )
+    #         # </parameters>
+
+    #         # <summary> Select and Install software sorted by type. </summary>
+    #         InstallFromFlathubRepos_InstallByType ${arr_snap_Unsorted[@]} "Select given snap software?"
+    #         InstallFromFlathubRepos_InstallByType ${str_snap_PrismBreak[@]} "Select recommended Prism Break Snap software?"
+
+    #         if [[ $( CheckIfVarIsNotNullReturnBool ${arr_snap_toInstall[@]} ) == true ]]; then
+    #             echo -e "Install selected Snap apps?"
+    #             apt install $str_args ${arr_snap_toInstall[@]} || bool=false
+    #         fi
+    #     done
+
+    #     $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
+    # }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
     # <returns> void </returns>
@@ -2279,7 +2456,7 @@
             if [[ $int_exitCode -eq 0 ]]; then
                 InstallFromDebianRepos
                 InstallFromFlathubRepos
-                InstallFromSnapRepos
+                # InstallFromSnapRepos
             fi
         fi
 
