@@ -10,22 +10,25 @@ Post-install changes to a Debian Linux system.
 
         bash installer.bash
 
-## Features
-* Distro-specific
-    * Modify software repository sources (APT)
-    * Install APT software packages **[1]**
-    * Update APT packages
+## Sudo Features
+* Ask user to change Debian software repositories, and update
+* Ask user to install recommended software **[1]**
+    * Debian APT packages
+    * Flatpak apps
+    * Sudo-only Git scripts
+* Ask user to make recommended system security-hardening / changes
+    * Enable/Disable USB, thunderbolt, etc. interfaces
+    * Enable/Change/Disable SSH
+    * Enable UFW firewall
+    * Parse local '.files' directory for changes to:
+        * Cron
+        * System files
+        * System services
 
-* Distro-agnostic
-    * Add/Ignore alternative repo sources (Flathub, Snap)
-    * Install Flatpak/Snap software packages **[1]**
-    * Update Flatpak/Snap packages
-    * Add Systemd services to machine
-    * Clone Git repositories
-    * Execute scripts of given Git repos
-    * Append to Cron
-    * Security-hardening
-    * Firewall setup
+## User Features
+* Ask user to install recommended Git scripts
+
+## Sources
 
 * **[1]** Install listed software by given category (of all sources)
     * Development
@@ -41,8 +44,4 @@ Post-install changes to a Debian Linux system.
     * other/unsorted
 
 ## DISCLAIMER
-Tested on Debian Linux.
-
-## To-Do
-* lots of work to be done
-* make processes that can be distro-agnostic, more-so
+Tested on Debian Linux. Work-in-progress.
