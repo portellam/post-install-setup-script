@@ -9,29 +9,18 @@
 ### notes ###
 # <summary>
 #
-# declare -l is NOT declare a local parameter
-# it is lowercase
-# likewise, declare -u is uppercase
-#
-# set proper declare options for all vars
-#   review PDF
-#
-# -use alias commands?
-#
-# -do not over-rely on existing functions for file manipulation, better to use commands than hope logic works as intended.
-#
-# -refactor *return statements* of functions with first input variable
-#   -set $1 as return string/var, and push back other input vars ($1 will be $2, and so on...)
-#
-# -de-nest code:
-#   -place nested conditionals in functions
-#   -use while loops, watch for changes in exit code
-# -use consistent vocabulary in names, comments, etc
-# -refactor code
-#
-# -cat EOF
-#
-# use awk, grep, cut, paste
+# TODO:
+# - refactor with preferred exit/return codes?
+#   * #1 - echo preferred exit/return code value in 'SetExitCode' function, and call this with 'return SetExitCodeGivenSpecificException'
+#       I misinterpreted how return codes worked... :-(
+#   * #2 - else?
+# - change variable declarations (-l is lowercase, not local)
+# - use alias commands?
+# - determine required commands
+# - determine packages to install
+# - make certain functions distro agnostic
+# - de-nest as much as possible
+# - use 'awk, grep, cut, paste' etc.
 #
 # </summary>
 ###
@@ -1852,8 +1841,6 @@
         echo
     }
 
-    ### NOTE: continue refactor from here down!!!
-
     # <summary> Install from Snap software repositories. </summary>
     # <returns> void </returns>
     # function InstallFromSnapRepos
@@ -2108,27 +2095,33 @@
     }
 
     # <summary> Configuration of SSH. </summary>
+    # <parameter name="$str_altSSH"> chosen alternate SSH port value </parameter>
     # <returns> void </returns>
     function ModifySSH
     {
+        echo -e "Configuring SSH..."
+
+        # <parameters>
+        local bool=true
+        # </parameters>
+
         # <summary> Exit if command is not present. </summary>
         if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == true ]]; then
-            false; SaveThisExitCode
+            bool=false
             echo -e "${str_warning}SSH not installed! Skipping..."
         fi
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
-        while [[ $int_exitCode -eq 0 ]]; do
-            local var_return=false
-            ReadInputReturnBool "Modify SSH?"
-
+        while [[ $bool == true ]]; do
             # <parameters>
             local declare -i int_count=0
+            local var_return=false
+            ReadInputReturnBool "Modify SSH?"
             # </parameters>
 
             while [[ $int_count -lt 3 ]]; do
                 # <parameters>
-                local str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
+                str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
                 local declare -i int_altSSH="${str_altSSH}"
                 # </parameters>
 
@@ -2145,7 +2138,7 @@
         done
 
         # <summary> Write to system files. </summary>
-        if [[ $int_exitCode -eq 0 ]]; then
+        if [[ $bool == true ]]; then
             # <parameters>
             local readonly str_file1="/etc/ssh/ssh_config"
             # local readonly str_file2="/etc/ssh/sshd_config"
@@ -2159,7 +2152,7 @@
                 && $( CheckIfFileExistsReturnBool $str_file1 ) == true
                 ) ]]; then
 
-                systemctl restart ssh || ( false; SaveThisExitCode )
+                systemctl restart ssh || bool=false
             fi
 
             # if [[ (
@@ -2169,10 +2162,14 @@
             #     && $( CheckIfFileExistsReturnBool $str_file2 ) == true
             #     ) ]]; then
 
-            #     systemctl restart sshd || ( false; SaveThisExitCode )
+            #     systemctl restart sshd || bool=false
             # fi
         fi
+
+        $bool; ExitWithThisExitCode "Configuring SSH..."; ParseThisExitCode; echo
     }
+
+    ### NOTE: continue refactor from here down!!!
 
     # <summary> Recommended host security changes. </summary>
     # <returns> void </returns>
@@ -2181,7 +2178,6 @@
         echo -e "Configuring system security..."
 
         # <parameters>
-        local var_return=false
         local bool=false
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
         local readonly arr_files1=(
@@ -2190,6 +2186,7 @@
             "/etc/modprobe.d/disable-thunderbolt.conf"
         )
         local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        local var_return=false
         # </parameters>
 
         # <summary> Set working directory to script root folder. </summary>
@@ -2201,15 +2198,15 @@
             ReadInputReturnBool "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             # <summary> Yes. </summary>
-            if [[ $int_exitCode -eq 0 && (
-                $( DeleteFileReturnBool ${arr_files1[0]} ) == true
+            if [[
+                $var_return == true
+                && $( DeleteFileReturnBool ${arr_files1[0]} ) == true
                 && $( AppendVarToFileReturnBool ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
                 && $( DeleteFileReturnBool ${arr_files1[1]} ) == true
                 && $( AppendVarToFileReturnBool ${arr_files1[1]} 'blacklist firewire-core' ) == true
                 && $( DeleteFileReturnBool ${arr_files1[2]} ) == true
                 && $( AppendVarToFileReturnBool ${arr_files1[2]} 'blacklist thunderbolt' ) == true
-            ) ]]; then
-                bool=true
+                ]]; then
                 update-initramfs -u -k all || bool=false
 
             # <summary> No, delete any changes and update system. </summary>
@@ -2224,7 +2221,7 @@
             fi
         fi
 
-        if [[ $bool == true ]]; then
+        if [[ $bool == false ]]; then
             echo -e "${str_warning}Failed to make changes."
         fi
 
@@ -2237,17 +2234,17 @@
         if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
             ReadInputReturnBool "Setup '/etc/sysctl.conf' with defaults?"
 
-            if [[ $int_exitCode -eq 0 && (
-                ! ( cp $str_file1 $str_file2 )
-                || ! (cat $str_file2 >> $str_file1 )
-                ) ]]; then
-                SetExitCodeIfPassNorFail; SaveThisExitCode
+            if [[ $var_return == true ]]; then
+                ( cp $str_file1 $str_file2 || bool=false ) &> /dev/null
+                ( cat $str_file2 >> $str_file1 || bool=false ) &> /dev/null
             fi
         done
 
         ReadInputReturnBool "Setup firewall with UFW?"
 
-        if [[ $int_exitCode -eq 0 ]]; then
+        ### NOTE: I am unsure if these false statements will execute the commands, but if they do, I see no need to refactor.
+
+        if [[ $var_return == true ]]; then
             bool=$( CheckIfCommandExistsReturnBool "ufw" )
 
             if [[ $bool == false ]]; then
@@ -2301,24 +2298,19 @@
                     ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null )
                     || ! $( ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh' &> /dev/null )
                     ) ]]; then
-                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                    bool=false
                 fi
 
                 # <summary> If alternate choice is not provided, attempt to make changes. Exit early at failure. </summary>
                 if [[ $bool == false && (
                     ! $( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null )
                     ) ]]; then
-                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                    bool=false
                 fi
 
                 if [[ ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null ) ]]; then
-                    SetExitCodeIfPassNorFail; SaveThisExitCode
+                    bool=false
                 fi
-            fi
-
-            # <summary> Do not save changes. </summary>
-            if [[ $bool == false ]]; then
-                SetExitCodeIfPassNorFail; SaveThisExitCode
             fi
 
             # <summary> Attempt to save changes. Exit early at failure. </summary>
@@ -2326,7 +2318,7 @@
                 ! $( ufw enable &> /dev/null )
                 || ! $( ufw reload &> /dev/null )
                 ]]; then
-                false; SaveThisExitCode
+                bool=false
             fi
         fi
 
@@ -2442,6 +2434,10 @@
     # <returns> void </returns>
     function ExecuteSystemSetup
     {
+        # <parameters>
+        declare -g str_altSSH=""
+        # </parameters>
+
         # ModifySecurity
         # ModifySSH
         AppendServices
