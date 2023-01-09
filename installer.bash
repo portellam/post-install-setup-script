@@ -2338,103 +2338,101 @@
 # <code>
     # <summary> Display Help to console. </summary>
     # <returns> void </returns>
-    function Help
-    {                                 # NOTE: needs work.
-        declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
-            \nwhere OPTIONS
-            \n\t-h  --help\t\t\tPrint this prompt.
-            \n\t-d  --delete\t\t\tDelete existing VFIO setup.
-            \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
-            \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
-            \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
-            \n\nwhere ARGUMENTS
-            \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
-            \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
-            \n"
+    # function Help
+    # {
+    #     declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
+    #         \nwhere OPTIONS
+    #         \n\t-h  --help\t\t\tPrint this prompt.
+    #         \n\t-d  --delete\t\t\tDelete existing VFIO setup.
+    #         \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
+    #         \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
+    #         \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
+    #         \n\nwhere ARGUMENTS
+    #         \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
+    #         \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
+    #         \n"
 
-        echo -e $str_helpPrompt
+    #     echo -e $str_helpPrompt
 
-        ExitWithThisExitCode
-    }
+    #     ExitWithThisExitCode
+    # }
 
     # <summary> Parse input parameters for given options. </summary>
     # <returns> void </returns>
-    function ParseInputParamForOptions
-    {            # NOTE: needs work.
-        if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
-            while [[ "$1" =~ ^-  ]]; do
-                case $1 in
-                    "")                                     # no option
-                        SetExitCodeOnError
-                        SaveThisExitCode
-                        break;;
+    # function ParseInputParamForOptions
+    # {
+    #     if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
+    #         while [[ "$1" =~ ^-  ]]; do
+    #             case $1 in
+    #                 "")                                     # no option
+    #                     SetExitCodeOnError
+    #                     SaveThisExitCode
+    #                     break;;
 
-                    -h | --help )                           # options
-                        declare -lir int_aFlag=1
-                        break;;
-                    -d | --delete )
-                        declare -lir int_aFlag=2
-                        break;;
-                    -m | --multiboot )
-                        declare -lir int_aFlag=3;;
-                    -s | --static )
-                        declare -lir int_aFlag=4;;
-                    -w | --write )
-                        declare -lir int_aFlag=5;;
+    #                 -h | --help )                           # options
+    #                     declare -lir int_aFlag=1
+    #                     break;;
+    #                 -d | --delete )
+    #                     declare -lir int_aFlag=2
+    #                     break;;
+    #                 -m | --multiboot )
+    #                     declare -lir int_aFlag=3;;
+    #                 -s | --static )
+    #                     declare -lir int_aFlag=4;;
+    #                 -w | --write )
+    #                     declare -lir int_aFlag=5;;
 
-                    -f | --full )                           # arguments
-                        declare -lir int_bFlag=1;;
-                    -r | --read )
-                        declare -lir int_bFlag=2;;
-                esac
+    #                 -f | --full )                           # arguments
+    #                     declare -lir int_bFlag=1;;
+    #                 -r | --read )
+    #                     declare -lir int_bFlag=2;;
+    #             esac
 
-                shift
-            done
-        else                                                # invalid option
-            SetExitCodeOnError
-            SaveThisExitCode
-            ParseThisExitCode
-            Help
-            ExitWithThisExitCode
-        fi
+    #             shift
+    #         done
+    #     else                                                # invalid option
+    #         SetExitCodeOnError
+    #         SaveThisExitCode
+    #         ParseThisExitCode
+    #         Help
+    #         ExitWithThisExitCode
+    #     fi
 
-        # if [[ "$1" == '--' ]]; then
-        #     shift
-        # fi
+    #     # if [[ "$1" == '--' ]]; then
+    #     #     shift
+    #     # fi
 
-        case $int_aFlag in                                  # execute second options before first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PreInstallSetup;;
-                    # 2)
-                    #     ReadIOMMU_FromFile;;
-                esac;;
-        esac
+    #     case $int_aFlag in                                  # execute second options before first options
+    #         3|4)
+    #             case $int_bFlag in
+    #                 1)
+    #                     PreInstallSetup;;
+    #                 # 2)
+    #                 #     ReadIOMMU_FromFile;;
+    #             esac;;
+    #     esac
 
-        case $int_aFlag in                                  # execute first options
-            1)
-                Help;;
-            2)
-                DeleteSetup;;
-            3)
-                MultiBootSetup;;
-            4)
-                StaticSetup;;
-            # 5)
-            #     WriteIOMMU_ToFile;;
-        esac
+    #     case $int_aFlag in                                  # execute first options
+    #         1)
+    #             Help;;
+    #         2)
+    #             DeleteSetup;;
+    #         3)
+    #             MultiBootSetup;;
+    #         4)
+    #             StaticSetup;;
+    #         # 5)
+    #         #     WriteIOMMU_ToFile;;
+    #     esac
 
-        case $int_aFlag in                                  # execute second options after first options
-            3|4)
-                case $int_bFlag in
-                    1)
-                        PostInstallSetup;;
-                esac;;
-        esac
-    }
-
-    ### NOTE: continue refactor from here up!!!
+    #     case $int_aFlag in                                  # execute second options after first options
+    #         3|4)
+    #             case $int_bFlag in
+    #                 1)
+    #                     PostInstallSetup;;
+    #             esac;;
+    #     esac
+    # }
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> void </returns>
@@ -2504,13 +2502,14 @@
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     if [[ $bool_isUserRoot == true ]]; then
         ExecuteSetupOfSoftwareSources
-        # ExecuteSetupOfGitRepos
-        # ExecuteSystemSetup
+        ExecuteSetupOfGitRepos
+        ExecuteSystemSetup
     else
         ExecuteSetupOfGitRepos
     fi
 
     # <summary> Post-execution clean up. </summary>
-    ExitWithThisExitCode
+    # ExitWithThisExitCode
+    exit
 # </code>
 ###
