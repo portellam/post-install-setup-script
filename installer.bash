@@ -202,45 +202,55 @@
     }
 
     # <summary> Set exit codes based on reserved/custom conditions. </summary>
+    # <returns> int </returns>
     # <code>
+
         function SetExitCodeOnError
         {
             (exit 255)
+            # echo 255
         }
 
         function SetExitCodeIfVarIsNull
         {
             (exit 254)
+            # echo 254
         }
 
         function SetExitCodeIfFileOrDirIsNull
         {
             (exit 253)
+            # echo 253
         }
 
         function SetExitCodeIfFileIsNotReadable
         {
             (exit 252)
+            # echo 252
         }
 
         function SetExitCodeIfFileIsNotWritable
         {
             (exit 251)
+            # echo 251
         }
 
         function SetExitCodeIfFileIsNotExecutable
         {
             (exit 250)
+            # echo 250
         }
 
         function SetExitCodeIfInputIsInvalid
         {
             (exit 249)
+            # echo 249
         }
 
         function SetExitCodeIfPassNorFail
         {
             (exit 131)
+            # echo 131
         }
     # </code>
 # </code>
@@ -1035,8 +1045,6 @@
     }
 # </code>
 ###
-
-### NOTE: continue refactor from here inside!!!
 
 ### program functions ###
 # <summary> Logic specific to the purpose of this program or repository. </summary>
@@ -2169,8 +2177,6 @@
         $bool; ExitWithThisExitCode "Configuring SSH..."; ParseThisExitCode; echo
     }
 
-    ### NOTE: continue refactor from here down!!!
-
     # <summary> Recommended host security changes. </summary>
     # <returns> void </returns>
     function ModifySecurity
@@ -2185,7 +2191,7 @@
             "/etc/modprobe.d/disable-firewire.conf"
             "/etc/modprobe.d/disable-thunderbolt.conf"
         )
-        local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+        # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
         local var_return=false
         # </parameters>
 
