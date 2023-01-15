@@ -1669,130 +1669,131 @@
     }
 
     # <summary> Install from Snap software repositories. </summary>
-    # <returns> void </returns>
-    # function InstallFromSnapRepos
-    # {
-    #     # <summary> Select and Install software sorted by type. </summary>
-    #     # <parameter name="${arr_snap_toInstall[@]}"> total list of packages to install </parameter>
-    #     # <parameter name="$1"> this list packages to install </parameter>
-    #     # <parameter name="$2"> output statement </parameter>
-    #     # <returns> ${arr_snap_toInstall[@]} </returns>
-    #     function InstallFromSnapRepos_InstallByType
-    #     {
-    #         if [[ $1 != "" ]]; then
-    #             echo -e $2
+        # <returns> void </returns>
+        # function InstallFromSnapRepos
+        # {
+        #     # <summary> Select and Install software sorted by type. </summary>
+        #     # <parameter name="${arr_snap_toInstall[@]}"> total list of packages to install </parameter>
+        #     # <parameter name="$1"> this list packages to install </parameter>
+        #     # <parameter name="$2"> output statement </parameter>
+        #     # <returns> ${arr_snap_toInstall[@]} </returns>
+        #     function InstallFromSnapRepos_InstallByType
+        #     {
+        #         if [[ $1 != "" ]]; then
+        #             echo -e $2
 
-    #             if [[ $1 == *" "* ]]; then
-    #                 local declare -i int_i=1
+        #             if [[ $1 == *" "* ]]; then
+        #                 local declare -i int_i=1
 
-    #                 while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-    #                     echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-    #                     (( int_i++ ))                                   # counter
-    #                 done
-    #             else
-    #                 echo -e "\t$1"
-    #             fi
+        #                 while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
+        #                     echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
+        #                     (( int_i++ ))                                   # counter
+        #                 done
+        #             else
+        #                 echo -e "\t$1"
+        #             fi
 
-    #             ReadInput
+        #             ReadInput
 
-    #             if [[ $int_exit_code -eq 0 ]]; then
-    #                 arr_snap_toInstall+=( "$1" )
-    #             fi
+        #             if [[ $int_exit_code -eq 0 ]]; then
+        #                 arr_snap_toInstall+=( "$1" )
+        #             fi
 
-    #             echo    # output padding
-    #         fi
-    #     }
+        #             echo    # output padding
+        #         fi
+        #     }
 
-    #     echo -e "Installing from alternative $( uname -o ) repositories..."
+        #     echo -e "Installing from alternative $( uname -o ) repositories..."
 
-    #     # <params>
-    #     local bool=true
-    #     local str_args=""
-    #     local var_return=false
-    #     # </params>
+        #     # <params>
+        #     local bool=true
+        #     local str_args=""
+        #     local var_return=false
+        #     # </params>
 
-    #     # <summary> snap </summary>
-    #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
-    #         echo -e "${str_warning}Snap not installed. Skipping..."
+        #     # <summary> snap </summary>
+        #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
+        #         echo -e "${str_warning}Snap not installed. Skipping..."
 
-    #         bool=$( InstallThisCommandReturnBool "snap" )
-    #     fi
+        #         bool=$( InstallThisCommandReturnBool "snap" )
+        #     fi
 
-    #     while [[ $bool == true ]]; do
-    #         # <params>
-    #         local str_args=""
-    #         local var_return=false
-    #         ReadInputReturnBool "Auto-accept install prompts? "
-    #         # </params>
+        #     while [[ $bool == true ]]; do
+        #         # <params>
+        #         local str_args=""
+        #         local var_return=false
+        #         ReadInputReturnBool "Auto-accept install prompts? "
+        #         # </params>
 
-    #         if [[ $var_return == true ]]; then
-    #             str_args="-y"
-    #         fi
+        #         if [[ $var_return == true ]]; then
+        #             str_args="-y"
+        #         fi
 
-    #         # <summary> Add remote repository. </summary>
+        #         # <summary> Add remote repository. </summary>
 
-    #         # <summary> Update local packages. </summary>
-    #         snap update $str_args || bool=false
-    #         echo    # output padding
+        #         # <summary> Update local packages. </summary>
+        #         snap update $str_args || bool=false
+        #         echo    # output padding
 
-    #         # <summary> Snap packages sorted by type. </summary>
-    #         # <params>
-    #         local declare -a arr_snap_toInstall=()
+        #         # <summary> Snap packages sorted by type. </summary>
+        #         # <params>
+        #         local declare -a arr_snap_toInstall=()
 
-    #         # NOTE: update here!
-    #         local declare -ar arr_snap_Compatibility=(
-    #             ""
-    #         )
+        #         # NOTE: update here!
+        #         local declare -ar arr_snap_Compatibility=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Developer=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Developer=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Games=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Games=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Internet=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Internet=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Media=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Media=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Office=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Office=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_PrismBreak=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_PrismBreak=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Tools=(
-    #             ""
-    #         )
+        #         local declare -ar arr_snap_Tools=(
+        #             ""
+        #         )
 
-    #         local declare -ar arr_snap_Unsorted=(
-    #             "org.freedesktop.Sdk"
-    #             "org.gnome.Platform"
-    #             "org.gtk.Gtk3theme.Breeze"
-    #             "org.kde.KStyle.Adwaita"
-    #             "org.kde.Platform"
-    #         )
-    #         # </params>
+        #         local declare -ar arr_snap_Unsorted=(
+        #             "org.freedesktop.Sdk"
+        #             "org.gnome.Platform"
+        #             "org.gtk.Gtk3theme.Breeze"
+        #             "org.kde.KStyle.Adwaita"
+        #             "org.kde.Platform"
+        #         )
+        #         # </params>
 
-    #         # <summary> Select and Install software sorted by type. </summary>
-    #         InstallFromFlathubRepos_InstallByType ${arr_snap_Unsorted[@]} "Select given snap software?"
-    #         InstallFromFlathubRepos_InstallByType ${str_snap_PrismBreak[@]} "Select recommended Prism Break Snap software?"
+        #         # <summary> Select and Install software sorted by type. </summary>
+        #         InstallFromFlathubRepos_InstallByType ${arr_snap_Unsorted[@]} "Select given snap software?"
+        #         InstallFromFlathubRepos_InstallByType ${str_snap_PrismBreak[@]} "Select recommended Prism Break Snap software?"
 
-    #         if [[ $( CheckIfVarIsNotNullReturnBool ${arr_snap_toInstall[@]} ) == true ]]; then
-    #             echo -e "Install selected Snap apps?"
-    #             apt install $str_args ${arr_snap_toInstall[@]} || bool=false
-    #         fi
-    #     done
+        #         if [[ $( CheckIfVarIsNotNullReturnBool ${arr_snap_toInstall[@]} ) == true ]]; then
+        #             echo -e "Install selected Snap apps?"
+        #             apt install $str_args ${arr_snap_toInstall[@]} || bool=false
+        #         fi
+        #     done
 
-    #     $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
-    # }
+        #     $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
+        # }
+    #
 
     # <summary> Setup software repositories for Debian Linux. </summary>
     # <returns> void </returns>
@@ -2154,102 +2155,103 @@
 # <summary> Program middleman logic </summary>
 # <code>
     # <summary> Display Help to console. </summary>
-    # <returns> void </returns>
-    # function Help
-    # {
-    #     declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
-    #         \nwhere OPTIONS
-    #         \n\t-h  --help\t\t\tPrint this prompt.
-    #         \n\t-d  --delete\t\t\tDelete existing VFIO setup.
-    #         \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
-    #         \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
-    #         \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
-    #         \n\nwhere ARGUMENTS
-    #         \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
-    #         \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
-    #         \n"
+        # <returns> void </returns>
+        # function Help
+        # {
+        #     declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
+        #         \nwhere OPTIONS
+        #         \n\t-h  --help\t\t\tPrint this prompt.
+        #         \n\t-d  --delete\t\t\tDelete existing VFIO setup.
+        #         \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
+        #         \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
+        #         \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
+        #         \n\nwhere ARGUMENTS
+        #         \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
+        #         \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
+        #         \n"
 
-    #     echo -e $str_helpPrompt
+        #     echo -e $str_helpPrompt
 
-    #     ExitWithThisExitCode
-    # }
+        #     ExitWithThisExitCode
+        # }
 
-    # <summary> Parse input parameters for given options. </summary>
-    # <returns> void </returns>
-    # function ParseInputParamForOptions
-    # {
-    #     if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
-    #         while [[ "$1" =~ ^-  ]]; do
-    #             case $1 in
-    #                 "")                                     # no option
-    #                     SetExitCodeOnError
-    #                     SaveThisExitCode
-    #                     break;;
+        # <summary> Parse input parameters for given options. </summary>
+        # <returns> void </returns>
+        # function ParseInputParamForOptions
+        # {
+        #     if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
+        #         while [[ "$1" =~ ^-  ]]; do
+        #             case $1 in
+        #                 "")                                     # no option
+        #                     SetExitCodeOnError
+        #                     SaveThisExitCode
+        #                     break;;
 
-    #                 -h | --help )                           # options
-    #                     declare -lir int_aFlag=1
-    #                     break;;
-    #                 -d | --delete )
-    #                     declare -lir int_aFlag=2
-    #                     break;;
-    #                 -m | --multiboot )
-    #                     declare -lir int_aFlag=3;;
-    #                 -s | --static )
-    #                     declare -lir int_aFlag=4;;
-    #                 -w | --write )
-    #                     declare -lir int_aFlag=5;;
+        #                 -h | --help )                           # options
+        #                     declare -lir int_aFlag=1
+        #                     break;;
+        #                 -d | --delete )
+        #                     declare -lir int_aFlag=2
+        #                     break;;
+        #                 -m | --multiboot )
+        #                     declare -lir int_aFlag=3;;
+        #                 -s | --static )
+        #                     declare -lir int_aFlag=4;;
+        #                 -w | --write )
+        #                     declare -lir int_aFlag=5;;
 
-    #                 -f | --full )                           # arguments
-    #                     declare -lir int_bFlag=1;;
-    #                 -r | --read )
-    #                     declare -lir int_bFlag=2;;
-    #             esac
+        #                 -f | --full )                           # arguments
+        #                     declare -lir int_bFlag=1;;
+        #                 -r | --read )
+        #                     declare -lir int_bFlag=2;;
+        #             esac
 
-    #             shift
-    #         done
-    #     else                                                # invalid option
-    #         SetExitCodeOnError
-    #         SaveThisExitCode
-    #         ParseThisExitCode
-    #         Help
-    #         ExitWithThisExitCode
-    #     fi
+        #             shift
+        #         done
+        #     else                                                # invalid option
+        #         SetExitCodeOnError
+        #         SaveThisExitCode
+        #         ParseThisExitCode
+        #         Help
+        #         ExitWithThisExitCode
+        #     fi
 
-    #     # if [[ "$1" == '--' ]]; then
-    #     #     shift
-    #     # fi
+        #     # if [[ "$1" == '--' ]]; then
+        #     #     shift
+        #     # fi
 
-    #     case $int_aFlag in                                  # execute second options before first options
-    #         3|4)
-    #             case $int_bFlag in
-    #                 1)
-    #                     PreInstallSetup;;
-    #                 # 2)
-    #                 #     ReadIOMMU_FromFile;;
-    #             esac;;
-    #     esac
+        #     case $int_aFlag in                                  # execute second options before first options
+        #         3|4)
+        #             case $int_bFlag in
+        #                 1)
+        #                     PreInstallSetup;;
+        #                 # 2)
+        #                 #     ReadIOMMU_FromFile;;
+        #             esac;;
+        #     esac
 
-    #     case $int_aFlag in                                  # execute first options
-    #         1)
-    #             Help;;
-    #         2)
-    #             DeleteSetup;;
-    #         3)
-    #             MultiBootSetup;;
-    #         4)
-    #             StaticSetup;;
-    #         # 5)
-    #         #     WriteIOMMU_ToFile;;
-    #     esac
+        #     case $int_aFlag in                                  # execute first options
+        #         1)
+        #             Help;;
+        #         2)
+        #             DeleteSetup;;
+        #         3)
+        #             MultiBootSetup;;
+        #         4)
+        #             StaticSetup;;
+        #         # 5)
+        #         #     WriteIOMMU_ToFile;;
+        #     esac
 
-    #     case $int_aFlag in                                  # execute second options after first options
-    #         3|4)
-    #             case $int_bFlag in
-    #                 1)
-    #                     PostInstallSetup;;
-    #             esac;;
-    #     esac
-    # }
+        #     case $int_aFlag in                                  # execute second options after first options
+        #         3|4)
+        #             case $int_bFlag in
+        #                 1)
+        #                     PostInstallSetup;;
+        #             esac;;
+        #     esac
+        # }
+    #
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> void </returns>
@@ -2259,8 +2261,10 @@
         declare -g str_altSSH=""
         # </params>
 
-        ModifySecurity
-        ModifySSH
+        if ModifySecurity; then
+            ModifySSH
+        fi
+
         AppendServices
         AppendCron
     }
