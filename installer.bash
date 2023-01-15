@@ -22,7 +22,7 @@
 #
 # </summary>
 
-# <summary> #1 - Exit codes </summary>
+# <summary> #1 - Command operation validation </summary>
 # <code>
     # <summary> Append Pass or Fail given exit code. If Fail, call SaveExitCode. </summary>
     # <param name="$1"> the output statement </param>
@@ -50,6 +50,29 @@
     function SaveExitCode
     {
         int_exit_code="$?"
+    }
+
+    # <summary> Attempt given command a given number of times before failure. </summary>
+    # <param name="$1"> the command to execute </param>
+    # <returns> void </returns>
+    function TryThisXTimesBeforeFail
+    {
+        # <params>
+        declare -i int_count=0
+        declare -ir int_max_count_of_tries=3
+        # </params>
+
+        if CheckIfVarIsValid $1; then
+            while [[ $int_count -lt $int_max_count_of_tries ]]; do
+                if eval $1; then
+                    return 0
+                fi
+
+                (( int_count++ ))
+            done
+        fi
+
+        return 1
     }
 # </code>
 
@@ -80,28 +103,28 @@
         return 0
     }
 
-    # <summary> Check if the value is valid. </summary>
+    # <summary> Check if the value is a valid bool. </summary>
     # <param name="$1"> the value </param>
     # <returns> exit code </returns>
     #
-    function CheckIfVarIsValid
+    function CheckIfVarIsBool
     {
         # <params>
-        local readonly str_output_var_is_null="${var_prefix_error} Null string."
-        local readonly str_output_var_is_empty="${var_prefix_error} Empty string."
+        local readonly str_output_var_is_incorrect_type="${var_prefix_error} Not a boolean."
         # </params>
 
-        if [[ -z "$1" ]]; then
-            echo -e $str_output_var_is_null
-            return $int_code_var_is_null
+        if ! CheckIfVarIsValid $1; then
+            return $?
         fi
 
-        if [[ "$1" == "" ]]; then
-            echo -e $str_output_var_is_empty
-            return $int_code_var_is_empty
-        fi
+        case "$1" in
+            "true" | "false" )
+                return 0;;
 
-        return 0
+            * )
+                echo -e $str_output_var_is_incorrect_type
+                return $int_code_var_is_not_bool;;
+        esac
     }
 
     # <summary> Check if the value is a valid number. </summary>
@@ -122,6 +145,30 @@
         if ! [[ $1 =~ $str_num_regex ]]; then
             echo -e $str_output_var_is_NAN
             return $int_code_var_is_NAN
+        fi
+
+        return 0
+    }
+
+    # <summary> Check if the value is valid. </summary>
+    # <param name="$1"> the value </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfVarIsValid
+    {
+        # <params>
+        local readonly str_output_var_is_null="${var_prefix_error} Null string."
+        local readonly str_output_var_is_empty="${var_prefix_error} Empty string."
+        # </params>
+
+        if [[ -z "$1" ]]; then
+            echo -e $str_output_var_is_null
+            return $int_code_var_is_null
+        fi
+
+        if [[ "$1" == "" ]]; then
+            echo -e $str_output_var_is_empty
+            return $int_code_var_is_empty
         fi
 
         return 0
@@ -287,11 +334,11 @@
         # </params>
 
         if ! CheckIfFileExists $1; then
-            return "$?"
+            return $?
         fi
 
         if ! CheckIfVarIsValid ${var_file[@]}; then
-            return "$?"
+            return $?
         fi
 
         return 0
@@ -309,11 +356,11 @@
         # </params>
 
         if ! CheckIfFileExists $1; then
-            return "$?"
+            return $?
         fi
 
         if ! CheckIfVarIsValid $var_file; then
-            return "$?"
+            return $?
         fi
 
         # ( printf "%s\n" "${var_file[@]}" >> $1 ) || (
@@ -413,16 +460,34 @@
     }
 
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
+    # <param name="$1"> boolean to toggle verbosity </param>
     # <returns> exit code </returns>
     function TestNetwork
     {
-        echo -en "Testing Internet connection...\t"
-        ( ping -q -c 1 8.8.8.8 || ping -q -c 1 1.1.1.1 ) &> /dev/null || false
-        AppendPassOrFail
+        # <params>
+        local bool=false
+        # </params>
 
-        echo -en "Testing connection to DNS...\t"
+        if CheckIfVarIsBool $1 &> /dev/null && $1; then
+            local bool=$1
+        fi
+
+        if $bool; then
+            echo -en "Testing Internet connection...\t"
+        fi
+
+        ( ping -q -c 1 8.8.8.8 || ping -q -c 1 1.1.1.1 ) &> /dev/null || false
+
+        if $bool; then
+            AppendPassOrFail
+            echo -en "Testing connection to DNS...\t"
+        fi
+
         ( ping -q -c 1 www.google.com && ping -q -c 1 www.yandex.com ) &> /dev/null || false
-        AppendPassOrFail
+
+        if $bool; then
+            AppendPassOrFail
+        fi
 
         if [[ $int_exit_code -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
@@ -673,10 +738,15 @@
 
 # <summary> #7 - Software installation </summary>
 # <code>
-    # <summary> Install a software package. </summary>
+    # <summary> Distro-agnostic, Check if package exists on-line. </summary>
     # <returns> exit code </returns>
-    function InstallPackage
+    function CheckIfPackageExists
     {
+        # <params>
+        local str_commands_to_execute=""
+        local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
+        # </params>
+
         if ! CheckIfVarIsValid $1; then
             return 1
         fi
@@ -689,19 +759,131 @@
             return 1
         fi
 
-        local str_commands_to_execute=""
+        if ! CheckLinuxDistro; then
+            return $?
+        fi
 
         case "${$str_package_manager}" in
             "apt" )
-                str_commands_to_execute="apt install -y $1"
+                str_commands_to_execute="apt list $1"
+                ;;
+
+            "dnf" )
+                str_commands_to_execute="dnf search $1"
+                ;;
+
+            "pacman" )
+                str_commands_to_execute="pacman -Ss $1"
+                ;;
+
+            "gentoo" )
+                str_commands_to_execute="emerge --search $1"
+                ;;
+
+            "urpmi" )
+                str_commands_to_execute="urpmq $1"
+                ;;
+
+            "yum" )
+                str_commands_to_execute="yum search $1"
+                ;;
+
+            "zypper" )
+                str_commands_to_execute="zypper se $1"
                 ;;
 
             * )
+                echo -e $str_output
                 return 1
                 ;;
         esac
 
         eval $str_commands_to_execute || return 1
+    }
+
+    # <summary> Distro-agnostic, Install a software package. </summary>
+    # <returns> exit code </returns>
+    function InstallPackage
+    {
+        # <params>
+        local str_commands_to_execute=""
+        local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
+        # </params>
+
+        if ! CheckIfVarIsValid $1; then
+            return 1
+        fi
+
+        if ! CheckIfVarIsValid $str_package_manager; then
+            CheckLinuxDistro
+        fi
+
+        if ! CheckIfVarIsValid $str_package_manager; then
+            return 1
+        fi
+
+        if ! CheckLinuxDistro; then
+            return $?
+        fi
+
+        # <summary> Auto-update and auto-install selected packages </summary>
+        case "${$str_package_manager}" in
+            "apt" )
+                str_commands_to_execute="apt update && apt full-upgrade -y && apt install -y $1"
+                ;;
+
+            "dnf" )
+                str_commands_to_execute="dnf upgrade && dnf install $1"
+                ;;
+
+            "pacman" )
+                str_commands_to_execute="pacman -Syu && pacman -S $1"
+                ;;
+
+            "gentoo" )
+                str_commands_to_execute="emerge -u @world && emerge www-client/$1"
+                ;;
+
+            "urpmi" )
+                str_commands_to_execute="urpmi --auto-update && urpmi $1"
+                ;;
+
+            "yum" )
+                str_commands_to_execute="yum update && yum install $1"
+                ;;
+
+            "zypper" )
+                str_commands_to_execute="zypper refresh && zypper in $1"
+                ;;
+
+            * )
+                echo -e $str_output
+                return 1
+                ;;
+        esac
+
+        eval $str_commands_to_execute || return 1
+    }
+
+    # <summary> Update or Clone repository given if it exists or not. </summary>
+    # <param name="$1"> the directory </param>
+    # <param name="$2"> the full repo name </param>
+    # <param name="$3"> the username </param>
+    # <returns> exit code </returns>
+    function UpdateOrCloneGitRepo
+    {
+        # <summary> Update existing GitHub repository. </summary>
+        if CheckIfDirExists "$1$2"; then
+            cd "$1$2" && TryThisXTimesBeforeFail "git pull"
+            return $?
+
+        # <summary> Clone new GitHub repository. </summary>
+        else
+            if ReadInput "Clone repo '$2'?"; then
+                cd "$1$3" && TryThisXTimesBeforeFail "git clone https://github.com/$2"
+                return $?
+            fi
+        fi
     }
 # </code>
 
@@ -712,12 +894,14 @@
     declare -gl str_package_manager=""; CheckLinuxDistro &> /dev/null
 
     # <summary> Exit codes </summary>
-    declare -gir int_code_var_is_null=255
-    declare -gir int_code_var_is_empty=254
-    declare -gir int_code_dir_is_null=253
-    declare -gir int_code_file_is_null=252
-    declare -gir int_code_var_is_NAN=251
-    declare -gir int_code_cmd_is_null=251
+    declare -gir int_code_partial_completion=255
+    declare -gir int_code_var_is_null=253
+    declare -gir int_code_var_is_empty=252
+    declare -gir int_code_var_is_not_bool=251
+    declare -gir int_code_var_is_NAN=250
+    declare -gir int_code_dir_is_null=249
+    declare -gir int_code_file_is_null=248
+    declare -gir int_code_cmd_is_null=247
     declare -gi int_exit_code="$?"
 
     # <summary>
@@ -737,6 +921,9 @@
     declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset}"
     declare -gr var_suffix_fail="${var_red}Failure${var_reset}"
     declare -gr var_suffix_pass="${var_green}Success${var_reset}"
+
+    # <summary> Output statement </summary>
+    declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
     declare -gr str_output_var_is_not_valid="${var_prefix_error} Invalid input."
 # </params>
 
@@ -779,7 +966,7 @@
             fi
 
             cd $( dirname $0 )
-            CheckIfDirExists $str_files_dir || return "$?"
+            CheckIfDirExists $str_files_dir || return $?
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
             # <param name="${var_element1}"> cron file </param>
@@ -799,7 +986,7 @@
                 done
             }
 
-            CheckIfDirExists $str_files_dir|| return "$?"
+            CheckIfDirExists $str_files_dir|| return $?
             cd $str_files_dir || return 1
 
             for var_element1 in $( ls *-cron ); do
@@ -819,7 +1006,12 @@
         echo -e $str_output
         AppendCron_Main
         AppendPassOrFail $str_output
-        return "$int_exit_code"
+
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
+        fi
+
+        return $int_exit_code
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -843,7 +1035,7 @@
                     cp $1 $2 || return 1
                     chown root $2 || return 1
                     chmod +x $2 || return 1
-                    CheckIfDirExists $str_files_dir || return "$?"
+                    CheckIfDirExists $str_files_dir || return $?
                     cd $str_files_dir
                 fi
 
@@ -882,10 +1074,13 @@
         echo -e $str_output
         AppendServices_Main
         AppendPassOrFail $str_output
-        return "$int_exit_code"
-    }
 
-    ### NOTE: continue refactor from here on. Review previous for code implementation.
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
+        fi
+
+        return $int_exit_code
+    }
 
     # <summary> Clone given GitHub repositories. </summary>
     # <returns> void </returns>
@@ -894,7 +1089,7 @@
         function CloneOrUpdateGitRepositories_Main
         {
             # <params>
-            local bool=true
+            local bool_nonzero_amount_of_failed_repos=false
 
             # <summary> Example: "username/reponame" </summary>
             if $bool_is_user_root; then
@@ -922,53 +1117,49 @@
             fi
             # </params>
 
+            if ! TestNetwork; then
+                return 1;
+            fi
+
             CreateDir $str_dir1 || return 1
             chmod -R +w $str_dir1 || return 1
 
+            # <summary> Should code execution fail at any point, skip to next repo. </summary>
             for str_repo in ${arr_repo[@]}; do
-                cd $str_dir1 || break
-
-                # <summary> Should code execution fail at any point, skip to next repo. </summary>
-                while $bool; then
+                if cd $str_dir1; then
                     local str_userName=$( echo $str_repo | cut -d "/" -f1 )
-
-                    CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
-
-                    # <summary> Update existing GitHub repository. </summary>
-                    if [[ $( CheckIfDirIsNotNullReturnBool ${str_dir1}${str_repo} ) == true ]]; then
-                        cd ${str_dir1}${str_repo}
-                        ( git pull || bool=false ) &> /dev/null
-
-                    # <summary> Clone new GitHub repository. </summary>
-                    else
-                        local var_return=false
-                        ReadInputReturnBool "Clone repo '$str_repo'?"
-
-                        if [[ $var_return == true ]]; then
-                            ( cd ${str_dir1}${str_userName} || bool=false ) &> /dev/null
-                            ( git clone https://github.com/$str_repo || bool=false ) &> /dev/null
-                            echo
-                        fi
+                    if ! CheckIfDirExists "${str_dir1}${str_userName}"; then
+                        CreateDir "${str_dir1}${str_userName}"
                     fi
-                done
 
-                break
+                    if CheckIfDirExists "${str_dir1}${str_userName}" && ! UpdateOrCloneGitRepo $str_dir1 $str_repo $str_userName; then
+                        bool_nonzero_amount_of_failed_repos=true
+                        echo
+                    fi
+                fi
             done
+
+            if $bool_nonzero_amount_of_failed_repos; then
+                return $int_code_partial_completion
+            fi
+
+            return 0
         }
 
         # <params>
         local readonly str_output="Cloning Git repos..."
+        local readonly str_output_partial_completion="${var_prefix_warn} One or more Git repositories were not cloned."
         # </params>
 
         echo -e $str_output
         CloneOrUpdateGitRepositories_Main
         AppendPassOrFail $str_output
 
-        if [[ $bool == false ]]; then
-            echo -e "One or more Git repositories were not cloned."
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return $int_exit_code
     }
 
     # <summary> Install necessary commands/packages using native package manager, for this program. </summary>
@@ -981,17 +1172,25 @@
             readonly local str_packages_to_install="flatpak rsync snap " # xml-core xmlstarlet"
             # </params>
 
-            CheckLinuxDistro || return "$?"
-            InstallPackage $str_packages_to_install || return "$?"
+            CheckLinuxDistro || return $?
+            InstallPackage $str_packages_to_install || return $?
         }
 
         # <params>
         local readonly str_output="Checking for commands..."
+        local readonly str_output_partial_completion="${var_prefix_warn} One or more commands failed to install."
         # </params>
 
         echo -e $str_output
         AppendServices_Main
         AppendPassOrFail $str_output
+
+
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
+        fi
+
+        return $int_exit_code
     }
 
     # TODO: add support for parsing and recognizing other popular Linux distros.
