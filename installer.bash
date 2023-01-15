@@ -381,7 +381,7 @@
         # <params>
         local readonly str_kernel="$( uname -o | tr '[:upper:]' '[:lower:]' )"
         local readonly str_operating_system="$( lsb_release -is | tr '[:upper:]' '[:lower:]' )"
-        local str_package_manager=""
+        # local str_package_manager=""
         local readonly str_output_distro_is_not_valid="${var_prefix_error} Distribution '$( lsb_release -is )' is not supported."
         local readonly str_output_kernel_is_not_valid="${var_prefix_error} Kernel '$( uname -o )' is not supported."
         local readonly str_OS_with_apt="debian bodhi deepin knoppix mint peppermint pop ubuntu kubuntu lubuntu xubuntu "
@@ -711,7 +711,41 @@
     }
 # </code>
 
-# <summary> #7 - Program business logic </summary>
+# <summary> #7 - Software installation </summary>
+# <code>
+    # <summary> Install a software package. </summary>
+    # <returns> exit code </returns>
+    function InstallPackage
+    {
+        if ! CheckIfVarIsValid $1; then
+            return 1
+        fi
+
+        if ! CheckIfVarIsValid $str_package_manager; then
+            CheckLinuxDistro
+        fi
+
+        if ! CheckIfVarIsValid $str_package_manager; then
+            return 1
+        fi
+
+        local str_commands_to_execute=""
+
+        case "${$str_package_manager}" in
+            "apt" )
+                str_commands_to_execute="apt install -y $1"
+                ;;
+
+            * )
+                return 1
+                ;;
+        esac
+
+        eval $str_commands_to_execute || return 1
+    }
+# </code>
+
+# <summary> #8 - Program business logic </summary>
 # <code>
     # <summary> Crontab </summary>
     # <returns> void </returns>
@@ -750,7 +784,7 @@
             fi
 
             cd $( dirname $0 )
-            CheckIfDirExists $str_files_dir || return 1
+            CheckIfDirExists $str_files_dir || return "$?"
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
             # <param name="${var_element1}"> cron file </param>
@@ -770,17 +804,14 @@
                 done
             }
 
-            if ! CheckIfDirExists $str_files_dir; then
-                return "$?"
-            else
-                cd $str_files_dir || return 1
+            CheckIfDirExists $str_files_dir|| return "$?"
+            cd $str_files_dir || return 1
 
-                for var_element1 in $( ls *-cron ); do
-                    if ReadInput "Append '${var_element1}'?"; then
-                        AppendCron_MatchCronFile
-                    fi
-                done
-            fi
+            for var_element1 in $( ls *-cron ); do
+                if ReadInput "Append '${var_element1}'?"; then
+                    AppendCron_MatchCronFile
+                fi
+            done
 
             systemctl enable cron || return 1
             systemctl restart cron || return 1
@@ -792,7 +823,7 @@
 
         echo -e $str_output
         AppendCron_Main
-        AppendPassOrFail $str_output;
+        AppendPassOrFail $str_output
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -816,8 +847,7 @@
                     cp $1 $2 || return 1
                     chown root $2 || return 1
                     chmod +x $2 || return 1
-                    bool=$( CheckIfDirIsNotNullReturnBool $str_files_dir )
-                    CheckIfDirExists $str_files_dir || return 1
+                    CheckIfDirExists $str_files_dir || return "$?"
                     cd $str_files_dir
                 fi
 
@@ -855,7 +885,7 @@
 
         echo -e $str_output
         AppendServices_Main
-        AppendPassOrFail $str_output;
+        AppendPassOrFail $str_output
     }
 
     ### NOTE: continue refactor from here on. Review previous for code implementation.
@@ -955,66 +985,27 @@
         fi
     }
 
-    # TODO: add support for parsing and recognizing other popular Linux distros.
-    # <summary> Install a given command using native package manager, return boolean. </summary>
-    # <parameter name="$1"> command_to_use </parameter>
-    # <parameter name="$2"> required_packages </parameter>
-    # <returns> boolean </returns>
-    function InstallThisCommandReturnBool
-    {
-        local bool=false
-
-        if [[
-            $( CheckIfVarIsNotNullReturnBool $1 ) == true
-            && $( CheckIfVarIsNotNullReturnBool $2 ) == true
-            && $( CheckIfCommandExistsReturnBool $1 ) == false
-            ]]; then
-            bool=true
-            ( apt install -y $2 || bool=false ) &> /dev/null
-        fi
-
-        if [[ $( CheckIfCommandExistsReturnBool $1 ) == true ]]; then
-            bool=true
-        fi
-
-        echo $bool
-    }
-
-    # TODO: add support for parsing and recognizing other popular Linux distros.
     # <summary> Install necessary commands/packages using native package manager, for this program. </summary>
     # <returns> void </returns>
     function InstallCommands
     {
-        echo -en "Checking for commands... "
+        function InstallCommands_Main
+        {
+            # <params>
+            readonly local str_packages_to_install="flatpak rsync snap " # xml-core xmlstarlet"
+            # </params>
+
+            CheckLinuxDistro || return "$?"
+            InstallPackage $str_packages_to_install || return "$?"
+        }
 
         # <params>
-        local bool=$( CheckCurrentDistro )
+        local readonly str_output="Checking for commands..."
         # </params>
 
-        ( TestNetwork || bool=false ) &> /dev/null
-
-        if [[ $bool == true ]]; then
-            local bool_is_xmllint_installed=$( InstallThisCommandReturnBool "xmllint" "xml-core xmlstarlet" )
-            local bool_is_flatpak_Installed=$( InstallThisCommandReturnBool "flatpak" "flatpak" )
-            local bool_is_rsync_Installed=$( InstallThisCommandReturnBool "rsync" "rsync" )
-            local bool_is_snap_Installed=$( InstallThisCommandReturnBool "snap" "snap" )
-
-            # local bool_is_X_installed =$( InstallThisCommandReturnBool "x" "and_sometimes_y" )
-        fi
-
-        # <summary> Set exit code. </summary>
-        while [[ "$?" -eq 0 ]]; do
-            $bool
-            $bool_is_xmllint_installed
-            $bool_is_flatpak_Installed
-            $bool_is_rsync_Installed
-            $bool_is_snap_Installed
-            break
-        done
-
-        EchoPassOrFailThisExitCode;
-        # ParseThisExitCode;
-        echo
+        echo -e $str_output
+        AppendServices_Main
+        AppendPassOrFail $str_output
     }
 
     # TODO: add support for parsing and recognizing other popular Linux distros.
@@ -1975,7 +1966,7 @@
     }
 # </code>
 
-# <summary> #8 - Program middleman logic </summary>
+# <summary> #9 - Program middleman logic </summary>
 # <code>
     # <summary> Display Help to console. </summary>
     # <returns> void </returns>
