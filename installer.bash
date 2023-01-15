@@ -6,25 +6,19 @@
 
 # <summary>
 #
-# TODO:
+# RULES
 #
-# - create nested subfunctions in business logic with name "_Main"
-#   - such that return statements can be used effectively
-#   - and echo statements can pass or fail at any point of a subfunction's end.
-#
-# - refactor with preferred exit/return codes?
-#   * #1 - echo preferred exit/return code value in 'SetExitCode' function, and call this with 'return SetExitCodeGivenSpecificException'
-#       I misinterpreted how return codes worked... :-(
-#   * #2 - else?
-# - change variable declarations (-l is lowercase, not local)
-# - use alias commands?
-# - determine required commands
-# - determine packages to install
-# - make certain functions distro agnostic
+# - params tag shall not be nested within a function. It should only be declare once.
+# - code should be self-documenting: summary tag is not necessary, but is better for functions and less for code blocks.
+# - param tag and returns tag are welcome.
+# - create nested subfunctions in business logic with name + "_Main"
+#   * such that return statements can be used effectively
+#   * and echo statements can pass or fail at any point of a subfunction's end.
 # - de-nest as much as possible
-# - use 'awk, grep, cut, paste' etc.
-#
-#
+# - make package installation distro-agnostic
+#   * prioritize debian over other families.
+#   * if I can find arch or fedora versions of debian packages, do so. Otherwise, do not execute code.
+# - any changes to bash-libraries, upstream back to dev branch.
 #
 # </summary>
 
@@ -57,7 +51,6 @@
     {
         int_exit_code="$?"
     }
-
 # </code>
 
 # <summary> #2 - Data-type and variable validation </summary>
@@ -826,6 +819,7 @@
         echo -e $str_output
         AppendCron_Main
         AppendPassOrFail $str_output
+        return "$int_exit_code"
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -888,6 +882,7 @@
         echo -e $str_output
         AppendServices_Main
         AppendPassOrFail $str_output
+        return "$int_exit_code"
     }
 
     ### NOTE: continue refactor from here on. Review previous for code implementation.
@@ -896,64 +891,46 @@
     # <returns> void </returns>
     function CloneOrUpdateGitRepositories
     {
-        echo -e "Cloning Git repos..."
-
-        # <params>
-        local bool=true
-        # </params>
-
-        # <summary> sudo/root v. user </summary>
-        if [[ $bool_is_user_root == true ]]; then
+        function CloneOrUpdateGitRepositories_Main
+        {
             # <params>
-            local readonly str_dir1="/root/source/"
+            local bool=true
 
-            # <summary>
-            # List of useful Git repositories.
-            # Example: "username/reponame"
-            # </summary>
-            local declare -ar arr_repo=(
-                "corna/me_cleaner"
-                "dt-zero/me_cleaner"
-                "foundObjects/zram-swap"
-                "portellam/Auto-Xorg"
-                "portellam/deploy-VFIO-setup"
-                "pyllyukko/user.js"
-                "StevenBlack/hosts"
-            )
+            # <summary> Example: "username/reponame" </summary>
+            if $bool_is_user_root; then
+                local readonly str_dir1="/root/source/"
+
+                local declare -ar arr_repo=(
+                    "corna/me_cleaner"
+                    "dt-zero/me_cleaner"
+                    "foundObjects/zram-swap"
+                    "portellam/Auto-Xorg"
+                    "portellam/deploy-VFIO-setup"
+                    "pyllyukko/user.js"
+                    "StevenBlack/hosts"
+                )
+            else
+                local readonly str_dir1=$( echo ~/ )"source/"
+
+                local declare -ar arr_repo=(
+                    "awilliam/rom-parser"
+                    #"pixelplanetdev/4chan-flag-filter"
+                    #"pyllyukko/user.js"
+                    "SpaceinvaderOne/Dump_GPU_vBIOS"
+                    "spheenik/vfio-isolate"
+                )
+            fi
             # </params>
-        else
-            # <params>
-            local readonly str_dir1=$( echo ~/ )"source/"
 
-            # <summary>
-            # List of useful Git repositories.
-            # Example: "username/reponame"
-            # </summary>
-            local declare -ar arr_repo=(
-                "awilliam/rom-parser"
-                #"pixelplanetdev/4chan-flag-filter"
-                #"pyllyukko/user.js"
-                "SpaceinvaderOne/Dump_GPU_vBIOS"
-                "spheenik/vfio-isolate"
-            )
-            # </params>
-        fi
+            CreateDir $str_dir1 || return 1
+            chmod -R +w $str_dir1 || return 1
 
-        bool=$( CreateDirReturnBool $str_dir1 )
-        ( chmod -R +w $str_dir1 || bool=false ) &> /dev/null
-
-        if [[ $( CheckIfFileIsWritableReturnBool $str_dir1 ) == true ]]; then
             for str_repo in ${arr_repo[@]}; do
-                # <summary> Reset toggle for next execution. </summary>
-                bool=true
-
-                ( cd $str_dir1 || bool=false ) &> /dev/null
+                cd $str_dir1 || break
 
                 # <summary> Should code execution fail at any point, skip to next repo. </summary>
-                while [[ $bool == true ]]; then
-                    # <params>
+                while $bool; then
                     local str_userName=$( echo $str_repo | cut -d "/" -f1 )
-                    # </params>
 
                     CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
 
@@ -977,14 +954,21 @@
 
                 break
             done
-        fi
+        }
 
-        # <summary> Set exit code. </summary>
-        $bool; EchoPassOrFailThisExitCode "Cloning Git repos..."; ParseThisExitCode; echo
+        # <params>
+        local readonly str_output="Cloning Git repos..."
+        # </params>
+
+        echo -e $str_output
+        CloneOrUpdateGitRepositories_Main
+        AppendPassOrFail $str_output
 
         if [[ $bool == false ]]; then
             echo -e "One or more Git repositories were not cloned."
         fi
+
+        return "$int_exit_code"
     }
 
     # <summary> Install necessary commands/packages using native package manager, for this program. </summary>
