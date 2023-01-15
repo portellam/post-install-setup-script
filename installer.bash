@@ -1195,179 +1195,193 @@
         return $int_exit_code
     }
 
-    # TODO: add support for parsing and recognizing other popular Linux distros.
-    # <summary> Install from Debian repositories. </summary>
+    ##### NOTE: need to refactor from here on down #####
+
+    # <summary> Install from this Linux distribution's repositories. </summary>
     # <returns> void </returns>
-    function InstallFromDebianRepos
+    function InstallFromGahnooPlusLoonicksRepos
     {
-        # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_apt_toInstall[@]}"> total list of packages to install </parameter>
-        # <parameter name="$1"> this list packages to install </parameter>
-        # <parameter name="$2"> output statement </parameter>
-        # <returns> ${arr_apt_toInstall[@]} </returns>
-        function InstallFromDebianRepos_InstallByType
+        function InstallFromGahnooPlusLoonicksRepos_Main
         {
-            if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                # <params>
-                local var_return=false
-                # </params>
+            # <summary> Select and Install software sorted by type. </summary>
+            # <parameter name="${arr_apt_toInstall[@]}"> total list of packages to install </parameter>
+            # <parameter name="$1"> this list packages to install </parameter>
+            # <parameter name="$2"> output statement </parameter>
+            # <returns> ${arr_apt_toInstall[@]} </returns>
+            function InstallFromGahnooPlusLoonicksRepos_InstallByType
+            {
+                if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
+                    # <params>
+                    local var_return=false
+                    # </params>
 
-                echo -e $2
+                    echo -e $2
 
-                if [[ $1 == *" "* ]]; then
-                    local declare -i int_i=1
+                    if [[ $1 == *" "* ]]; then
+                        local declare -i int_i=1
 
-                    while [[ $( echo $1 | cut -d ' ' -f $int_i ) ]]; do
-                        echo -e "\t"$( echo $1 | cut -d ' ' -f $int_i )
-                        (( int_i++ ))                                   # counter
-                    done
-                else
-                    echo -e "\t$1"
+                        while [[ $( echo $1 | cut -d ' ' -f $int_i ) ]]; do
+                            echo -e "\t"$( echo $1 | cut -d ' ' -f $int_i )
+                            (( int_i++ ))                                   # counter
+                        done
+                    else
+                        echo -e "\t$1"
+                    fi
+
+                    ReadInputReturnBool $var_return
+
+                    if [[ $var_return == true ]]; then
+                        arr_apt_toInstall+=( "$1" )
+                    fi
+
+                    echo    # output padding
+                fi
+            }
+
+            # <params>
+            local bool=true
+            local str_args=""
+            local var_return=false
+            # </params>
+
+            echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
+            ReadInputReturnBool "Auto-accept install prompts? "
+
+            if [[ $var_return == true ]]; then
+                str_args="-y"
+            fi
+
+            while [[ $bool == true ]]; do
+                # <summary> Update and upgrade local packages </summary>
+                apt clean
+                apt update || bool=false
+
+                # <summary> Desktop environment checks </summary>
+                # Qt DE (KDE-plasma, LXQT)
+                if [[ $( apt list --installed plasma-desktop lxqt ) != "" ]]; then
+                    apt install -y plasma-discover-backend-flatpak || bool=false
                 fi
 
-                ReadInputReturnBool $var_return
-
-                if [[ $var_return == true ]]; then
-                    arr_apt_toInstall+=( "$1" )
+                # GNOME DE (gnome, XFCE)
+                if [[ $( apt list --installed gnome xfwm4 ) != "" ]]; then
+                    apt install -y gnome-software-plugin-flatpak || bool=false
                 fi
 
                 echo    # output padding
-            fi
+
+                # <summary> APT packages sorted by type. </summary>
+                # <params>
+                local declare -a arr_apt_toInstall=(
+                    ""
+                )
+
+                # NOTE: update here!
+                local declare -ar arr_apt_Required=(
+                    "systemd-timesyncd"
+                )
+
+                local declare -ar arr_apt_Commands=(
+                    "curl flashrom lm-sensors neofetch unzip wget youtube-dl"
+                )
+
+                local declare -ar arr_apt_Compatibilty=(
+                    "java-common python3 qemu virt-manager wine"
+                )
+
+                local declare -ar arr_apt_Developer=(
+                    ""
+                )
+
+                local declare -ar arr_apt_Drivers=(
+                    "apcupsd rtl-sdr steam-devices"
+                )
+
+                local declare -ar arr_apt_Games=(
+                    ""
+                )
+
+                local declare -ar arr_apt_Internet=(
+                    "firefox-esr filezilla"
+                )
+
+                local declare -ar arr_apt_Media=(
+                    "vlc"
+                )
+
+                local declare -ar arr_apt_Office=(
+                    "libreoffice"
+                )
+
+                local declare -ar arr_apt_PrismBreak=(
+                    ""
+                )
+
+                local declare -ar arr_apt_Repos=(
+                    "git flatpak snap"
+                )
+
+                local declare -ar arr_apt_Security=(
+                    "apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
+                )
+
+                local declare -ar arr_apt_Suites=(
+                    "debian-edu-install science-all"
+                )
+
+                local declare -ar arr_apt_Tools=(
+                    "bleachbit cockpit grub-customizer synaptic zram-tools"
+                )
+
+                local declare -ar arr_apt_VGAdrivers=(
+                    "nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
+                )
+
+                local declare -ar arr_apt_Unsorted=(
+                    ""
+                )
+
+                arr_apt_toInstall+="${str_apt_Required} "
+                # </params>
+
+                # <summary> Select and Install software sorted by type. </summary>
+                # InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Unsorted[@]} "Select given software?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Commands[@]}  "Select Terminal commands?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Compatibilty[@]}  "Select compatibility libraries?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Developer[@]}  "Select Development software?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Games[@]}  "Select games?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Internet[@]}  "Select Internet software?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Media[@]}  "Select multi-media software?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Office[@]}  "Select office software?"
+                # InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_PrismBreak[@]}  "Select recommended \"Prism break\" software?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Repos[@]}  "Select software repositories?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Security[@]}  "Select security tools?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Suites[@]}  "Select software suites?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_Tools[@]}  "Select software tools?"
+                InstallFromGahnooPlusLoonicksRepos_InstallByType ${arr_apt_VGAdrivers[@]}  "Select VGA drivers?"
+
+                if [[ $( CheckIfVarIsNotNullReturnBool ${arr_apt_toInstall[@]} ) == true ]]; then
+                    apt install $str_args ${arr_apt_toInstall[@]} || bool=false
+                fi
+
+                # <summary> Clean up </summary>
+                # apt autoremove $str_args || bool=false
+            done
         }
 
         # <params>
-        local bool=true
-        local str_args=""
-        local var_return=false
+        local readonly str_output="Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         # </params>
 
-        echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
-        ReadInputReturnBool "Auto-accept install prompts? "
+        echo -e $str_output
+        InstallFromGahnooPlusLoonicksRepos_Main
+        AppendPassOrFail $str_output
 
-        if [[ $var_return == true ]]; then
-            str_args="-y"
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
         fi
 
-        while [[ $bool == true ]]; do
-            # <summary> Update and upgrade local packages </summary>
-            apt clean
-            apt update || bool=false
-
-            # <summary> Desktop environment checks </summary>
-            # Qt DE (KDE-plasma, LXQT)
-            if [[ $( apt list --installed plasma-desktop lxqt ) != "" ]]; then
-                apt install -y plasma-discover-backend-flatpak || bool=false
-            fi
-
-            # GNOME DE (gnome, XFCE)
-            if [[ $( apt list --installed gnome xfwm4 ) != "" ]]; then
-                apt install -y gnome-software-plugin-flatpak || bool=false
-            fi
-
-            echo    # output padding
-
-            # <summary> APT packages sorted by type. </summary>
-            # <params>
-            local declare -a arr_apt_toInstall=(
-                ""
-            )
-
-            # NOTE: update here!
-            local declare -ar arr_apt_Required=(
-                "systemd-timesyncd"
-            )
-
-            local declare -ar arr_apt_Commands=(
-                "curl flashrom lm-sensors neofetch unzip wget youtube-dl"
-            )
-
-            local declare -ar arr_apt_Compatibilty=(
-                "java-common python3 qemu virt-manager wine"
-            )
-
-            local declare -ar arr_apt_Developer=(
-                ""
-            )
-
-            local declare -ar arr_apt_Drivers=(
-                "apcupsd rtl-sdr steam-devices"
-            )
-
-            local declare -ar arr_apt_Games=(
-                ""
-            )
-
-            local declare -ar arr_apt_Internet=(
-                "firefox-esr filezilla"
-            )
-
-            local declare -ar arr_apt_Media=(
-                "vlc"
-            )
-
-            local declare -ar arr_apt_Office=(
-                "libreoffice"
-            )
-
-            local declare -ar arr_apt_PrismBreak=(
-                ""
-            )
-
-            local declare -ar arr_apt_Repos=(
-                "git flatpak snap"
-            )
-
-            local declare -ar arr_apt_Security=(
-                "apt-listchanges bsd-mailx fail2ban gufw ssh ufw unattended-upgrades"
-            )
-
-            local declare -ar arr_apt_Suites=(
-                "debian-edu-install science-all"
-            )
-
-            local declare -ar arr_apt_Tools=(
-                "bleachbit cockpit grub-customizer synaptic zram-tools"
-            )
-
-            local declare -ar arr_apt_VGAdrivers=(
-                "nvidia-detect xserver-xorg-video-all xserver-xorg-video-amdgpu xserver-xorg-video-ati xserver-xorg-video-cirrus xserver-xorg-video-fbdev xserver-xorg-video-glide xserver-xorg-video-intel xserver-xorg-video-ivtv-dbg xserver-xorg-video-ivtv xserver-xorg-video-mach64 xserver-xorg-video-mga xserver-xorg-video-neomagic xserver-xorg-video-nouveau xserver-xorg-video-openchrome xserver-xorg-video-qxl/ xserver-xorg-video-r128 xserver-xorg-video-radeon xserver-xorg-video-savage xserver-xorg-video-siliconmotion xserver-xorg-video-sisusb xserver-xorg-video-tdfx xserver-xorg-video-trident xserver-xorg-video-vesa xserver-xorg-video-vmware"
-            )
-
-            local declare -ar arr_apt_Unsorted=(
-                ""
-            )
-
-            arr_apt_toInstall+="${str_apt_Required} "
-            # </params>
-
-            # <summary> Select and Install software sorted by type. </summary>
-            # InstallFromDebianRepos_InstallByType ${arr_apt_Unsorted[@]} "Select given software?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Commands[@]}  "Select Terminal commands?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Compatibilty[@]}  "Select compatibility libraries?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Developer[@]}  "Select Development software?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Games[@]}  "Select games?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Internet[@]}  "Select Internet software?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Media[@]}  "Select multi-media software?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Office[@]}  "Select office software?"
-            # InstallFromDebianRepos_InstallByType ${arr_apt_PrismBreak[@]}  "Select recommended \"Prism break\" software?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Repos[@]}  "Select software repositories?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Security[@]}  "Select security tools?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Suites[@]}  "Select software suites?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_Tools[@]}  "Select software tools?"
-            InstallFromDebianRepos_InstallByType ${arr_apt_VGAdrivers[@]}  "Select VGA drivers?"
-
-            if [[ $( CheckIfVarIsNotNullReturnBool ${arr_apt_toInstall[@]} ) == true ]]; then
-                apt install $str_args ${arr_apt_toInstall[@]} || bool=false
-            fi
-
-            # <summary> Clean up </summary>
-            # apt autoremove $str_args || bool=false
-        done
-
-        $bool; EchoPassOrFailThisExitCode "Installing from $( lsb_release -is ) $( uname -o ) repositories..."; ParseThisExitCode; echo
+        return $int_exit_code
     }
-
-    # NOTE: fixed Debian function, need to update other functions that call "ReadInputReturnBool"
 
     # <summary> Install from Flathub software repositories. </summary>
     # <returns> void </returns>
@@ -2280,7 +2294,7 @@
         case $str_package_manager in
             "apt" )
                 ModifyDebianRepos
-                InstallFromDebianRepos
+                InstallFromGahnooPlusLoonicksRepos
                 ;;
         esac
 
