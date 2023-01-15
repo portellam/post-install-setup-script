@@ -8,6 +8,8 @@
 #
 # RULES
 #
+# - functions shall be in UpperCamelCase
+# - params shall be in lowercase underscore format
 # - params tag shall not be nested within a function. It should only be declare once.
 # - code should be self-documenting: summary tag is not necessary, but is better for functions and less for code blocks.
 # - param tag and returns tag are welcome.
@@ -33,7 +35,7 @@
             echo -en "$1 "
         fi
 
-        case "$?" in
+        case $? in
             0)
                 echo -e $var_suffix_pass
                 return 0;;
@@ -117,7 +119,7 @@
             return $?
         fi
 
-        case "$1" in
+        case $1 in
             "true" | "false" )
                 return 0;;
 
@@ -241,7 +243,7 @@
     {
         # <params>
         local readonly str_file=$( basename $0 )
-        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset}"
+        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset_color}"
         # </params>
 
         if [[ $( whoami ) != "root" ]]; then
@@ -516,7 +518,7 @@
             str_output="$1 "
         fi
 
-        declare -r str_output+="${var_green}[Y/n]:${var_reset}"
+        declare -r str_output+="${var_green}[Y/n]:${var_reset_color}"
 
         while [[ $int_count -le $int_max_count ]]; do
 
@@ -577,7 +579,7 @@
             str_output="$1 "
         fi
 
-        readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset}"
+        readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
 
         # <summary> Read input </summary>
         while [[ $int_count -le $int_max_count ]]; do
@@ -646,7 +648,7 @@
             str_output="$1 "
         fi
 
-        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset}"
+        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         # <summary> Read input </summary>
         for int_count in {0..2}; do
@@ -711,7 +713,7 @@
             str_output="$1 "
         fi
 
-        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset}"
+        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         # <summary> Read input </summary>
         for int_count in {0..2}; do
@@ -763,7 +765,7 @@
             return $?
         fi
 
-        case "${$str_package_manager}" in
+        case $str_package_manager in
             "apt" )
                 str_commands_to_execute="apt list $1"
                 ;;
@@ -827,7 +829,7 @@
         fi
 
         # <summary> Auto-update and auto-install selected packages </summary>
-        case "${$str_package_manager}" in
+        case $str_package_manager in
             "apt" )
                 str_commands_to_execute="apt update && apt full-upgrade -y && apt install -y $1"
                 ;;
@@ -912,15 +914,15 @@
     declare -gr var_green='\033[0;32m'
     declare -gr var_red='\033[0;31m'
     declare -gr var_yellow='\033[0;33m'
-    declare -gr var_reset='\033[0m'
+    declare -gr var_reset_color='\033[0m'
 
     # <summary> Append output </summary>
-    declare -gr var_prefix_error="${var_yellow}Error:${var_reset}"
-    declare -gr var_prefix_fail="${var_red}Failure:${var_reset}"
-    declare -gr var_prefix_pass="${var_green}Success:${var_reset}"
-    declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset}"
-    declare -gr var_suffix_fail="${var_red}Failure${var_reset}"
-    declare -gr var_suffix_pass="${var_green}Success${var_reset}"
+    declare -gr var_prefix_error="${var_yellow}Error:${var_reset_color}"
+    declare -gr var_prefix_fail="${var_red}Failure:${var_reset_color}"
+    declare -gr var_prefix_pass="${var_green}Success:${var_reset_color}"
+    declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
+    declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
+    declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
 
     # <summary> Output statement </summary>
     declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
@@ -1412,7 +1414,7 @@
 
         # <summary> Flatpak </summary>
         if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == false ]]; then
-            echo -e "${str_warning}Flatpak not installed. Skipping..."
+            echo -e "${str_prefix_warn}Flatpak not installed. Skipping..."
 
             bool=$( InstallThisCommandReturnBool "flatpak" )
         fi
@@ -1713,7 +1715,7 @@
 
         #     # <summary> snap </summary>
         #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
-        #         echo -e "${str_warning}Snap not installed. Skipping..."
+        #         echo -e "${str_prefix_warn}Snap not installed. Skipping..."
 
         #         bool=$( InstallThisCommandReturnBool "snap" )
         #     fi
@@ -1832,7 +1834,7 @@
         # <summary> User prompt </summary>
         echo
         echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_releaseName})."
-        echo -e "${str_warning}It is NOT possible to revert from a non-stable branch back to a stable or ${str_releaseName} release branch."
+        echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_releaseName} release branch."
         echo -e "Release branches:"
         echo -e "\t'stable'\t== '${str_releaseName}'"
         echo -e "\t'testing'\t*more recent updates; slightly less stability"
@@ -1923,7 +1925,7 @@
     }
 
     # <summary> Configuration of SSH. </summary>
-    # <parameter name="$str_altSSH"> chosen alternate SSH port value </parameter>
+    # <parameter name="$str_alt_SSH"> chosen alternate SSH port value </parameter>
     # <returns> void </returns>
     function ModifySSH
     {
@@ -1936,7 +1938,7 @@
         # <summary> Exit if command is not present. </summary>
         if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == true ]]; then
             bool=false
-            echo -e "${str_warning}SSH not installed! Skipping..."
+            echo -e "${str_prefix_warn}SSH not installed! Skipping..."
         fi
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
@@ -1949,8 +1951,8 @@
 
             while [[ $int_count -lt 3 ]]; do
                 # <params>
-                str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
-                local declare -i int_altSSH="${str_altSSH}"
+                str_alt_SSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
+                local declare -i int_altSSH="${str_alt_SSH}"
                 # </params>
 
                 if [[ $int_altSSH -eq 22 || $int_altSSH -gt 10000 ]]; then
@@ -1958,7 +1960,7 @@
                 fi
 
                 SetExitCodeIfInputIsInvalid; SaveThisExitCode
-                echo -e "${str_warning}Available port range: 1000-65535"
+                echo -e "${str_prefix_warn}Available port range: 1000-65535"
                 ((int_count++))
             done
 
@@ -2048,7 +2050,7 @@
         fi
 
         if [[ $bool == false ]]; then
-            echo -e "${str_warning}Failed to make changes."
+            echo -e "${str_prefix_warn}Failed to make changes."
         fi
 
         # <summary> Write output to files. </summary>
@@ -2074,7 +2076,7 @@
             bool=$( CheckIfCommandExistsReturnBool "ufw" )
 
             if [[ $bool == false ]]; then
-                echo -e "${str_warning}UFW is not installed. Skipping..."
+                echo -e "${str_prefix_warn}UFW is not installed. Skipping..."
             fi
 
             if [[ $bool == true && (
@@ -2113,11 +2115,11 @@
 
             # <summary> SSH on LAN </summary>
             if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == false ]]; then
-                echo -e "${str_warning}SSH is not installed. Skipping..."
+                echo -e "${str_prefix_warn}SSH is not installed. Skipping..."
             else
                 local var_return=""
                 ModifySSH $var_return
-                local readonly bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_altSSH} )
+                local readonly bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_alt_SSH} )
 
                 # <summary> If alternate choice is provided, attempt to make changes. Exit early at failure. </summary>
                 if [[ $bool == true && (
@@ -2258,7 +2260,7 @@
     function ExecuteSystemSetup
     {
         # <params>
-        declare -g str_altSSH=""
+        declare -g str_alt_SSH=""
         # </params>
 
         if ModifySecurity; then
@@ -2273,27 +2275,35 @@
     # <returns> void </returns>
     function ExecuteSetupOfSoftwareSources
     {
-        if [[ $( CheckCurrentDistro ) == true ]]; then
-            ModifyDebianRepos
-            TestNetwork &> /dev/null
-            InstallFromDebianRepos
-            InstallFromFlathubRepos
-            # InstallFromSnapRepos
-        fi
+        CheckLinuxDistro
 
-        echo -e "\n${str_warning}If system update is/was prematurely stopped, to restart progress, execute in terminal:\n\t'sudo dpkg --configure -a"
+        case $str_package_manager in
+            "apt" )
+                ModifyDebianRepos
+                InstallFromDebianRepos
+                ;;
+        esac
+
+        InstallFromFlathubRepos
+        # InstallFromSnapRepos
+
+        echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
     }
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
     # <returns> void </returns>
     function ExecuteSetupOfGitRepos
     {
-        if [[ $( CheckIfCommandExistsReturnBool "git" ) == true ]]; then
-            TestNetwork &> /dev/null
-            CloneOrUpdateGitRepositories
+        if ! CheckIfCommandIsInstalled "git"; then
+            InstallPackage "git"
+        fi
+
+        if ! CheckIfCommandIsInstalled "git"; then
+            echo -e "\n${str_prefix_warn} Git is not installed on this system."
+        fi
+
+        if CloneOrUpdateGitRepositories; then
             InstallFromGitRepos
-        else
-            echo -e "\n${str_warning}Git is not installed on this system."
         fi
     }
 # </code>
@@ -2301,14 +2311,10 @@
 # <summary> Main </summary>
 # <params>
     declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
-    declare -gr str_warning="\e[33mWARNING:\e[0m"" "
-
-    # <summary> Necessary for exit code preservation, for conditional statements. </summary>
-    declare -gi int_exit_code=$?
 
     # <summary> Checks </summary>
-    CheckIfCommandIsInstalled "apt"
-    declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
+    # CheckIfCommandIsInstalled "apt" &> /dev/null
+    # declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
 # </params>
 # <code>
     # <summary> Pre-execution checks. </summary>
