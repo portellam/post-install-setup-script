@@ -7,6 +7,11 @@
 # <summary>
 #
 # TODO:
+#
+# - create nested subfunctions in business logic with name "_Main"
+#   - such that return statements can be used effectively
+#   - and echo statements can pass or fail at any point of a subfunction's end.
+#
 # - refactor with preferred exit/return codes?
 #   * #1 - echo preferred exit/return code value in 'SetExitCode' function, and call this with 'return SetExitCodeGivenSpecificException'
 #       I misinterpreted how return codes worked... :-(
@@ -18,6 +23,8 @@
 # - make certain functions distro agnostic
 # - de-nest as much as possible
 # - use 'awk, grep, cut, paste' etc.
+#
+#
 #
 # </summary>
 
@@ -57,9 +64,14 @@
 # <summary> #1 - Exit codes </summary>
 # <code>
     # <summary> Append Pass or Fail given exit code. If Fail, call SaveExitCode. </summary>
+    # <param name="$1"> the output statement </param>
     # <returns> output statement </returns>
     function AppendPassOrFail
     {
+        if CheckIfVarIsValid $1 &> /dev/null; then
+            echo -en "$1 "
+        fi
+
         case "$?" in
             0)
                 echo -e $var_suffix_pass
@@ -705,126 +717,113 @@
     # <returns> void </returns>
     function AppendCron
     {
-        echo -e "Appending cron entries..."
+        function AppendCron_Main
+        {
+            # <params>
+            local readonly str_dir1="/etc/cron.d/"
+            declare -a arr_actual_packages=()
+            # </params>
 
-        # <parameters>
-        local bool=true
-        local readonly str_dir1="/etc/cron.d/"
+            # <summary>
+            # List of packages that have cron files (see below).
+            # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
+            # </summary>
+            declare -ar arr_packagesWanted=(
+                "flatpak"
+                # "ntpdate"                         # NOTE: superceded by 'systemd-timesyncd'
+                "rsync"
+                "snap"
+            )
 
-        # <summary>
-        # List of packages that have cron files (see below).
-        # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
-        # </summary>
-        local declare -ar arr_packagesWanted=(
-            "flatpak"
-            # "ntpdate"                         # NOTE: superceded by 'systemd-timesyncd'
-            "rsync"
-            "snap"
-        )
+            for var_element1 in ${arr_expected_packages[@]}; do
+                if ! CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
+                    InstallThisCommandReturnBool $var_element1
+                fi
 
-        local declare -a arr_requiredFound=()
-
-        # <summary> Add command to list if it is installed. </summary>
-        for var_element1 in ${arr_packagesWanted[@]}; do
-            # <parameters>
-            local bool_isInstalled=$( CheckIfCommandExistsReturnBool $var_element1 )
-            # </parameters>
-
-            if [[ $bool_isInstalled == false ]]; then
-                bool_isInstalled=$( InstallThisCommandReturnBool $var_element1 )
-            fi
-
-            if [[ $bool_isInstalled == true ]]; then
-                arr_requiredFound+=( "${var_element1}" )
-            fi
-        done
-
-        case false in
-            $( CheckIfCommandExistsReturnBool "unattended-upgrades" ) )
-                arr_requiredPackages+=( "apt" );;
-        esac
-        # </parameters>
-
-        # <summary> First code block. </summary>
-        while [[ $bool == true ]]; do
-            bool=$( GoToScriptDirectoryReturnBool )
-
-            # <summary> Set working directory to script root folder. </summary>
-            bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
-            cd $str_filesDir &> /dev/null || bool=false
-            break
-        done
-
-        # <summary> Second code block. </summary>
-        if [[ $bool == true ]]; then
-            for var_element1 in $( ls *-cron ); do
-                local var_return=false
-                ReadInputReturnBool "Append '${var_element1}'?"
-
-                if [[ $var_return == true ]]; then
-                    for var_element2 in ${arr_requiredPackages[@]}; do
-
-                        # <summary>
-                        # Match given cron file, append only if package exists in system.
-                        # </summary>
-                        if [[ ${var_element1} == *"${var_element2}"* ]]; then
-                            if [[ $( CheckIfCommandExistsReturnBool ${var_element2} ) == true ]]; then
-                                cp $var_element1 ${str_dir1}${var_element1}
-                                # echo -e "Appended file '${var_element1}'."
-                            else
-                                echo -e "\e${str_warning}Missing required package '${var_element2}'. Skipping..."
-                            fi
-                        fi
-                    done
+                if CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
+                    arr_actual_packages+=( "${var_element1}" )
                 fi
             done
-        fi
 
-        # <summary> Restart service. </summary>
-        while [[ $bool == true ]]; do
-            ( systemctl enable cron || bool=false ) &> /dev/null
-            ( systemctl restart cron || bool=false ) &> /dev/null
-            break
-        done
+            if ! CheckIfCommandIsInstalled "unattended-upgrades"
+                arr_actual_packages+=( "apt" )
+            fi
 
-        # <summary> Set exit code. </summary>
-        $bool; EchoPassOrFailThisExitCode "Appending cron entries..."; ParseThisExitCode; echo
+            cd $( dirname $0 )
+            CheckIfDirExists $str_files_dir || return 1
+
+            # <summary> Match given cron file, append only if package exists in system. </summary>
+            # <param name="${var_element1}"> cron file </param>
+            # <returns> void </returns>
+            function AppendCron_MatchCronFile
+            {
+                for var_element2 in ${arr_actual_packages[@]}; do
+                    if [[ ${var_element1} == *"${var_element2}"* ]]; then
+                        if ! CheckIfCommandIsInstalled $var_element2; then
+                            echo -e "${var_prefix_warn}Missing required package '${var_element2}'. Skipping..."
+
+                        else
+                            cp $var_element1 ${str_dir1}${var_element1}
+                            # echo -e "Appended file '${var_element1}'."
+                        fi
+                    fi
+                done
+            }
+
+            if ! CheckIfDirExists $str_files_dir; then
+                return "$?"
+            else
+                cd $str_files_dir || return 1
+
+                for var_element1 in $( ls *-cron ); do
+                    if ReadInput "Append '${var_element1}'?"; then
+                        AppendCron_MatchCronFile
+                    fi
+                done
+            fi
+
+            systemctl enable cron || return 1
+            systemctl restart cron || return 1
+        }
+
+        # <params>
+        local readonly str_output="Appending cron entries..."
+        # </params>
+
+        echo -e $str_output
+        AppendCron_Main
+        AppendPassOrFail $str_output;
     }
 
     # <summary> Append SystemD services to host. </summary>
     # <returns> void </returns>
     function AppendServices
     {
-        # <summary> Copy files and set permissions, and return boolean. </summary>
-        # <returns> boolean </returns>
-        function AppendServices_AppendFile
+        function AppendServices_Main
         {
-            local bool=$( CheckIfFileExistsReturnBool $2 &> /dev/null )
+            # <params>
+            local readonly str_pattern=".service"
+            declare -ar arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
+            declare -ar arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
+            # </params>
 
-            while [[ $bool == true ]]; do
-                ( cp $1 $2 || bool=false ) &> /dev/null
-                ( chown root $2 || bool=false ) &> /dev/null
-                ( chmod +x $2 || bool=false ) &> /dev/null
+            # <summary> Copy files and set permissions. </summary>
+            # <param name="$2"> the file </param>
+            # <returns> exit code </returns>
+            function AppendServices_AppendFile
+            {
+                if CheckIfFileExists $2 &> /dev/null; then
+                    cp $1 $2 || return 1
+                    chown root $2 || return 1
+                    chmod +x $2 || return 1
+                    bool=$( CheckIfDirIsNotNullReturnBool $str_files_dir )
+                    CheckIfDirExists $str_files_dir || return 1
+                    cd $str_files_dir
+                fi
 
-                # <summary> Set working directory to script root folder. </summary>
-                bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
-                ( cd $str_filesDir || bool=false ) &> /dev/null
-                break
-            done
+                return 0
+            }
 
-            echo $bool
-        }
-
-        echo -e "Appending files to Systemd..."
-
-        # <parameters>
-        local bool=true
-        local readonly str_pattern=".service"
-        local declare -ar arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
-        local declare -ar arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
-        # </parameters>
-
-        if [[ $bool == true ]]; then
             # <summary> Copy binaries to system. </summary>
             for var_element1 in ${arr_dir1[@]}; do
                 local str_file1="/usr/sbin/${var_element1}"
@@ -833,41 +832,33 @@
 
             # <summary> Copy services to system. </summary>
             for var_element1 in ${arr_dir2[@]}; do
-                # <parameters>
                 local str_file1="/etc/systemd/system/${var_element1}"
-                # </parameters>
-
                 AppendServices_AppendFile $var_element1 $str_file1
 
-                if [[ $bool == true ]]; then
-                    ( systemctl daemon-reload || bool=false ) &> /dev/null
-                    local var_return=false
-                    ReadInputReturnBool "Enable/disable '${var_element1}'?"
+                if AppendServices_AppendFile $var_element1 $str_file1; then
+                    systemctl daemon-reload
 
-                    if [[ $var_return == true ]]; then
-                        ( systemctl enable ${var_element1} || bool=false ) &> /dev/null
+                    if ReadInput "Enable/disable '${var_element1}'?"; then
+                        systemctl enable ${var_element1}
                     else
-                        ( systemctl disable ${var_element1} || bool=false ) &> /dev/null
+                        systemctl disable ${var_element1}
                     fi
                 fi
             done
 
-            ( systemctl daemon-reload || bool=false ) &> /dev/null
-        fi
+            systemctl daemon-reload || return 1
+        }
 
-        # <summary> Set exit code. </summary>
-        $bool; EchoPassOrFailThisExitCode "Appending files to Systemd..."; ParseThisExitCode; echo
+        # <params>
+        local readonly str_output="Appending files to Systemd..."
+        # </params>
+
+        echo -e $str_output
+        AppendServices_Main
+        AppendPassOrFail $str_output;
     }
 
-    # TODO: add support for parsing and recognizing other popular Linux distros.
-    # <summary> Check if Linux distribution is Debian or Debian-derivative. </summary>
-    # <returns> void </returns>
-    function CheckCurrentDistro
-    {
-        if [[ $bool_isDistroDebianBased == false ]]; then
-            echo -e "${str_warning}Unrecognized Linux distribution; Apt not installed. Skipping..."
-        fi
-    }
+    ### NOTE: continue refactor from here on. Review previous for code implementation.
 
     # <summary> Clone given GitHub repositories. </summary>
     # <returns> void </returns>
@@ -875,13 +866,13 @@
     {
         echo -e "Cloning Git repos..."
 
-        # <parameters>
+        # <params>
         local bool=true
-        # </parameters>
+        # </params>
 
         # <summary> sudo/root v. user </summary>
-        if [[ $bool_isUserRoot == true ]]; then
-            # <parameters>
+        if [[ $bool_is_user_root == true ]]; then
+            # <params>
             local readonly str_dir1="/root/source/"
 
             # <summary>
@@ -897,9 +888,9 @@
                 "pyllyukko/user.js"
                 "StevenBlack/hosts"
             )
-            # </parameters>
+            # </params>
         else
-            # <parameters>
+            # <params>
             local readonly str_dir1=$( echo ~/ )"source/"
 
             # <summary>
@@ -913,7 +904,7 @@
                 "SpaceinvaderOne/Dump_GPU_vBIOS"
                 "spheenik/vfio-isolate"
             )
-            # </parameters>
+            # </params>
         fi
 
         bool=$( CreateDirReturnBool $str_dir1 )
@@ -928,9 +919,9 @@
 
                 # <summary> Should code execution fail at any point, skip to next repo. </summary>
                 while [[ $bool == true ]]; then
-                    # <parameters>
+                    # <params>
                     local str_userName=$( echo $str_repo | cut -d "/" -f1 )
-                    # </parameters>
+                    # </params>
 
                     CreateDirReturnBool ${str_dir1}${str_userName} &> /dev/null
 
@@ -996,9 +987,9 @@
     {
         echo -en "Checking for commands... "
 
-        # <parameters>
+        # <params>
         local bool=$( CheckCurrentDistro )
-        # </parameters>
+        # </params>
 
         ( TestNetwork || bool=false ) &> /dev/null
 
@@ -1039,9 +1030,9 @@
         function InstallFromDebianRepos_InstallByType
         {
             if [[ $( CheckIfVarIsNotNullReturnBool $1 ) == true ]]; then
-                # <parameters>
+                # <params>
                 local var_return=false
-                # </parameters>
+                # </params>
 
                 echo -e $2
 
@@ -1066,11 +1057,11 @@
             fi
         }
 
-        # <parameters>
+        # <params>
         local bool=true
         local str_args=""
         local var_return=false
-        # </parameters>
+        # </params>
 
         echo -e "Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         ReadInputReturnBool "Auto-accept install prompts? "
@@ -1098,7 +1089,7 @@
             echo    # output padding
 
             # <summary> APT packages sorted by type. </summary>
-            # <parameters>
+            # <params>
             local declare -a arr_apt_toInstall=(
                 ""
             )
@@ -1169,7 +1160,7 @@
             )
 
             arr_apt_toInstall+="${str_apt_Required} "
-            # </parameters>
+            # </params>
 
             # <summary> Select and Install software sorted by type. </summary>
             # InstallFromDebianRepos_InstallByType ${arr_apt_Unsorted[@]} "Select given software?"
@@ -1227,7 +1218,7 @@
 
                 ReadInput
 
-                if [[ $int_exitCode -eq 0 ]]; then
+                if [[ $int_exit_code -eq 0 ]]; then
                     arr_flatpak_toInstall+=( "$1" )
                 fi
 
@@ -1237,11 +1228,11 @@
 
         echo -e "Installing from alternative $( uname -o ) repositories..."
 
-        # <parameters>
+        # <params>
         local bool=true
         local str_args=""
         local var_return=false
-        # </parameters>
+        # </params>
 
         # <summary> Flatpak </summary>
         if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == false ]]; then
@@ -1251,11 +1242,11 @@
         fi
 
         while [[ $bool == true ]]; do
-            # <parameters>
+            # <params>
             local str_args=""
             local var_return=false
             ReadInputReturnBool "Auto-accept install prompts? "
-            # </parameters>
+            # </params>
 
             if [[ $var_return == true ]]; then
                 str_args="-y"
@@ -1269,7 +1260,7 @@
             echo    # output padding
 
             # <summary> Flatpak packages sorted by type. </summary>
-            # <parameters>
+            # <params>
             local declare -a arr_flatpak_toInstall=()
 
             # NOTE: update here!
@@ -1339,7 +1330,7 @@
                 "org.kde.KStyle.Adwaita"
                 "org.kde.Platform"
             )
-            # </parameters>
+            # </params>
 
             # <summary> Select and Install software sorted by type. </summary>
             InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
@@ -1367,11 +1358,11 @@
         {
             echo -e "Executing Git script..."
 
-            # <parameters>
+            # <params>
             local bool_execSuccessful=true
             # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
             local str_dir2=$( basename $1 )"/"
-            # </parameters>
+            # </params>
 
             while [[ $bool == true ]]; do
                 bool_execSuccessful=$( CheckIfDirIsNotNullReturnBool $1 )
@@ -1386,7 +1377,7 @@
                     bool_execSuccessful=$( CheckIfFileIsExecutableReturnBool $2 )
 
                     # <summary> sudo/root v. user </summary>
-                    if [[ $bool_isUserRoot == true ]]; then
+                    if [[ $bool_is_user_root == true ]]; then
                         ( sudo bash $2 || bool_execSuccessful=false ) &> /dev/null
                     else
                         ( bash $2 || bool_execSuccessful=false ) &> /dev/null
@@ -1406,21 +1397,21 @@
 
         echo -e "Executing Git scripts..."
 
-        # <parameters>
+        # <params>
         local bool=true
 
         # <summary> sudo/root v. user </summary>
-        if [[ $bool_isUserRoot == true ]]; then
+        if [[ $bool_is_user_root == true ]]; then
             local readonly str_dir1="/root/source/"
         else
             local readonly str_dir1="~/source/"
         fi
-        # </parameters>
+        # </params>
 
         # <summary> Test this on a fresh install </summary>
         if [[ $( CheckIfDirIsNotNullReturnBool $str_dir1 ) == true ]]; then
             # <summary> sudo/root v. user </summary>
-            if [[ $bool_isUserRoot == true ]]; then
+            if [[ $bool_is_user_root == true ]]; then
 
                 # <summary> portellam/Auto-Xorg </summary>
                 local str_file1="installer.bash"
@@ -1528,7 +1519,7 @@
 
     #             ReadInput
 
-    #             if [[ $int_exitCode -eq 0 ]]; then
+    #             if [[ $int_exit_code -eq 0 ]]; then
     #                 arr_snap_toInstall+=( "$1" )
     #             fi
 
@@ -1538,11 +1529,11 @@
 
     #     echo -e "Installing from alternative $( uname -o ) repositories..."
 
-    #     # <parameters>
+    #     # <params>
     #     local bool=true
     #     local str_args=""
     #     local var_return=false
-    #     # </parameters>
+    #     # </params>
 
     #     # <summary> snap </summary>
     #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
@@ -1552,11 +1543,11 @@
     #     fi
 
     #     while [[ $bool == true ]]; do
-    #         # <parameters>
+    #         # <params>
     #         local str_args=""
     #         local var_return=false
     #         ReadInputReturnBool "Auto-accept install prompts? "
-    #         # </parameters>
+    #         # </params>
 
     #         if [[ $var_return == true ]]; then
     #             str_args="-y"
@@ -1569,7 +1560,7 @@
     #         echo    # output padding
 
     #         # <summary> Snap packages sorted by type. </summary>
-    #         # <parameters>
+    #         # <params>
     #         local declare -a arr_snap_toInstall=()
 
     #         # NOTE: update here!
@@ -1612,7 +1603,7 @@
     #             "org.kde.KStyle.Adwaita"
     #             "org.kde.Platform"
     #         )
-    #         # </parameters>
+    #         # </params>
 
     #         # <summary> Select and Install software sorted by type. </summary>
     #         InstallFromFlathubRepos_InstallByType ${arr_snap_Unsorted[@]} "Select given snap software?"
@@ -1633,7 +1624,7 @@
     {
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
 
-        # <parameters>
+        # <params>
         IFS=$'\n'
         local bool=true
         local readonly str_file1="/etc/apt/sources.list"
@@ -1642,7 +1633,7 @@
         local readonly str_releaseVer=$( lsb_release -sr )
         local str_sources=""
         local var_return=false
-        # </parameters>
+        # </params>
 
         # <summary> Create backup or restore from backup. </summary>
         if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
@@ -1672,7 +1663,7 @@
         echo -e "\t'backports'\t== '${str_releaseName}-backports'\t*optionally receive more recent updates."
 
         # <summary Apt sources </summary>
-        # <parameters>
+        # <params>
         ReadInputFromMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
         local readonly str_branchName=$var_return
 
@@ -1689,7 +1680,7 @@
             "deb-src http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
             "#"
         )
-        # </parameters>
+        # </params>
 
         # <summary> Write to file. </summary>
         if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
@@ -1761,9 +1752,9 @@
     {
         echo -e "Configuring SSH..."
 
-        # <parameters>
+        # <params>
         local bool=true
-        # </parameters>
+        # </params>
 
         # <summary> Exit if command is not present. </summary>
         if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == true ]]; then
@@ -1773,17 +1764,17 @@
 
         # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
         while [[ $bool == true ]]; do
-            # <parameters>
+            # <params>
             local declare -i int_count=0
             local var_return=false
             ReadInputReturnBool "Modify SSH?"
-            # </parameters>
+            # </params>
 
             while [[ $int_count -lt 3 ]]; do
-                # <parameters>
+                # <params>
                 str_altSSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
                 local declare -i int_altSSH="${str_altSSH}"
-                # </parameters>
+                # </params>
 
                 if [[ $int_altSSH -eq 22 || $int_altSSH -gt 10000 ]]; then
                     break
@@ -1799,11 +1790,11 @@
 
         # <summary> Write to system files. </summary>
         if [[ $bool == true ]]; then
-            # <parameters>
+            # <params>
             local readonly str_file1="/etc/ssh/ssh_config"
             # local readonly str_file2="/etc/ssh/sshd_config"
             local readonly str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
-            # </parameters>
+            # </params>
 
             if [[ (
                 $( CheckIfFileExistsReturnBool $str_file1 ) == true
@@ -1835,7 +1826,7 @@
     {
         echo -e "Configuring system security..."
 
-        # <parameters>
+        # <params>
         local bool=false
         # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
         local readonly arr_files1=(
@@ -1845,11 +1836,11 @@
         )
         # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
         local var_return=false
-        # </parameters>
+        # </params>
 
         # <summary> Set working directory to script root folder. </summary>
-        bool=$( CheckIfDirIsNotNullReturnBool $str_filesDir )
-        ( cd $str_filesDir || bool=false ) &> /dev/null
+        bool=$( CheckIfDirIsNotNullReturnBool $str_files_dir )
+        ( cd $str_files_dir || bool=false ) &> /dev/null
 
         # <summary> Write output to files. </summary>
         if [[ $bool == true ]]; then
@@ -2088,9 +2079,9 @@
     # <returns> void </returns>
     function ExecuteSystemSetup
     {
-        # <parameters>
+        # <params>
         declare -g str_altSSH=""
-        # </parameters>
+        # </params>
 
         ModifySecurity
         ModifySSH
@@ -2129,25 +2120,25 @@
 
 # <summary> Main </summary>
 # <params>
-    declare -gr str_filesDir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+    declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
     declare -gr str_warning="\e[33mWARNING:\e[0m"" "
 
     # <summary> Necessary for exit code preservation, for conditional statements. </summary>
-    declare -gi int_exitCode=$?
+    declare -gi int_exit_code=$?
 
     # <summary> Checks </summary>
-    CheckIfCommandIsInstalled
-    declare -gr bool_isDistroDebianBased=$( ParseExitCodeAsBool )
+    CheckIfCommandIsInstalled "apt"
+    declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
 
     CheckIfUserIsRootReturnBool
-    declare -gr bool_isUserRoot=$( ParseExitCodeAsBool )
+    declare -gr bool_is_user_root=$( ParseExitCodeAsBool )
 # </params>
 # <code>
     # <summary> Pre-execution checks. </summary>
     InstallCommands # &> /dev/null
 
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
-    if [[ $bool_isUserRoot == true ]]; then
+    if $bool_is_user_root; then
         ExecuteSetupOfSoftwareSources
         ExecuteSetupOfGitRepos
         ExecuteSystemSetup
