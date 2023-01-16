@@ -960,6 +960,9 @@
 
 # <summary> Global parameters </summary>
 # <params>
+    # <summary> Misc. </summary>
+    declare -gl str_package_manager=""
+
     # <summary> Exit codes </summary>
     declare -gir int_code_partial_completion=255
     declare -gir int_code_var_is_null=253
@@ -1183,10 +1186,6 @@
                 )
             fi
             # </params>
-
-            if ! TestNetwork; then
-                return 1;
-            fi
 
             CreateDir $str_dir1 || return 1
             chmod -R +w $str_dir1 || return 1
@@ -2243,13 +2242,17 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfSoftwareSources
     {
-        CheckLinuxDistro
+        # CheckLinuxDistro
 
         case $str_package_manager in
             "apt" )
                 ModifyDebianRepos || return $?
                 ;;
         esac
+
+        if ! TryThisXTimesBeforeFail "TestNetwork"; then
+            return 1;
+        fi
 
         InstallFromLinuxRepos || return $?
         InstallFromFlathubRepos || return $?
@@ -2261,6 +2264,10 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
+        if ! TryThisXTimesBeforeFail "TestNetwork"; then
+            return 1;
+        fi
+
         if ! CheckIfCommandIsInstalled "git"; then
             InstallPackage "git"
         fi
@@ -2275,24 +2282,24 @@
     }
 # </code>
 
-# <summary> Main </summary>
+# <summary> Program Main logic </summary>
+# <code>
+    # <params>
+    declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
 
-# <params>
-declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+    CheckIfUserIsRoot &> /dev/null
+    declare -g bool_is_user_root=$( ParseExitCodeAsBool )
+    # </params>
 
-CheckIfUserIsRoot &> /dev/null
-declare -g bool_is_user_root=$( ParseExitCodeAsBool )
+    CheckLinuxDistro &> /dev/null
 
-declare -gl str_package_manager=""
-CheckLinuxDistro &> /dev/null
-# </params>
+    if $bool_is_user_root; then
+        ExecuteSetupOfSoftwareSources || exit $?
+        ExecuteSetupOfGitRepos || exit $?
+        ExecuteSystemSetup || exit $?
+    else
+        ExecuteSetupOfGitRepos || exit $?
+    fi
 
-if $bool_is_user_root; then
-    ExecuteSetupOfSoftwareSources || exit $?
-    ExecuteSetupOfGitRepos || exit $?
-    ExecuteSystemSetup || exit $?
-else
-    ExecuteSetupOfGitRepos || exit $?
-fi
-
-exit 0
+    exit 0
+# </code>
