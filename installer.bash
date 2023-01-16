@@ -262,6 +262,86 @@
 
 # <summary> #4 - File operation and validation </summary>
 # <code>
+    # <summary> Check if two given files are the same. </summary>
+    # <parameter name="$1"> file </parameter>
+    # <parameter name="$2"> file </parameter>
+    # <returns> exit code </returns>
+    function CheckIfTwoFilesAreSame
+    {
+        if ! CheckIfFileExists $1 || ! CheckIfFileExists $2; then
+            return $?
+        fi
+
+        if ! cmp -s "$1" "$2"; then
+            return 1
+        fi
+
+        return 0
+    }
+
+    # <summary> Create latest backup of given file (do not exceed given maximum count). </summary>
+    # <parameter name="$1"> file </parameter>
+    # <returns> exit code </returns>
+    function CreateBackupFile
+    {
+        # <params>
+        declare -ir int_max_count=5
+        local readonly str_file1=$1
+        local readonly str_dir1=$( dirname $1 )
+        local readonly str_suffix=".old"
+        local declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $str_file1 | grep $str_suffix | uniq ) )
+
+        local var_element1=${arr_dir1[0]}
+        var_element1=${var_element1%"${str_suffix}"}             # substitution
+        var_element1=${var_element1##*.}                         # ditto
+        # </params>
+
+        if ! CheckIfFileExists $str_file1; then
+            return 1
+        fi
+
+        if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
+            cp $str_file1 "${str_file1}.0${str_suffix}" || return 1
+        fi
+
+        if ! CheckIfVarIsNum $var_element1; then
+            return 1
+        fi
+
+        # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
+        while [[ ${#arr_dir1[@]} -ge $int_max_count ]]; do
+            if DeleteFile ${arr_dir1[0]}; then
+                break
+            fi
+
+            arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
+        done
+
+        # <summary> If *first* backup is same as original file, exit. </summary>
+        if CheckIfTwoFilesAreSame $1 ${arr_dir[0]}; then
+            return 0
+        if
+
+        # <params>
+        var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
+        var_element1=${var_element1##*.}                        # ditto
+        local declare -i int_last_index=0
+        # </params>
+
+        # <summary> Increment number of backup file suffix. </summary>
+        if CheckIfVarIsNum $var_element1; then
+            local declare -i int_last_index="${var_element1}"
+            (( int_last_index++ ))
+        fi
+
+        # <summary> Source file is newer and different than backup, add to backups. </summary>
+        if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
+            cp $str_file1 "${str_file1}.${int_last_index}${str_suffix}" || return 1
+        fi
+
+        return 0
+    }
+
     # <summary> Create a directory. </summary>
     # <param name="$1"> the directory </param>
     # <returns> exit code </returns>
@@ -1596,7 +1676,7 @@
                     cd $str_scriptDir
                     local str_file1="/etc/hosts"
 
-                    if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
+                    if [[ $( CreateBackupFile $str_file1 ) == true ]]; then
                         ( cp hosts $str_file1 || bool=false ) &> /dev/null
                     fi
                 fi
@@ -1611,7 +1691,7 @@
                     local str_file1="/etc/firefox-esr/firefox-esr.js"
 
                     make debian_locked.js &> /dev/null && (
-                        if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
+                        if [[ $( CreateBackupFile $str_file1 ) == true ]]; then
                             ( cp debian_locked.js $str_file1 || bool=false ) &> /dev/null
                         fi
                     )
@@ -1848,7 +1928,7 @@
 
             if [[ (
                 $( CheckIfFileExistsReturnBool $str_file1 ) == true
-                && $( CreateBackupFromFileReturnBool $str_file1 ) == true
+                && $( CreateBackupFile $str_file1 ) == true
                 && $( AppendVarToFileReturnBool $str_file1 $str_output1 ) == true
                 && $( CheckIfFileExistsReturnBool $str_file1 ) == true
                 ) ]]; then
@@ -1858,7 +1938,7 @@
 
             # if [[ (
             #     $( CheckIfFileExistsReturnBool $str_file2 ) == true
-            #     && $( CreateBackupFromFileReturnBool $str_file2 ) == true
+            #     && $( CreateBackupFile $str_file2 ) == true
             #     && $( AppendVarToFileReturnBool $str_file2 $str_output1 ) == true
             #     && $( CheckIfFileExistsReturnBool $str_file2 ) == true
             #     ) ]]; then
