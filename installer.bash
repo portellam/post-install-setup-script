@@ -1392,6 +1392,23 @@
 
         function InstallFromLinuxRepos_Main
         {
+            if ! CheckIfVarIsValid $str_package_manager; then
+                return $?
+            fi
+
+            # <params>
+            case $str_package_manager in
+                "apt" )
+                    InstallFromLinuxRepos_GetAPTPackages
+                    ;;
+
+                * )
+                    return 1
+                    ;;
+            esac
+
+            # </params>
+
             # <summary> Select and Install software sorted by type. </summary>
             InstallFromLinuxRepos_InstallByType ${arr_packages_Unsorted[@]} "Select given software?"
             InstallFromLinuxRepos_InstallByType ${arr_packages_Commands[@]}  "Select Terminal commands?"
@@ -1762,7 +1779,7 @@
                 str_sources+="contrib"
             fi
 
-            if CheckIfVarIsValid &> /dev/null; then
+            if CheckIfVarIsValid $str_sources &> /dev/null; then
                 str_sources+=" "
             fi
 
