@@ -48,7 +48,7 @@
 
     # <summary> Save last exit code. </summary>
     # <param name="$int_exit_code"> the exit code </param>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function SaveExitCode
     {
         int_exit_code=$?
@@ -56,7 +56,7 @@
 
     # <summary> Attempt given command a given number of times before failure. </summary>
     # <param name="$1"> the command to execute </param>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function TryThisXTimesBeforeFail
     {
         # <params>
@@ -224,7 +224,6 @@
 
     # <summary> Parse exit code as boolean. If non-zero, return false. </summary>
     # <returns> boolean </returns>
-    #
     function ParseExitCodeAsBool
     {
         if [[ "$?" -ne 0 ]]; then
@@ -240,7 +239,7 @@
 # <summary> #3 - User validation </summary>
 # <code>
     # <summary> Check if current user is sudo or root. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function CheckIfUserIsRoot
     {
         # <params>
@@ -262,7 +261,6 @@
     # <summary> Create a directory. </summary>
     # <param name="$1"> the directory </param>
     # <returns> exit code </returns>
-    #
     function CreateDir
     {
         # <params>
@@ -284,7 +282,6 @@
     # <summary> Create a file. </summary>
     # <param name="$1"> the file </param>
     # <returns> exit code </returns>
-    #
     function CreateFile
     {
         # <params>
@@ -306,7 +303,6 @@
     # <summary> Delete a dir/file. </summary>
     # <param name="$1"> the file </param>
     # <returns> exit code </returns>
-    #
     function DeleteFile
     {
         # <params>
@@ -329,7 +325,6 @@
     # <param name="$1"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
-    #
     function ReadFromFile
     {
         # <params>
@@ -352,7 +347,6 @@
     # <param name="$1"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
-    #
     function WriteToFile
     {
         # <params>
@@ -938,7 +932,7 @@
 # <summary> Program business logic </summary>
 # <code>
     # <summary> Crontab </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function AppendCron
     {
         function AppendCron_Main
@@ -978,7 +972,7 @@
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
             # <param name="${var_element1}"> cron file </param>
-            # <returns> void </returns>
+            # <returns> exit code </returns>
             function AppendCron_MatchCronFile
             {
                 for var_element2 in ${arr_actual_packages[@]}; do
@@ -1023,7 +1017,7 @@
     }
 
     # <summary> Append SystemD services to host. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function AppendServices
     {
         function AppendServices_Main
@@ -1091,7 +1085,7 @@
     }
 
     # <summary> Clone given GitHub repositories. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function CloneOrUpdateGitRepositories
     {
         function CloneOrUpdateGitRepositories_Main
@@ -1171,7 +1165,7 @@
     }
 
     # <summary> Install from this Linux distribution's repositories. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function InstallFromLinuxRepos
     {
         # NOTE: update here!
@@ -1374,7 +1368,7 @@
     }
 
     # <summary> Install from Flathub software repositories. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function InstallFromFlathubRepos
     {
         # <summary> Select and Install software sorted by type. </summary>
@@ -1535,14 +1529,14 @@
     ##### NOTE: need to refactor from here on down #####
 
     # <summary> Install from Git repositories. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function InstallFromGitRepos
     {
         # <summary> Prompt user to execute script or skip. </summary>
         # <parameter name="$bool"> check if any script failed to execute </parameter>
         # <parameter name="$1"> script directory </parameter>
         # <parameter name="$2"> script to execute </parameter>
-        # <returns> void </returns>
+        # <returns> exit code </returns>
         function ExecuteScript
         {
             echo -e "Executing Git script..."
@@ -1682,7 +1676,7 @@
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ModifyDebianRepos
     {
         echo -e "Modifying $( lsb_release -is ) $( uname -o ) repositories..."
@@ -1810,7 +1804,7 @@
 
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_alt_SSH"> chosen alternate SSH port value </parameter>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ModifySSH
     {
         echo -e "Configuring SSH..."
@@ -1884,7 +1878,7 @@
     }
 
     # <summary> Recommended host security changes. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ModifySecurity
     {
         echo -e "Configuring system security..."
@@ -2041,7 +2035,7 @@
 # <summary> Program middleman logic </summary>
 # <code>
     # <summary> Display Help to console. </summary>
-        # <returns> void </returns>
+        # <returns> exit code </returns>
         # function Help
         # {
         #     declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
@@ -2062,7 +2056,7 @@
         # }
 
         # <summary> Parse input parameters for given options. </summary>
-        # <returns> void </returns>
+        # <returns> exit code </returns>
         # function ParseInputParamForOptions
         # {
         #     if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
@@ -2140,7 +2134,7 @@
     #
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ExecuteSystemSetup
     {
         # <params>
@@ -2148,33 +2142,33 @@
         # </params>
 
         if ModifySecurity; then
-            ModifySSH
+            ModifySSH || return $?
         fi
 
-        AppendServices
-        AppendCron
+        AppendServices || return $?
+        AppendCron || return $?
     }
 
     # <summary> Execute setup of all software repositories. </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ExecuteSetupOfSoftwareSources
     {
         CheckLinuxDistro
 
         case $str_package_manager in
             "apt" )
-                ModifyDebianRepos
-                InstallFromLinuxRepos
+                ModifyDebianRepos || return $?
+                InstallFromLinuxRepos || return $?
                 ;;
         esac
 
-        InstallFromFlathubRepos
+        InstallFromFlathubRepos || return $?
 
         echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
     }
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
-    # <returns> void </returns>
+    # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
         if ! CheckIfCommandIsInstalled "git"; then
@@ -2186,7 +2180,7 @@
         fi
 
         if CloneOrUpdateGitRepositories; then
-            InstallFromGitRepos
+            InstallFromGitRepos || return $?
         fi
     }
 # </code>
