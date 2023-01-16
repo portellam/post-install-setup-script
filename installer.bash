@@ -6,6 +6,10 @@
 
 # <summary>
 #
+# TODO
+# - create 'CreateBackupFile'
+#
+#
 # RULES
 #
 # - functions shall be in UpperCamelCase
@@ -1663,122 +1667,117 @@
         function ModifyDebianRepos_Main
         {
             # <params>
-            # IFS=$'\n'
-            local bool=true
+            IFS=$'\n'
             local readonly str_file1="/etc/apt/sources.list"
-            local readonly str_newFile1="${str_file1}.new"
-            local readonly str_releaseName=$( lsb_release -sc )
-            local readonly str_releaseVer=$( lsb_release -sr )
+            local readonly str_release_Name=$( lsb_release -sc )
+            local readonly str_release_Ver=$( lsb_release -sr )
             local str_sources=""
-            local var_return=false
             # </params>
 
-            # <summary> Create backup or restore from backup. </summary>
-            if [[ $( CreateBackupFromFileReturnBool $str_file1 ) == true ]]; then
-                ReadInputReturnBool "Include 'contrib' sources?"
+            if ! CreateBackupFile $str_file1; then
+                return $?
+            fi
 
-                if [[ $var_return == true ]]; then
-                    str_sources+="contrib"
-                fi
+            if ReadInput "Include 'contrib' sources?"; then
+                str_sources+="contrib"
+            fi
 
-                # <summary> Setup optional sources. </summary>
-                ReadInputReturnBool "Include 'non-free' sources?"
+            if CheckIfVarIsValid &> /dev/null; then
+                str_sources+=" "
+            fi
 
-                if [[ $var_return == true ]]; then
-                    str_sources+=" non-free"
-                fi
+            if ReadInput "Include 'contrib' sources?"; then
+                str_sources+="non-free"
+            fi
             fi
 
             # <summary> Setup mandatory sources. </summary>
             # <summary> User prompt </summary>
             echo
-            echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_releaseName})."
-            echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_releaseName} release branch."
+            echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_release_Name})."
+            echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_Name} release branch."
             echo -e "Release branches:"
-            echo -e "\t'stable'\t== '${str_releaseName}'"
+            echo -e "\t'stable'\t== '${str_release_Name}'"
             echo -e "\t'testing'\t*more recent updates; slightly less stability"
             echo -e "\t'unstable'\t*most recent updates; least stability. NOT recommended."
-            echo -e "\t'backports'\t== '${str_releaseName}-backports'\t*optionally receive more recent updates."
+            echo -e "\t'backports'\t== '${str_release_Name}-backports'\t*optionally receive more recent updates."
 
             # <summary Apt sources </summary>
-            # <params>
-            ReadInputFromMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
-            local readonly str_branchName=$var_return
+            ReadMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
+            local readonly str_branch_Name=$var_return
 
             local declare -a arr_sources=(
-                "# debian $str_branchName"
+                "# debian $str_branch_Name"
                 "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ $str_branchName main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branchName main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_branch_Name main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_branch_Name main $str_sources"
                 $'\n'
-                "deb http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branchName-updates main $str_sources"
+                "deb http://deb.debian.org/debian/ $str_branch_Name-updates main $str_sources"
+                "deb-src http://deb.debian.org/debian/ $str_branch_Name-updates main $str_sources"
                 $'\n'
-                "deb http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ $str_branchName-security main $str_sources"
+                "deb http://security.debian.org/debian-security/ $str_branch_Name-security main $str_sources"
+                "deb-src http://security.debian.org/debian-security/ $str_branch_Name-security main $str_sources"
                 "#"
             )
-            # </params>
 
-            # <summary> Write to file. </summary>
-            if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
-                local declare -a arr_file1=()
-
-                while read var_element1; do
-                    if [[ $var_element1 != "#"* ]]; then
-                        var_element1="#$var_element1"
-                    fi
-
-                    arr_file1+=( $var_element1 )
-                done < $str_file1 || bool=false
-
-                # for var_element1 in ${arr_file1[@]}; do
-                #     # AppendVarToFileReturnBool $str_file1 $var_element1 &> /dev/null
-                #     ( echo -e $var_element1 >> $str_file1 ) &> /dev/null || ( false; SaveExitCode )
-                # done
+            if ! CheckIfFileExists $str_file1; then
+                ( exit $int_code_partial_completion )
             fi
 
+            # <summary> Comment out lines in system file. </summary>
+            declare -a var_file=()
+
+            while read var_element1; do
+                if [[ $var_element1 != "#"* ]]; then
+                    var_element1="#$var_element1"
+                fi
+
+                var_file+=( $var_element1 )
+            done < $str_file1 || return 1
+
+            WriteToFile ${var_file[@]}
+
             # <summary> Append to output. </summary>
-            case $str_branchName in
+            case $str_branch_Name in
                 # <summary> Current branch with backports. </summary>
                 "backports")
                     local declare -a arr_sources=(
-                        "# debian $str_releaseVer/$str_releaseName"
+                        "# debian $str_release_Ver/$str_release_Name"
                         "# See https://wiki.debian.org/SourcesList for more information."
-                        "deb http://deb.debian.org/debian/ $str_releaseName main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_releaseName main $str_sources"
+                        "deb http://deb.debian.org/debian/ $str_release_Name main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_release_Name main $str_sources"
                         ""
-                        "deb http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_releaseName-updates main $str_sources"
+                        "deb http://deb.debian.org/debian/ $str_release_Name-updates main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_release_Name-updates main $str_sources"
                         ""
-                        "deb http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
-                        "deb-src http://security.debian.org/debian-security/ $str_releaseName-security main $str_sources"
+                        "deb http://security.debian.org/debian-security/ $str_release_Name-security main $str_sources"
+                        "deb-src http://security.debian.org/debian-security/ $str_release_Name-security main $str_sources"
                         "#"
                         ""
-                        "# debian $str_releaseVer/$str_releaseName $str_branchName"
-                        "deb http://deb.debian.org/debian $str_releaseName-$str_branchName main contrib non-free"
-                        "deb-src http://deb.debian.org/debian $str_releaseName-$str_branchName main contrib non-free"
+                        "# debian $str_release_Ver/$str_release_Name $str_branch_Name"
+                        "deb http://deb.debian.org/debian $str_release_Name-$str_branch_Name main contrib non-free"
+                        "deb-src http://deb.debian.org/debian $str_release_Name-$str_branch_Name main contrib non-free"
                         "#"
-                    );;
+                    )
+                    ;;
             esac
 
             # <summary> Output to sources file. </summary>
-            local readonly str_file2="/etc/apt/sources.list.d/$str_branchName.list"
-            # DeleteFileReturnBool $str_file2 &> /dev/null
-            # CreateFileReturnBool $str_file2 &> /dev/null
+            local readonly str_file2="/etc/apt/sources.list.d/$str_branch_Name.list"
+            # DeleteFile $str_file2 &> /dev/null
+            # CreateFile $str_file2 &> /dev/null
 
-            case $str_branchName in
+            case $str_branch_Name in
                 "backports"|"testing"|"unstable")
-                    OverwriteArrayToFileReturnBool $str_file2 "${arr_sources[@]}";;
+                    declare -a var_file=( ${arr_sources[@]} )
+                    WriteToFile $str_file2
+                    ;;
             esac
 
             # <summary> Update packages on system. </summary>
-            while [[ "$?" -eq 0 ]]; do
-                apt clean || SetExitCodeIfPassNorFail
-                apt update || SetExitCodeOnError
-                apt full-upgrade || SetExitCodeOnError
-                break
-            done
+            apt clean || ( exit $int_code_partial_completion )
+            apt update || return 1
+            apt full-upgrade || return 1
         }
 
         # <params>
