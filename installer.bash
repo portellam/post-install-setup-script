@@ -51,7 +51,7 @@
     # <returns> void </returns>
     function SaveExitCode
     {
-        int_exit_code="$?"
+        int_exit_code=$?
     }
 
     # <summary> Attempt given command a given number of times before failure. </summary>
@@ -64,15 +64,17 @@
         declare -ir int_max_count_of_tries=3
         # </params>
 
-        if CheckIfVarIsValid $1; then
-            while [[ $int_count -lt $int_max_count_of_tries ]]; do
-                if eval $1; then
-                    return 0
-                fi
-
-                (( int_count++ ))
-            done
+        if ! CheckIfVarIsValid $1; then
+            return $?
         fi
+
+        while [[ $int_count -lt $int_max_count_of_tries ]]; do
+            if eval $1; then
+                return 0
+            fi
+
+            (( int_count++ ))
+        done
 
         return 1
     }
@@ -483,20 +485,23 @@
         if $bool; then
             AppendPassOrFail
             echo -en "Testing connection to DNS...\t"
+        else
+            SaveExitCode
         fi
 
         ( ping -q -c 1 www.google.com && ping -q -c 1 www.yandex.com ) &> /dev/null || false
 
         if $bool; then
             AppendPassOrFail
+        else
+            SaveExitCode
         fi
 
         if [[ $int_exit_code -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
-            return $int_exit_code
         fi
 
-        SaveExitCode; return 0
+        return $int_exit_code
     }
 # </code>
 
@@ -630,8 +635,9 @@
 
         # <summary> Minimum multiple choice are two answers. </summary>
         if ( ! CheckIfVarIsValid $2 || ! CheckIfVarIsValid $3 ) &> /dev/null; then
+            SaveExitCode
             echo -e $str_output_multiple_choice_not_valid
-            return 1;
+            return $int_exit_code
         fi
 
         arr_input+=( $2 )
@@ -1753,7 +1759,7 @@
 
             # for var_element1 in ${arr_file1[@]}; do
             #     # AppendVarToFileReturnBool $str_file1 $var_element1 &> /dev/null
-            #     ( echo -e $var_element1 >> $str_file1 ) &> /dev/null || ( false; SaveThisExitCode )
+            #     ( echo -e $var_element1 >> $str_file1 ) &> /dev/null || ( false; SaveExitCode )
             # done
         fi
 
@@ -1837,7 +1843,7 @@
                     break
                 fi
 
-                SetExitCodeIfInputIsInvalid; SaveThisExitCode
+                SetExitCodeIfInputIsInvalid; SaveExitCode
                 echo -e "${str_prefix_warn}Available port range: 1000-65535"
                 ((int_count++))
             done
@@ -2064,7 +2070,7 @@
         #             case $1 in
         #                 "")                                     # no option
         #                     SetExitCodeOnError
-        #                     SaveThisExitCode
+        #                     SaveExitCode
         #                     break;;
 
         #                 -h | --help )                           # options
@@ -2090,7 +2096,7 @@
         #         done
         #     else                                                # invalid option
         #         SetExitCodeOnError
-        #         SaveThisExitCode
+        #         SaveExitCode
         #         ParseThisExitCode
         #         Help
         #         ExitWithThisExitCode
@@ -2203,8 +2209,5 @@
         ExecuteSetupOfGitRepos
     fi
 
-    # <summary> Post-execution clean up. </summary>
-    # ExitWithThisExitCode
-    exit
+    exit $?
 # </code>
-###
