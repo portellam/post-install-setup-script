@@ -1164,37 +1164,6 @@
         return $int_exit_code
     }
 
-    # <summary> Install necessary commands/packages using native package manager, for this program. </summary>
-    # <returns> void </returns>
-    function InstallCommands
-    {
-        function InstallCommands_Main
-        {
-            # <params>
-            readonly local str_packages_to_install="flatpak rsync snap " # xml-core xmlstarlet"
-            # </params>
-
-            CheckLinuxDistro || return $?
-            InstallPackage $str_packages_to_install || return $?
-        }
-
-        # <params>
-        local readonly str_output="Checking for commands..."
-        local readonly str_output_partial_completion="${var_prefix_warn} One or more commands failed to install."
-        # </params>
-
-        echo -e $str_output
-        AppendServices_Main
-        AppendPassOrFail $str_output
-
-
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
-            echo -e $str_output_partial_completion
-        fi
-
-        return $int_exit_code
-    }
-
     # <summary> Install from this Linux distribution's repositories. </summary>
     # <returns> void </returns>
     function InstallFromLinuxRepos
@@ -1378,7 +1347,9 @@
                 return $?
             fi
 
-            InstallPackage ${arr_packages_to_install[@]}
+            if ReadInput "Install selected packages?"; then
+                InstallPackage ${arr_packages_to_install[@]}
+            fi
         }
 
         # <params>
@@ -1401,82 +1372,79 @@
     function InstallFromFlathubRepos
     {
         # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_flatpak_toInstall[@]}"> total list of packages to install </parameter>
+        # <parameter name="${arr_flatpak_to_install[@]}"> total list of packages to install </parameter>
         # <parameter name="$1"> this list packages to install </parameter>
         # <parameter name="$2"> output statement </parameter>
-        # <returns> ${arr_flatpak_toInstall[@]} </returns>
+        # <returns> ${arr_flatpak_to_install[@]} </returns>
         function InstallFromFlathubRepos_InstallByType
         {
-            if [[ $1 != "" ]]; then
-                echo -e $2
+            if CheckIfVarIsValid $1; then
+                local declare -i int_i=1
+                local str_list_of_packages_to_install=$1
+                local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
 
-                if [[ $1 == *" "* ]]; then
-                    local declare -i int_i=1
-
-                    while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-                        echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-                        (( int_i++ ))                                   # counter
-                    done
-                else
-                    echo -e "\t$1"
-                fi
-
-                ReadInput
-
-                if [[ $int_exit_code -eq 0 ]]; then
-                    arr_flatpak_toInstall+=( "$1" )
-                fi
+                while CheckIfVarIsValid $str_package; do
+                    echo -e "\t${str_package}"
+                    (( int_i++ ))
+                    str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
+                done
 
                 echo
+
+                if ! ReadInput $2; then
+                    return $?
+                fi
+
+                arr_flatpak_to_install+=( $str_list_of_packages_to_install )
+                return 0
+            fi
+
+            return 1
+        }
+
+        function InstallFromFlathubRepos_Main
+        {
+            if ! CheckIfCommandIsInstalled "flatpak"; then
+                InstallPackage "flatpak"
+            fi
+
+            if ! CheckIfCommandIsInstalled "flatpak"; then
+                return $?
+            fi
+
+            if CheckIfCommandIsInstalled "plasma-desktop lxqt"; then
+                InstallPackage "plasma-discover-backend-flatpak"
+
+            elif CheckIfCommandIsInstalled "gnome xfwm4"; then
+                InstallPackage "gnome-software-plugin-flatpak "
+
+            else
+                true
+            fi
+
+            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+            flatpak update -y || return 1
+            echo
+
+            # <summary> Select and Install software sorted by type. </summary>
+            InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
+            InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
+
+            if ! CheckIfVarIsValid ${arr_flatpak_to_install[@]}; then
+                return $?
+            fi
+
+            if ReadInput "Install selected Flatpak apps?"; then
+                InstallPackage ${arr_flatpak_to_install[@]}
             fi
         }
 
-        echo -e "Installing from alternative $( uname -o ) repositories..."
-
+        # NOTE: update here!
+        # <summary> Flatpak packages sorted by type. </summary>
         # <params>
-        local bool=true
-        local str_args=""
-        local var_return=false
-        # </params>
+            local readonly str_output="Installing from Flathub repositories..."
 
-        if CheckIfCommandIsInstalled "plasma-desktop lxqt"; then
-            InstallPackage "plasma-discover-backend-flatpak"
-
-        elif CheckIfCommandIsInstalled "gnome xfwm4"; then
-            InstallPackage "gnome-software-plugin-flatpak "
-
-        else
-            true
-        fi
-
-        # <summary> Flatpak </summary>
-        if [[ $( CheckIfCommandExistsReturnBool "flatpak" ) == false ]]; then
-            echo -e "${str_prefix_warn}Flatpak not installed. Skipping..."
-
-            bool=$( InstallThisCommandReturnBool "flatpak" )
-        fi
-
-        while [[ $bool == true ]]; do
-            # <params>
-            local str_args=""
-            local var_return=false
-            ReadInputReturnBool "Auto-accept install prompts? "
-            # </params>
-
-            if [[ $var_return == true ]]; then
-                str_args="-y"
-            fi
-
-            # <summary> Add remote repository. </summary>
-            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo || bool=false
-
-            # <summary> Update local packages. </summary>
-            flatpak update $str_args || bool=false
-            echo
-
-            # <summary> Flatpak packages sorted by type. </summary>
-            # <params>
-            local declare -a arr_flatpak_toInstall=()
+            local declare -a arr_flatpak_to_install=()
 
             # NOTE: update here!
             local declare -ar arr_flatpak_Compatibility=(
@@ -1545,19 +1513,17 @@
                 "org.kde.KStyle.Adwaita"
                 "org.kde.Platform"
             )
-            # </params>
+        # </params>
 
-            # <summary> Select and Install software sorted by type. </summary>
-            InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
-            InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
+        echo -e $str_output
+        InstallFromFlathubRepos_Main
+        AppendPassOrFail $str_output
 
-            if [[ $( CheckIfVarIsNotNullReturnBool ${arr_flatpak_toInstall[@]} ) == true ]]; then
-                echo -e "Install selected Flatpak apps?"
-                apt install $str_args ${arr_flatpak_toInstall[@]} || bool=false
-            fi
-        done
+        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+            echo -e $str_output_partial_completion
+        fi
 
-        $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
+        return $int_exit_code
     }
 
     ##### NOTE: need to refactor from here on down #####
@@ -1708,133 +1674,6 @@
 
         echo
     }
-
-    # <summary> Install from Snap software repositories. </summary>
-        # <returns> void </returns>
-        # function InstallFromSnapRepos
-        # {
-        #     # <summary> Select and Install software sorted by type. </summary>
-        #     # <parameter name="${arr_snap_toInstall[@]}"> total list of packages to install </parameter>
-        #     # <parameter name="$1"> this list packages to install </parameter>
-        #     # <parameter name="$2"> output statement </parameter>
-        #     # <returns> ${arr_snap_toInstall[@]} </returns>
-        #     function InstallFromSnapRepos_InstallByType
-        #     {
-        #         if [[ $1 != "" ]]; then
-        #             echo -e $2
-
-        #             if [[ $1 == *" "* ]]; then
-        #                 local declare -i int_i=1
-
-        #                 while [[ $( echo $1 | cut -d ' ' -f$int_i ) ]]; do
-        #                     echo -e "\t"$( echo $1 | cut -d ' ' -f$int_i )
-        #                     (( int_i++ ))                                   # counter
-        #                 done
-        #             else
-        #                 echo -e "\t$1"
-        #             fi
-
-        #             ReadInput
-
-        #             if [[ $int_exit_code -eq 0 ]]; then
-        #                 arr_snap_toInstall+=( "$1" )
-        #             fi
-
-        #             echo
-        #         fi
-        #     }
-
-        #     echo -e "Installing from alternative $( uname -o ) repositories..."
-
-        #     # <params>
-        #     local bool=true
-        #     local str_args=""
-        #     local var_return=false
-        #     # </params>
-
-        #     # <summary> snap </summary>
-        #     if [[ $( CheckIfCommandExistsReturnBool "snap" ) == false ]]; then
-        #         echo -e "${str_prefix_warn}Snap not installed. Skipping..."
-
-        #         bool=$( InstallThisCommandReturnBool "snap" )
-        #     fi
-
-        #     while [[ $bool == true ]]; do
-        #         # <params>
-        #         local str_args=""
-        #         local var_return=false
-        #         ReadInputReturnBool "Auto-accept install prompts? "
-        #         # </params>
-
-        #         if [[ $var_return == true ]]; then
-        #             str_args="-y"
-        #         fi
-
-        #         # <summary> Add remote repository. </summary>
-
-        #         # <summary> Update local packages. </summary>
-        #         snap update $str_args || bool=false
-        #         echo
-
-        #         # <summary> Snap packages sorted by type. </summary>
-        #         # <params>
-        #         local declare -a arr_snap_toInstall=()
-
-        #         # NOTE: update here!
-        #         local declare -ar arr_snap_Compatibility=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Developer=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Games=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Internet=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Media=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Office=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_PrismBreak=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Tools=(
-        #             ""
-        #         )
-
-        #         local declare -ar arr_snap_Unsorted=(
-        #             "org.freedesktop.Sdk"
-        #             "org.gnome.Platform"
-        #             "org.gtk.Gtk3theme.Breeze"
-        #             "org.kde.KStyle.Adwaita"
-        #             "org.kde.Platform"
-        #         )
-        #         # </params>
-
-        #         # <summary> Select and Install software sorted by type. </summary>
-        #         InstallFromFlathubRepos_InstallByType ${arr_snap_Unsorted[@]} "Select given snap software?"
-        #         InstallFromFlathubRepos_InstallByType ${str_snap_PrismBreak[@]} "Select recommended Prism Break Snap software?"
-
-        #         if [[ $( CheckIfVarIsNotNullReturnBool ${arr_snap_toInstall[@]} ) == true ]]; then
-        #             echo -e "Install selected Snap apps?"
-        #             apt install $str_args ${arr_snap_toInstall[@]} || bool=false
-        #         fi
-        #     done
-
-        #     $bool; EchoPassOrFailThisExitCode "Installing from alternative $( uname -o ) repositories..."; ParseThisExitCode; echo
-        # }
-    #
 
     # <summary> Setup software repositories for Debian Linux. </summary>
     # <returns> void </returns>
@@ -2324,7 +2163,6 @@
         esac
 
         InstallFromFlathubRepos
-        # InstallFromSnapRepos
 
         echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
     }
@@ -2356,9 +2194,6 @@
     # declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
 # </params>
 # <code>
-    # <summary> Pre-execution checks. </summary>
-    InstallCommands # &> /dev/null
-
     # <summary> Execute specific functions if user is sudo/root or not. </summary>
     if $bool_is_user_root; then
         ExecuteSetupOfSoftwareSources
