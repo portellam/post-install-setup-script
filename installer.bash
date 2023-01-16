@@ -2186,22 +2186,20 @@
 # </code>
 
 # <summary> Main </summary>
+
 # <params>
-    declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
 
-    # <summary> Checks </summary>
-    # CheckIfCommandIsInstalled "apt" &> /dev/null
-    # declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
+# CheckIfCommandIsInstalled "apt" &> /dev/null
+# declare -gr bool_is_OS_debian_derivative=$( ParseExitCodeAsBool )
 # </params>
-# <code>
-    # <summary> Execute specific functions if user is sudo/root or not. </summary>
-    if $bool_is_user_root; then
-        ExecuteSetupOfSoftwareSources
-        ExecuteSetupOfGitRepos
-        ExecuteSystemSetup
-    else
-        ExecuteSetupOfGitRepos
-    fi
 
-    exit $?
-# </code>
+if $bool_is_user_root; then
+    ExecuteSetupOfSoftwareSources || exit $?
+    ExecuteSetupOfGitRepos || exit $?
+    ExecuteSystemSetup || exit $?
+else
+    ExecuteSetupOfGitRepos || exit $?
+fi
+
+exit 0
