@@ -1377,11 +1377,7 @@
                 done
 
                 echo
-
-                if ! ReadInput $2; then
-                    return $?
-                fi
-
+                ReadInput $2 || return $?
                 arr_packages_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1391,9 +1387,7 @@
 
         function InstallFromLinuxRepos_Main
         {
-            if ! CheckIfVarIsValid $str_package_manager; then
-                return $?
-            fi
+            CheckIfVarIsValid $str_package_manager || return $?
 
             # <params>
             case $str_package_manager in
@@ -1405,7 +1399,6 @@
                     return 1
                     ;;
             esac
-
             # </params>
 
             # <summary> Select and Install software sorted by type. </summary>
@@ -1424,13 +1417,8 @@
             InstallFromLinuxRepos_InstallByType ${arr_packages_Tools[@]}  "Select software tools?"
             InstallFromLinuxRepos_InstallByType ${arr_packages_VGA_drivers[@]}  "Select VGA drivers?"
 
-            if ! CheckIfVarIsValid ${arr_packages_to_install[@]}; then
-                return $?
-            fi
-
-            if ReadInput "Install selected packages?"; then
-                InstallPackage ${arr_packages_to_install[@]}
-            fi
+            CheckIfVarIsValid ${arr_packages_to_install[@]} || return $?
+            ReadInput "Install selected packages?" && InstallPackage ${arr_packages_to_install[@]}
         }
 
         # <params>
@@ -1471,11 +1459,7 @@
                 done
 
                 echo
-
-                if ! ReadInput $2; then
-                    return $?
-                fi
-
+                ReadInput $2 || return $?
                 arr_flatpak_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1485,23 +1469,18 @@
 
         function InstallFromFlathubRepos_Main
         {
-            if ! CheckIfCommandIsInstalled "flatpak"; then
-                InstallPackage "flatpak"
-            fi
+            # <params>
+            local str_command="flatpak"
+            # </params>
 
-            if ! CheckIfCommandIsInstalled "flatpak"; then
-                return $?
-            fi
+            CheckIfCommandIsInstalled $str_command || (
+                InstallPackage $str_command
+                CheckIfCommandIsInstalled $str_command || return $?
+            )
 
-            if CheckIfCommandIsInstalled "plasma-desktop lxqt"; then
-                InstallPackage "plasma-discover-backend-flatpak"
-
-            elif CheckIfCommandIsInstalled "gnome xfwm4"; then
-                InstallPackage "gnome-software-plugin-flatpak "
-
-            else
-                true
-            fi
+            # <summary> Pre-requisites. </summary>
+            CheckIfCommandIsInstalled "plasma-desktop lxqt" || InstallPackage "plasma-discover-backend-flatpak"
+            CheckIfCommandIsInstalled "gnome xfwm4" || InstallPackage "gnome-software-plugin-flatpak"
 
             sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
             sudo flatpak update -y || return 1
@@ -1510,14 +1489,8 @@
             # <summary> Select and Install software sorted by type. </summary>
             InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
             InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
-
-            if ! CheckIfVarIsValid ${arr_flatpak_to_install[@]}; then
-                return $?
-            fi
-
-            if ReadInput "Install selected Flatpak apps?"; then
-                flatpak install --user ${arr_flatpak_to_install[@]}
-            fi
+            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return $?
+            ReadInput "Install selected Flatpak apps?" && flatpak install --user ${arr_flatpak_to_install[@]}
         }
 
         # NOTE: update here!
@@ -2231,10 +2204,7 @@
         # </params>
 
         if $bool_is_user_root; then
-            if ModifySecurity; then
-                ModifySSH || return $?
-            fi
-
+            ModifySecurity && ( ModifySSH || return $? )
             AppendServices || return $?
             AppendCron || return $?
         fi
@@ -2254,9 +2224,7 @@
             esac
         fi
 
-        if ! TryThisXTimesBeforeFail "TestNetwork"; then
-            return 1;
-        fi
+        TryThisXTimesBeforeFail "TestNetwork" || return $?
 
         if $bool_is_user_root; then
             InstallFromLinuxRepos || return $?
@@ -2271,21 +2239,10 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
-        if ! TryThisXTimesBeforeFail "TestNetwork"; then
-            return 1;
-        fi
-
-        if ! CheckIfCommandIsInstalled "git"; then
-            InstallPackage "git"
-        fi
-
-        if ! CheckIfCommandIsInstalled "git"; then
-            echo -e "\n${str_prefix_warn} Git is not installed on this system."
-        fi
-
-        if CloneOrUpdateGitRepositories; then
-            InstallFromGitRepos || return $?
-        fi
+        TryThisXTimesBeforeFail "TestNetwork" || return $?
+        CheckIfCommandIsInstalled "git" || InstallPackage "git"
+        CheckIfCommandIsInstalled "git" || echo -e "\n${str_prefix_warn} Git is not installed on this system."
+        CloneOrUpdateGitRepositories && ( InstallFromGitRepos || return $? )
     }
 # </code>
 
