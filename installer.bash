@@ -1023,7 +1023,7 @@
 
             for var_element1 in ${arr_expected_packages[@]}; do
                 if ! CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
-                    InstallThisCommandReturnBool $var_element1
+                    InstallPackage $var_element1
                 fi
 
                 if CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
@@ -1503,8 +1503,8 @@
                 true
             fi
 
-            flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-            flatpak update -y || return 1
+            sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+            sudo flatpak update -y || return 1
             echo
 
             # <summary> Select and Install software sorted by type. </summary>
@@ -1516,7 +1516,7 @@
             fi
 
             if ReadInput "Install selected Flatpak apps?"; then
-                InstallPackage ${arr_flatpak_to_install[@]}
+                flatpak install --user ${arr_flatpak_to_install[@]}
             fi
         }
 
@@ -2230,12 +2230,14 @@
         declare -g str_alt_SSH=""
         # </params>
 
-        if ModifySecurity; then
-            ModifySSH || return $?
-        fi
+        if $bool_is_user_root; then
+            if ModifySecurity; then
+                ModifySSH || return $?
+            fi
 
-        AppendServices || return $?
-        AppendCron || return $?
+            AppendServices || return $?
+            AppendCron || return $?
+        fi
     }
 
     # <summary> Execute setup of all software repositories. </summary>
@@ -2244,18 +2246,23 @@
     {
         # CheckLinuxDistro
 
-        case $str_package_manager in
-            "apt" )
-                ModifyDebianRepos || return $?
-                ;;
-        esac
+        if $bool_is_user_root; then
+            case $str_package_manager in
+                "apt" )
+                    ModifyDebianRepos || return $?
+                    ;;
+            esac
+        fi
 
         if ! TryThisXTimesBeforeFail "TestNetwork"; then
             return 1;
         fi
 
-        InstallFromLinuxRepos || return $?
-        InstallFromFlathubRepos || return $?
+        if $bool_is_user_root; then
+            InstallFromLinuxRepos || return $?
+        else
+            InstallFromFlathubRepos || return $?
+        fi
 
         echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
     }
@@ -2292,14 +2299,9 @@
     # </params>
 
     CheckLinuxDistro &> /dev/null
-
-    if $bool_is_user_root; then
-        ExecuteSetupOfSoftwareSources || exit $?
-        ExecuteSetupOfGitRepos || exit $?
-        ExecuteSystemSetup || exit $?
-    else
-        ExecuteSetupOfGitRepos || exit $?
-    fi
+    ExecuteSetupOfSoftwareSources || exit $?
+    ExecuteSetupOfGitRepos || exit $?
+    ExecuteSystemSetup || exit $?
 
     exit 0
 # </code>
