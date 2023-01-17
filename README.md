@@ -12,13 +12,18 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
 
 ## Main logic
 [1] Check if user is root or not (set boolean).
+
 [2] Distro-agnostic setup; Check if system is a recognized Linux distribution (set string).
+
 [3] Setup Software sources and installation.
+
 [4] Setup Git repositories.
+
 [5] Setup system.
 
 ## Middle-man logic
 [3]
+
     * Check current system is...
         * Debian Linux => Modify Debian APT sources.
     * Test network connection.
@@ -28,11 +33,13 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
         * Install from Flathub (security measure; install as user is more secure than system-wide). [A]
 
 [4]
+
     * Test network connection.
     * Clone Git repositories.
     * Install scripts from Git repositories (different for root and user).
 
 [5]
+
     * Test network connection.
     * If user is root...
         * Modify SSH.
@@ -42,7 +49,7 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
 
 ## Sources
 
-* **[A]** Install listed software by given category (of all sources)
+**[A]** Install listed software by given category (of all sources)
     * Development
     * Games
     * Internet-based and Communication
