@@ -2118,7 +2118,8 @@
         # </params>
 
         if $bool_is_user_root; then
-            ModifySecurity && ( ModifySSH || return $? )
+            ModifySSH
+            ModifySecurity || return $?
             AppendServices || return $?
             AppendCron || return $?
         fi
