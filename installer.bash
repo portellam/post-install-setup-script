@@ -8,7 +8,9 @@
 #
 # TODO
 # - create 'CreateBackupFile'
-#
+# - double check usage of exit code partial completion
+# - reformat all vars in underscore format
+# - debug all functions
 #
 # RULES
 #
@@ -207,6 +209,66 @@
         if [[ ! -e "$1" ]]; then
             echo -e $str_output_file_is_null
             return $int_code_file_is_null
+        fi
+
+        return 0
+    }
+
+    # <summary> Check if the file is executable. </summary>
+    # <param name="$1"> the value </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfFileIsExecutable
+    {
+        # <params>
+        local readonly str_output_file_is_not_executable="${var_prefix_error} File '$1' is not executable."
+        # </params>
+
+        CheckIfFileExists $1 || return $?
+
+        if [[ ! -x "$1" ]]; then
+            echo -e $str_output_file_is_not_executable
+            return $int_code_file_is_not_executable
+        fi
+
+        return 0
+    }
+
+    # <summary> Check if the file is readable. </summary>
+    # <param name="$1"> the value </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfFileIsReadable
+    {
+        # <params>
+        local readonly str_output_file_is_not_readable="${var_prefix_error} File '$1' is not readable."
+        # </params>
+
+        CheckIfFileExists $1 || return $?
+
+        if [[ ! -r "$1" ]]; then
+            echo -e $str_output_file_is_not_readable
+            return $int_code_file_is_not_readable
+        fi
+
+        return 0
+    }
+
+    # <summary> Check if the file is writable. </summary>
+    # <param name="$1"> the value </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfFileIsWritable
+    {
+        # <params>
+        local readonly str_output_file_is_not_writable="${var_prefix_error} File '$1' is not writable."
+        # </params>
+
+        CheckIfFileExists $1 || return $?
+
+        if [[ ! -w "$1" ]]; then
+            echo -e $str_output_file_is_not_writable
+            return $int_code_file_is_not_writable
         fi
 
         return 0
@@ -897,7 +959,10 @@
     declare -gir int_code_var_is_NAN=250
     declare -gir int_code_dir_is_null=249
     declare -gir int_code_file_is_null=248
-    declare -gir int_code_cmd_is_null=247
+    declare -gir int_code_file_is_not_executable=247
+    declare -gir int_code_file_is_not_writable=246
+    declare -gir int_code_file_is_not_readable=245
+    declare -gir int_code_cmd_is_null=244
     declare -gi int_exit_code=$?
 
     # <summary>
@@ -982,7 +1047,7 @@
                 done
             }
 
-            CheckIfDirExists $str_files_dir|| return $?
+            CheckIfDirExists $str_files_dir | return $?
             cd $str_files_dir || return 1
 
             for var_element1 in $( ls *-cron ); do
@@ -1354,11 +1419,6 @@
         echo -e $str_output
         InstallFromLinuxRepos_Main
         AppendPassOrFail $str_output
-
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
-            echo -e $str_output_partial_completion
-        fi
-
         return $int_exit_code
     }
 
@@ -1498,161 +1558,151 @@
         echo -e $str_output
         InstallFromFlathubRepos_Main
         AppendPassOrFail $str_output
+        return $int_exit_code
+    }
+
+    # <summary> Install from Git repositories. </summary>
+    # <returns> exit code </returns>
+    function InstallFromGitRepos
+    {
+        function InstallFromGitRepos_GetSudoScripts
+        {
+            # <summary> portellam/Auto-Xorg </summary>
+            local str_file1="installer.bash"
+            local str_repo="portellam/auto-xorg"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+
+            # <summary> StevenBlack/hosts </summary>
+            local str_repo="stevenblack/hosts"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            echo -e "Executing script '${str_repo}'"
+
+            if CheckIfDirExists $str_scriptDir; then
+                cd $str_scriptDir
+                local str_file1="/etc/hosts"
+
+                CreateBackupFile $str_file1 && ( cp hosts $str_file1 &> /dev/null || bool_nonzero_amount_of_failed_operations=false )
+            fi
+
+            # <summary> pyllyukko/user.js </summary>
+            local str_repo="pyllyukko/user.js"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            echo -e "Executing script '${str_repo}'"
+
+            if CheckIfDirExists $str_scriptDir; then
+                cd $str_scriptDir
+                local str_file1="/etc/firefox-esr/firefox-esr.js"
+
+                make debian_locked.js &> /dev/null && (
+                    CreateBackupFile $str_file1 && ( cp debian_locked.js $str_file1 || bool_nonzero_amount_of_failed_operations=false )
+                )
+            fi
+
+            # <summary> foundObjects/zram-swap </summary>
+            local str_file1="installer.sh"
+            local str_repo="foundObjects/zram-swap"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+        }
+
+        function InstallFromGitRepos_GetUserScripts
+        {
+            # <summary> awilliam/rom-parser </summary>
+            # local str_file1="installer.sh"
+            local str_repo="awilliam/rom-parser"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # CheckIfDirExists $str_scriptDir
+
+            # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
+            # local str_file1="installer.sh"
+            local str_repo="spaceinvaderone/dump_gpu_vbios"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # CheckIfDirExists $str_scriptDir
+
+            # <summary> spheenik/vfio-isolate </summary>
+            # local str_file1="installer.sh"
+            local str_repo="spheenik/vfio-isolate"
+            local str_scriptDir="${str_dir1}${str_repo}/"
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # CheckIfDirExists $str_scriptDir
+        }
+
+        # <summary> Prompt user to execute script or skip. </summary>
+        # <parameter name="$bool"> check if any script failed to execute </parameter>
+        # <parameter name="$1"> script directory </parameter>
+        # <parameter name="$2"> script to execute </parameter>
+        # <returns> exit code </returns>
+        function InstallFromGitRepos_ExecuteScript
+        {
+            local readonly str_output="Executing Git script..."
+
+            # <params>
+            # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
+            local str_dir2=$( basename $1 )"/"
+            # </params>
+
+            cd $str_dir1 || return 1
+            ( CheckIfDirExists $1 && ( cd $1 || false ) ) || return $?
+            CheckIfFileExists $2|| return $?
+
+            if ReadInput "Execute script '${str_dir2}$2'?"; then
+                ( chmod +x $2 &> /dev/null ) || return 1
+                CheckIfFileIsExecutable || return $?
+
+                if $bool_is_user_root; then
+                    ( sudo bash $2 &> /dev/null ) || return $?
+                else
+                    ( bash $2 &> /dev/null ) || return $?
+                fi
+            fi
+
+            AppendPassOrFail $str_output
+            cd $str_dir1 || return 1
+        }
+
+        function InstallFromGitRepos_Main
+        {
+            # <params>
+            local bool_nonzero_amount_of_failed_operations=false
+
+            if [[ $bool_is_user_root == true ]]; then
+                local readonly str_dir1="/root/source/"
+            else
+                local readonly str_dir1="~/source/"
+            fi
+            # </params>
+
+            if CheckIfDirExists $str_dir1; then
+                if [[ $bool_is_user_root == true ]]; then
+                    InstallFromGitRepos_GetSudoScripts
+                else
+                    InstallFromGitRepos_GetUserScripts
+                fi
+            fi
+
+            if $bool_nonzero_amount_of_failed_repos; then
+                return $int_code_partial_completion
+            fi
+
+            return 0
+        }
+
+        # <params>
+        local readonly str_output="Executing Git scripts..."
+        # </params>
+
+        echo -e $str_output
+        InstallFromGitRepos_Main
+        AppendPassOrFail $str_output
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
         fi
 
         return $int_exit_code
-    }
-
-    ##### NOTE: need to refactor from here on down #####
-
-    # <summary> Install from Git repositories. </summary>
-    # <returns> exit code </returns>
-    function InstallFromGitRepos
-    {
-        # <summary> Prompt user to execute script or skip. </summary>
-        # <parameter name="$bool"> check if any script failed to execute </parameter>
-        # <parameter name="$1"> script directory </parameter>
-        # <parameter name="$2"> script to execute </parameter>
-        # <returns> exit code </returns>
-        function ExecuteScript
-        {
-            echo -e "Executing Git script..."
-
-            # <params>
-            local bool_execSuccessful=true
-            # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
-            local str_dir2=$( basename $1 )"/"
-            # </params>
-
-            while [[ $bool == true ]]; do
-                bool_execSuccessful=$( CheckIfDirIsNotNullReturnBool $1 )
-                cd $1 || bool=false
-                bool_execSuccessful=$( CheckIfFileExistsReturnBool $2 )
-
-                local var_return=false
-                ReadInputReturnBool "Execute script '${str_dir2}$2'?"
-
-                if [[ $var_return == true ]]; then
-                    ( chmod +x $2 || bool=false ) &> /dev/null
-                    bool_execSuccessful=$( CheckIfFileIsExecutableReturnBool $2 )
-
-                    # <summary> sudo/root v. user </summary>
-                    if [[ $bool_is_user_root == true ]]; then
-                        ( sudo bash $2 || bool_execSuccessful=false ) &> /dev/null
-                    else
-                        ( bash $2 || bool_execSuccessful=false ) &> /dev/null
-                    fi
-                fi
-            done
-
-            cd $str_dir1 || false
-
-            # <summary> Set exit code. </summary>
-            $bool_execSuccessful; ParseThisExitCode "Executing Git script..."; echo
-
-            if [[ $bool_execSuccessful == false ]]; then
-                bool=$bool_execSuccessful
-            fi
-        }
-
-        echo -e "Executing Git scripts..."
-
-        # <params>
-        local bool=true
-
-        # <summary> sudo/root v. user </summary>
-        if [[ $bool_is_user_root == true ]]; then
-            local readonly str_dir1="/root/source/"
-        else
-            local readonly str_dir1="~/source/"
-        fi
-        # </params>
-
-        # <summary> Test this on a fresh install </summary>
-        if [[ $( CheckIfDirIsNotNullReturnBool $str_dir1 ) == true ]]; then
-            # <summary> sudo/root v. user </summary>
-            if [[ $bool_is_user_root == true ]]; then
-
-                # <summary> portellam/Auto-Xorg </summary>
-                local str_file1="installer.bash"
-                local str_repo="portellam/auto-xorg"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                ExecuteScript $str_scriptDir $str_file1
-
-                # <summary> StevenBlack/hosts </summary>
-                local str_repo="stevenblack/hosts"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                echo -e "Executing script '${str_repo}'"
-
-                if [[ $( CheckIfDirIsNotNullReturnBool $str_scriptDir ) == true ]]; then
-                    cd $str_scriptDir
-                    local str_file1="/etc/hosts"
-
-                    if [[ $( CreateBackupFile $str_file1 ) == true ]]; then
-                        ( cp hosts $str_file1 || bool=false ) &> /dev/null
-                    fi
-                fi
-
-                # <summary> pyllyukko/user.js </summary>
-                local str_repo="pyllyukko/user.js"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                echo -e "Executing script '${str_repo}'"
-
-                if [[ $( CheckIfDirIsNotNullReturnBool $str_scriptDir ) == true ]]; then
-                    cd $str_scriptDir
-                    local str_file1="/etc/firefox-esr/firefox-esr.js"
-
-                    make debian_locked.js &> /dev/null && (
-                        if [[ $( CreateBackupFile $str_file1 ) == true ]]; then
-                            ( cp debian_locked.js $str_file1 || bool=false ) &> /dev/null
-                        fi
-                    )
-                fi
-
-                # <summary> foundObjects/zram-swap </summary>
-                local str_file1="installer.sh"
-                local str_repo="foundObjects/zram-swap"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                ExecuteScript $str_scriptDir $str_file1
-            else
-
-                # <summary> awilliam/rom-parser </summary>
-                # local str_file1="installer.sh"
-                local str_repo="awilliam/rom-parser"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNullReturnBool $str_scriptDir
-
-                # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
-                # local str_file1="installer.sh"
-                local str_repo="spaceinvaderone/dump_gpu_vbios"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNullReturnBool $str_scriptDir
-
-                # <summary> spheenik/vfio-isolate </summary>
-                # local str_file1="installer.sh"
-                local str_repo="spheenik/vfio-isolate"
-                local str_scriptDir="${str_dir1}${str_repo}/"
-                # ExecuteScript $str_scriptDir $str_file1
-                # CheckIfDirIsNotNullReturnBool $str_scriptDir
-            fi
-        fi
-
-        if [[ $bool == false ]]; then
-            SetExitCodeIfPassNorFail
-        fi
-
-        EchoPassOrFailThisExitCode "Executing Git scripts..."; ParseThisExitCode
-
-        if [[ $bool_execSuccessful == false ]]; then
-            echo -e "One or more Git scripts were not executed."
-        fi
-
-        echo
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
@@ -1663,28 +1713,17 @@
         {
             # <params>
             IFS=$'\n'
+            local bool_nonzero_amount_of_failed_operations=false
             local readonly str_file1="/etc/apt/sources.list"
             local readonly str_release_Name=$( lsb_release -sc )
             local readonly str_release_Ver=$( lsb_release -sr )
             local str_sources=""
             # </params>
 
-            if ! CreateBackupFile $str_file1; then
-                return $?
-            fi
-
-            if ReadInput "Include 'contrib' sources?"; then
-                str_sources+="contrib"
-            fi
-
-            if CheckIfVarIsValid $str_sources &> /dev/null; then
-                str_sources+=" "
-            fi
-
-            if ReadInput "Include 'contrib' sources?"; then
-                str_sources+="non-free"
-            fi
-            fi
+            CreateBackupFile $str_file1 || return $?
+            ReadInput "Include 'contrib' sources?" || str_sources+="contrib"
+            CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
+            ReadInput "Include 'non-free' sources?" || str_sources+="non-free"
 
             # <summary> Setup mandatory sources. </summary>
             # <summary> User prompt </summary>
@@ -1715,9 +1754,7 @@
                 "#"
             )
 
-            if ! CheckIfFileExists $str_file1; then
-                ( exit $int_code_partial_completion )
-            fi
+            CheckIfFileExists $str_file1 || bool_nonzero_amount_of_failed_operations=true
 
             # <summary> Comment out lines in system file. </summary>
             declare -a var_file=()
@@ -1770,9 +1807,15 @@
             esac
 
             # <summary> Update packages on system. </summary>
-            apt clean || ( exit $int_code_partial_completion )
+            apt clean || bool_nonzero_amount_of_failed_operations=true
             apt update || return 1
             apt full-upgrade || return 1
+
+            if $bool_nonzero_amount_of_failed_operations; then
+                return $int_code_partial_completion
+            fi
+
+            return 0
         }
 
         # <params>
@@ -1790,6 +1833,8 @@
         return $int_exit_code
     }
 
+    ##### NOTE: need to refactor from here on down #####
+
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_alt_SSH"> chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
@@ -1802,7 +1847,7 @@
         # </params>
 
         # <summary> Exit if command is not present. </summary>
-        if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == true ]]; then
+        if [[ $( CheckIfCommandExists "ssh" ) == true ]]; then
             bool=false
             echo -e "${str_prefix_warn}SSH not installed! Skipping..."
         fi
@@ -1812,7 +1857,7 @@
             # <params>
             local declare -i int_count=0
             local var_return=false
-            ReadInputReturnBool "Modify SSH?"
+            ReadInput "Modify SSH?"
             # </params>
 
             while [[ $int_count -lt 3 ]]; do
@@ -1842,20 +1887,20 @@
             # </params>
 
             if [[ (
-                $( CheckIfFileExistsReturnBool $str_file1 ) == true
+                $( CheckIfFileExists $str_file1 ) == true
                 && $( CreateBackupFile $str_file1 ) == true
-                && $( AppendVarToFileReturnBool $str_file1 $str_output1 ) == true
-                && $( CheckIfFileExistsReturnBool $str_file1 ) == true
+                && $( AppendVarToFile $str_file1 $str_output1 ) == true
+                && $( CheckIfFileExists $str_file1 ) == true
                 ) ]]; then
 
                 systemctl restart ssh || bool=false
             fi
 
             # if [[ (
-            #     $( CheckIfFileExistsReturnBool $str_file2 ) == true
+            #     $( CheckIfFileExists $str_file2 ) == true
             #     && $( CreateBackupFile $str_file2 ) == true
-            #     && $( AppendVarToFileReturnBool $str_file2 $str_output1 ) == true
-            #     && $( CheckIfFileExistsReturnBool $str_file2 ) == true
+            #     && $( AppendVarToFile $str_file2 $str_output1 ) == true
+            #     && $( CheckIfFileExists $str_file2 ) == true
             #     ) ]]; then
 
             #     systemctl restart sshd || bool=false
@@ -1884,29 +1929,29 @@
         # </params>
 
         # <summary> Set working directory to script root folder. </summary>
-        bool=$( CheckIfDirIsNotNullReturnBool $str_files_dir )
+        bool=$( CheckIfDirExists $str_files_dir )
         ( cd $str_files_dir || bool=false ) &> /dev/null
 
         # <summary> Write output to files. </summary>
         if [[ $bool == true ]]; then
-            ReadInputReturnBool "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+            ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
 
             # <summary> Yes. </summary>
             if [[
                 $var_return == true
-                && $( DeleteFileReturnBool ${arr_files1[0]} ) == true
-                && $( AppendVarToFileReturnBool ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
-                && $( DeleteFileReturnBool ${arr_files1[1]} ) == true
-                && $( AppendVarToFileReturnBool ${arr_files1[1]} 'blacklist firewire-core' ) == true
-                && $( DeleteFileReturnBool ${arr_files1[2]} ) == true
-                && $( AppendVarToFileReturnBool ${arr_files1[2]} 'blacklist thunderbolt' ) == true
+                && $( DeleteFile ${arr_files1[0]} ) == true
+                && $( AppendVarToFile ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
+                && $( DeleteFile ${arr_files1[1]} ) == true
+                && $( AppendVarToFile ${arr_files1[1]} 'blacklist firewire-core' ) == true
+                && $( DeleteFile ${arr_files1[2]} ) == true
+                && $( AppendVarToFile ${arr_files1[2]} 'blacklist thunderbolt' ) == true
                 ]]; then
                 update-initramfs -u -k all || bool=false
 
             # <summary> No, delete any changes and update system. </summary>
             else
                 for var_element1 in ${arr_files1}; do
-                    bool=$( DeleteFileReturnBool ${arr_files1[0]} )
+                    bool=$( DeleteFile ${arr_files1[0]} )
                 done
 
                 if [[ $bool == true ]]; then
@@ -1925,8 +1970,8 @@
 
         # fix here
 
-        if [[ $( CheckIfFileExistsReturnBool $str_file1 ) == true ]]; then
-            ReadInputReturnBool "Setup '/etc/sysctl.conf' with defaults?"
+        if [[ $( CheckIfFileExists $str_file1 ) == true ]]; then
+            ReadInput "Setup '/etc/sysctl.conf' with defaults?"
 
             if [[ $var_return == true ]]; then
                 ( cp $str_file1 $str_file2 || bool=false ) &> /dev/null
@@ -1934,12 +1979,12 @@
             fi
         done
 
-        ReadInputReturnBool "Setup firewall with UFW?"
+        ReadInput "Setup firewall with UFW?"
 
         ### NOTE: I am unsure if these false statements will execute the commands, but if they do, I see no need to refactor.
 
         if [[ $var_return == true ]]; then
-            bool=$( CheckIfCommandExistsReturnBool "ufw" )
+            bool=$( CheckIfCommandExists "ufw" )
 
             if [[ $bool == false ]]; then
                 echo -e "${str_prefix_warn}UFW is not installed. Skipping..."
@@ -1980,12 +2025,12 @@
             fi
 
             # <summary> SSH on LAN </summary>
-            if [[ $( CheckIfCommandExistsReturnBool "ssh" ) == false ]]; then
+            if [[ $( CheckIfCommandExists "ssh" ) == false ]]; then
                 echo -e "${str_prefix_warn}SSH is not installed. Skipping..."
             else
                 local var_return=""
                 ModifySSH $var_return
-                local readonly bool_altSSH=$( CheckIfVarIsValidNumReturnBool ${str_alt_SSH} )
+                local readonly bool_altSSH=$( CheckIfVarIsValidNum ${str_alt_SSH} )
 
                 # <summary> If alternate choice is provided, attempt to make changes. Exit early at failure. </summary>
                 if [[ $bool == true && (
