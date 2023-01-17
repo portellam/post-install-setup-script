@@ -11,6 +11,7 @@
 # - double check usage of exit code partial completion
 # - reformat all vars in underscore format
 # - debug all functions
+# - replace while loops and hard coded num counts with squiggly-bracket ranges (arrays)
 #
 # RULES
 #
@@ -1001,17 +1002,6 @@
             declare -a arr_actual_packages=()
             # </params>
 
-            # <summary>
-            # List of packages that have cron files (see below).
-            # NOTE: May change depend on content of cron files (ex: simple, common commands that are not from given specific packages, i.e "cp" or "rm").
-            # </summary>
-            declare -ar arr_packagesWanted=(
-                "flatpak"
-                # "ntpdate"                         # NOTE: superceded by 'systemd-timesyncd'
-                "rsync"
-                "snap"
-            )
-
             for var_element1 in ${arr_expected_packages[@]}; do
                 if ! CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
                     InstallPackage $var_element1
@@ -1022,10 +1012,7 @@
                 fi
             done
 
-            if ! CheckIfCommandIsInstalled "unattended-upgrades"
-                arr_actual_packages+=( "apt" )
-            fi
-
+            CheckIfCommandIsInstalled "unattended-upgrades" && arr_actual_packages+=( "apt" )
             cd $( dirname $0 )
             CheckIfDirExists $str_files_dir || return $?
 
@@ -1819,7 +1806,7 @@
         }
 
         # <params>
-        local str_output_partial_completion="Modifying $( lsb_release -is ) $( uname -o ) repositories..."
+        local str_output="Modifying $( lsb_release -is ) $( uname -o ) repositories..."
         # </params>
 
         echo -e $str_output
@@ -1833,235 +1820,191 @@
         return $int_exit_code
     }
 
-    ##### NOTE: need to refactor from here on down #####
-
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_alt_SSH"> chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
     function ModifySSH
     {
-        echo -e "Configuring SSH..."
-
-        # <params>
-        local bool=true
-        # </params>
-
-        # <summary> Exit if command is not present. </summary>
-        if [[ $( CheckIfCommandExists "ssh" ) == true ]]; then
-            bool=false
-            echo -e "${str_prefix_warn}SSH not installed! Skipping..."
-        fi
-
-        # <summary> Prompt user to enter alternate valid IP port value for SSH. </summary>
-        while [[ $bool == true ]]; do
+        function ModifySSH_Main
+        {
             # <params>
-            local declare -i int_count=0
-            local var_return=false
-            ReadInput "Modify SSH?"
+            local readonly str_command="ssh"
+            CheckIfCommandIsInstalled $str_command || return $?
+
+            declare -ir int_min_count=1
+            declare -ir int_max_count=3
+            declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
             # </params>
 
-            while [[ $int_count -lt 3 ]]; do
-                # <params>
-                str_alt_SSH=$( ReadInputFromRangeOfNums "\tEnter a new IP Port number for SSH (leave blank for default):" 22 65536 )
-                local declare -i int_altSSH="${str_alt_SSH}"
-                # </params>
+            ReadInput "Modify SSH?"
 
-                if [[ $int_altSSH -eq 22 || $int_altSSH -gt 10000 ]]; then
+            for int_count in ${arr_count[@]}; do
+                ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
+                local declare -i int_alt_SSH="${var_input}"
+
+                if [[ $int_alt_SSH -eq 22 || $int_alt_SSH -gt 10000 ]]; then
+                    str_alt_SSH="${int_alt_SSH}"
                     break
                 fi
 
-                SetExitCodeIfInputIsInvalid; SaveExitCode
-                echo -e "${str_prefix_warn}Available port range: 1000-65535"
-                ((int_count++))
+                echo -e "${str_prefix_warn}Available port range: 10000-65535"
             done
 
-            break
-        done
-
-        # <summary> Write to system files. </summary>
-        if [[ $bool == true ]]; then
             # <params>
             local readonly str_file1="/etc/ssh/ssh_config"
             # local readonly str_file2="/etc/ssh/sshd_config"
-            local readonly str_output1="\nLoginGraceTime 1m\nPermitRootLogin prohibit-password\nMaxAuthTries 6\nMaxSessions 2"
+
+            var_file=(
+                "#"
+                "LoginGraceTime 1m"
+                "PermitRootLogin prohibit-password"
+                "MaxAuthTries 6"
+                "MaxSessions 2"
+            )
             # </params>
 
-            if [[ (
-                $( CheckIfFileExists $str_file1 ) == true
-                && $( CreateBackupFile $str_file1 ) == true
-                && $( AppendVarToFile $str_file1 $str_output1 ) == true
-                && $( CheckIfFileExists $str_file1 ) == true
-                ) ]]; then
+            CheckIfFileExists $str_file1 || return $?
+            CreateBackupFile $str_file1 || return $?
+            WriteToFile $str_file1 || return $?
+            systemctl restart $str_command || return 1
 
-                systemctl restart ssh || bool=false
-            fi
+            # CheckIfFileExists $str_file2 || return $?
+            # CreateBackupFile $str_file2 || return $?
+            # WriteToFile $str_file2 || return $?
+            # systemctl restart sshd || return 1
 
-            # if [[ (
-            #     $( CheckIfFileExists $str_file2 ) == true
-            #     && $( CreateBackupFile $str_file2 ) == true
-            #     && $( AppendVarToFile $str_file2 $str_output1 ) == true
-            #     && $( CheckIfFileExists $str_file2 ) == true
-            #     ) ]]; then
+            return 0
+        }
 
-            #     systemctl restart sshd || bool=false
-            # fi
-        fi
+        # <params>
+        local str_output="Configuring SSH..."
+        # </params>
 
-        $bool; ExitWithThisExitCode "Configuring SSH..."; ParseThisExitCode; echo
+        echo -e $str_output
+        ModifySSH_Main
+        AppendPassOrFail $str_output
+        return $int_exit_code
     }
+
+    ##### NOTE: need to refactor from here on down #####
 
     # <summary> Recommended host security changes. </summary>
     # <returns> exit code </returns>
     function ModifySecurity
     {
-        echo -e "Configuring system security..."
+        function ModifySecurity_SetupFirewall
+        {
+            local str_command="ufw"
 
-        # <params>
-        local bool=false
-        # str_packagesToRemove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
-        local readonly arr_files1=(
-            "/etc/modprobe.d/disable-usb-storage.conf"
-            "/etc/modprobe.d/disable-firewire.conf"
-            "/etc/modprobe.d/disable-thunderbolt.conf"
-        )
-        # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"     # include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
-        local var_return=false
-        # </params>
+            CheckIfCommandExists $str_command && (
+                ufw reset || return 1
+                ufw default allow outgoing || return 1
+                ufw default deny incoming || return 1
 
-        # <summary> Set working directory to script root folder. </summary>
-        bool=$( CheckIfDirExists $str_files_dir )
-        ( cd $str_files_dir || bool=false ) &> /dev/null
+                # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
+                # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
+                ( ufw allow DNS comment 'dns' &> /dev/null ) || return 1
+                ( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
+                ( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
+                ( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null ) || return 1
+                ( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null ) || return 1
+                ( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null ) || return 1
+                ( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null ) || return 1
 
-        # <summary> Write output to files. </summary>
-        if [[ $bool == true ]]; then
-            ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
-
-            # <summary> Yes. </summary>
-            if [[
-                $var_return == true
-                && $( DeleteFile ${arr_files1[0]} ) == true
-                && $( AppendVarToFile ${arr_files1[0]} 'install usb-storage /bin/true' ) == true
-                && $( DeleteFile ${arr_files1[1]} ) == true
-                && $( AppendVarToFile ${arr_files1[1]} 'blacklist firewire-core' ) == true
-                && $( DeleteFile ${arr_files1[2]} ) == true
-                && $( AppendVarToFile ${arr_files1[2]} 'blacklist thunderbolt' ) == true
-                ]]; then
-                update-initramfs -u -k all || bool=false
-
-            # <summary> No, delete any changes and update system. </summary>
-            else
-                for var_element1 in ${arr_files1}; do
-                    bool=$( DeleteFile ${arr_files1[0]} )
-                done
-
-                if [[ $bool == true ]]; then
-                    update-initramfs -u -k all || bool=false
-                fi
-            fi
-        fi
-
-        if [[ $bool == false ]]; then
-            echo -e "${str_prefix_warn}Failed to make changes."
-        fi
-
-        # <summary> Write output to files. </summary>
-        local str_file1="sysctl.conf"
-        local str_file2="/etc/sysctl.conf"
-
-        # fix here
-
-        if [[ $( CheckIfFileExists $str_file1 ) == true ]]; then
-            ReadInput "Setup '/etc/sysctl.conf' with defaults?"
-
-            if [[ $var_return == true ]]; then
-                ( cp $str_file1 $str_file2 || bool=false ) &> /dev/null
-                ( cat $str_file2 >> $str_file1 || bool=false ) &> /dev/null
-            fi
-        done
-
-        ReadInput "Setup firewall with UFW?"
-
-        ### NOTE: I am unsure if these false statements will execute the commands, but if they do, I see no need to refactor.
-
-        if [[ $var_return == true ]]; then
-            bool=$( CheckIfCommandExists "ufw" )
-
-            if [[ $bool == false ]]; then
-                echo -e "${str_prefix_warn}UFW is not installed. Skipping..."
-            fi
-
-            if [[ $bool == true && (
-                ! $( ufw reset )
-                && ! $( ufw default allow outgoing )
-                && ! $( ufw default deny incoming )
-                ) ]]; then
-                bool=false
-            fi
-
-            # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
-            # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
-            if [[ $bool == true && (
-                ! $( ufw allow DNS comment 'dns' &> /dev/null )
-                && ! $( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null )
-                && ! $( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null )
-                && ! $( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null )
-                && ! $( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null )
-                && ! $( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null )
-                && ! $( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null )
-                ) ]]; then
-                bool=false
-            fi
-
-            # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
-            if [[ $bool == true && (
-                ! $( ufw allow http comment 'HTTP, local Web server' &> /dev/null )
-                && ! $( ufw allow https comment 'HTTPS, local Web server' &> /dev/null )
-                && ! $( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null )
-                && ! $( ufw allow 110 comment 'POP3, local mail server' &> /dev/null )
-                && ! $( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null )
-                && ! $( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null )
-                ) ]]; then
-                bool=false
-            fi
+                # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
+                ( ufw allow http comment 'HTTP, local Web server' &> /dev/null ) || return 1
+                ( ufw allow https comment 'HTTPS, local Web server' &> /dev/null ) || return 1
+                ( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null ) || return 1
+                ( ufw allow 110 comment 'POP3, local mail server' &> /dev/null ) || return 1
+                ( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null ) || return 1
+                ( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null ) || return 1
+            )
 
             # <summary> SSH on LAN </summary>
-            if [[ $( CheckIfCommandExists "ssh" ) == false ]]; then
-                echo -e "${str_prefix_warn}SSH is not installed. Skipping..."
-            else
-                local var_return=""
-                ModifySSH $var_return
-                local readonly bool_altSSH=$( CheckIfVarIsValidNum ${str_alt_SSH} )
+            str_command="ssh"
 
-                # <summary> If alternate choice is provided, attempt to make changes. Exit early at failure. </summary>
-                if [[ $bool == true && (
-                    ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null )
-                    || ! $( ufw limit from 192.168.0.0/16 to any port ${str_sshAlt} proto tcp comment 'ssh' &> /dev/null )
-                    ) ]]; then
-                    bool=false
+            CheckIfCommandIsInstalled $str_command && (
+                ModifySSH
+
+                if CheckIfVarIsValidNum $str_alt_SSH; then
+                    ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
+                    ( ufw limit from 192.168.0.0/16 to any port ${str_alt_SSH} proto tcp comment 'ssh' &> /dev/null ) || return 1
+                else
+                    ( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null ) || return 1
                 fi
 
-                # <summary> If alternate choice is not provided, attempt to make changes. Exit early at failure. </summary>
-                if [[ $bool == false && (
-                    ! $( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null )
-                    ) ]]; then
-                    bool=false
-                fi
+                ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
+            )
 
-                if [[ ! $( ufw deny ssh comment 'deny default ssh' &> /dev/null ) ]]; then
-                    bool=false
-                fi
+            ( ufw enable &> /dev/null ) || return 1
+            ( ufw reload &> /dev/null ) || return 1
+
+            return 0
+        }
+
+        function ModifySecurity_Main
+        {
+            # <params>
+            # local bool_nonzero_amount_of_failed_operations=false
+            local str_file1="sysctl.conf"
+            local str_file2="/etc/sysctl.conf"
+            # str_packages_to_remove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
+            var_file=(
+                "/etc/modprobe.d/disable-usb-storage.conf"
+                "/etc/modprobe.d/disable-firewire.conf"
+                "/etc/modprobe.d/disable-thunderbolt.conf"
+            )
+
+            # NOTE: include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
+            # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"
+            # </params>
+
+            CheckIfDirExists $str_files_dir
+            cd $str_files_dir &> /dev/null || return 1
+
+            if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
+                DeleteFile ${arr_files1[0]} || return $?
+                WriteToFile ${arr_files1[0]} || return $?
+                DeleteFile ${arr_files1[1]} || return $?
+                WriteToFile ${arr_files1[1]} || return $?
+                DeleteFile ${arr_files1[2]} || return $?
+                WriteToFile ${arr_files1[2]} || return $?
+                update-initramfs -u -k all || return $?
             fi
 
-            # <summary> Attempt to save changes. Exit early at failure. </summary>
-            if [[
-                ! $( ufw enable &> /dev/null )
-                || ! $( ufw reload &> /dev/null )
-                ]]; then
-                bool=false
-            fi
-        fi
+            # fix here
 
-        EchoPassOrFailThisExitCode "Configuring system security..."; ParseThisExitCode; echo
+            CheckIfFileExists $str_file1 && (
+                ReadInput "Setup '/etc/sysctl.conf' with defaults?" && (
+                    ( cp $str_file1 $str_file2 &> /dev/null ) || return $?
+                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return $?
+                )
+            )
+
+            if ReadInput "Setup firewall with UFW?"; then
+                ModifySecurity_SetupFirewall || return $?
+            fi
+
+            # if $bool_nonzero_amount_of_failed_operations; then
+            #     return $int_code_partial_completion
+            # fi
+
+            return 0
+        }
+
+        # <params>
+        local str_output="Configuring system security..."
+        # </params>
+
+        echo -e $str_output
+        ModifySecurity_Main
+        AppendPassOrFail $str_output
+
+        # if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        #     echo -e $str_output_partial_completion
+        # fi
+
+        return $int_exit_code
     }
 # </code>
 
