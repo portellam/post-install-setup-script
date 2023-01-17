@@ -1,5 +1,5 @@
 ## Description
-Post-install changes to a Debian Linux system.
+Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
 
 ## How-to
 * To execute setup as sudo/root, execute:
@@ -10,27 +10,39 @@ Post-install changes to a Debian Linux system.
 
         bash installer.bash
 
-## Sudo Features
-* Ask user to change Debian software repositories, and update
-* Ask user to install recommended software **[1]**
-    * Debian APT packages
-    * Flatpak apps
-    * Sudo-only Git scripts
-* Ask user to make recommended system security-hardening / changes
-    * Enable/Disable USB, thunderbolt, etc. interfaces
-    * Enable/Change/Disable SSH
-    * Enable UFW firewall
-    * Parse local '.files' directory for changes to:
-        * Cron
-        * System files
-        * System services
+## Main logic
+[1] Check if user is root or not (set boolean).
+[2] Distro-agnostic setup; Check if system is a recognized Linux distribution (set string).
+[3] Setup Software sources and installation.
+[4] Setup Git repositories.
+[5] Setup system.
 
-## User Features
-* Ask user to install recommended Git scripts
+## Middle-man logic
+[3]
+    * Check current system is...
+        * Debian Linux => Modify Debian APT sources.
+    * Test network connection.
+    * If user is root...
+        * Install from Linux package manager sources (if system is recognized and lists are available). [A]
+    * Else...
+        * Install from Flathub (security measure; install as user is more secure than system-wide). [A]
+
+[4]
+    * Test network connection.
+    * Clone Git repositories.
+    * Install scripts from Git repositories (different for root and user).
+
+[5]
+    * Test network connection.
+    * If user is root...
+        * Modify SSH.
+        * Modify system security.
+        * Add SystemD services.
+        * Add Cron jobs.
 
 ## Sources
 
-* **[1]** Install listed software by given category (of all sources)
+* **[A]** Install listed software by given category (of all sources)
     * Development
     * Games
     * Internet-based and Communication
