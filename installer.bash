@@ -35,9 +35,7 @@
     # <returns> output statement </returns>
     function AppendPassOrFail
     {
-        if CheckIfVarIsValid $1 &> /dev/null; then
-            echo -en "$1 "
-        fi
+        CheckIfVarIsValid $1 &> /dev/null && echo -en "$1 "
 
         case $? in
             0)
@@ -68,9 +66,7 @@
         declare -ir int_max_count_of_tries=3
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         while [[ $int_count -lt $int_max_count_of_tries ]]; do
             if eval $1; then
@@ -98,9 +94,7 @@
         local readonly var_expected_install_path="/usr/bin/$1"
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         # if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
         if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null; then
@@ -121,9 +115,7 @@
         local readonly str_output_var_is_incorrect_type="${var_prefix_error} Not a boolean."
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         case $1 in
             "true" | "false" )
@@ -146,9 +138,7 @@
         local readonly str_num_regex='^[0-9]+$'
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         if ! [[ $1 =~ $str_num_regex ]]; then
             echo -e $str_output_var_is_NAN
@@ -192,9 +182,7 @@
         local readonly str_output_dir_is_null="${var_prefix_error} Directory '$1' does not exist."
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         if [[ ! -d "$1" ]]; then
             echo -e $str_output_dir_is_null
@@ -214,9 +202,7 @@
         local readonly str_output_file_is_null="${var_prefix_error} File '$1' does not exist."
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return $?
-        fi
+        CheckIfVarIsValid $1 || return $?
 
         if [[ ! -e "$1" ]]; then
             echo -e $str_output_file_is_null
@@ -230,7 +216,7 @@
     # <returns> boolean </returns>
     function ParseExitCodeAsBool
     {
-        if [[ "$?" -ne 0 ]]; then
+        if [[ $? -ne 0 ]]; then
             echo false
             return 1
         fi
@@ -268,14 +254,8 @@
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        if ! CheckIfFileExists $1 || ! CheckIfFileExists $2; then
-            return $?
-        fi
-
-        if ! cmp -s "$1" "$2"; then
-            return 1
-        fi
-
+        ( CheckIfFileExists $1 && CheckIfFileExists $2 ) || return $?
+        cmp -s "$1" "$2" || return 1
         return 0
     }
 
@@ -296,17 +276,13 @@
         var_element1=${var_element1##*.}                         # ditto
         # </params>
 
-        if ! CheckIfFileExists $str_file1; then
-            return 1
-        fi
+        CheckIfFileExists $str_file1 || return 1
 
         if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
             cp $str_file1 "${str_file1}.0${str_suffix}" || return 1
         fi
 
-        if ! CheckIfVarIsNum $var_element1; then
-            return 1
-        fi
+        CheckIfVarIsNum $var_element1 || return 1
 
         # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
         while [[ ${#arr_dir1[@]} -ge $int_max_count ]]; do
@@ -317,10 +293,7 @@
             arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
         done
 
-        # <summary> If *first* backup is same as original file, exit. </summary>
-        if CheckIfTwoFilesAreSame $1 ${arr_dir[0]}; then
-            return 0
-        if
+        CheckIfTwoFilesAreSame $1 ${arr_dir[0]} && return 0
 
         # <params>
         var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
@@ -351,9 +324,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not create directory '$1'."
         # </params>
 
-        if ! CheckIfDirExists $1; then
-            return $?
-        fi
+        CheckIfFileExists $1 || return $?
 
         mkdir -p $1 || (
             echo -e $str_output_fail
@@ -372,9 +343,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not create file '$1'."
         # </params>
 
-        if CheckIfFileExists $1 &> /dev/null; then
-            return 0
-        fi
+        CheckIfFileExists $1 &> /dev/null && return 0
 
         touch $1 || (
             echo -e $str_output_fail
@@ -393,9 +362,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not delete file '$1'."
         # </params>
 
-        if ! CheckIfFileExists $1; then
-            return 0
-        fi
+        CheckIfFileExists $1 || return 0
 
         rm $1 || (
             echo -e $str_output_fail
@@ -416,13 +383,7 @@
         var_file=$( cat $1 )
         # </params>
 
-        if ! CheckIfFileExists $1; then
-            return $?
-        fi
-
-        if ! CheckIfVarIsValid ${var_file[@]}; then
-            return $?
-        fi
+        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return $?
 
         return 0
     }
@@ -438,13 +399,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '$1'."
         # </params>
 
-        if ! CheckIfFileExists $1; then
-            return $?
-        fi
-
-        if ! CheckIfVarIsValid $var_file; then
-            return $?
-        fi
+        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return $?
 
         # ( printf "%s\n" "${var_file[@]}" >> $1 ) || (
             # echo -e $str_output_fail
@@ -482,13 +437,7 @@
         local readonly str_OS_with_zypper="mandriva mageia"
         # </params>
 
-        if ! CheckIfVarIsValid $str_kernel &> /dev/null; then
-            return $?
-        fi
-
-        if ! CheckIfVarIsValid $str_operating_system &> /dev/null; then
-            return $?
-        fi
+        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return $?
 
         if [[ "${str_kernel}" != *"linux"* ]]; then
             echo -e $str_output_kernel_is_not_valid
@@ -598,10 +547,7 @@
         local str_output=""
         # </params>
 
-        if CheckIfVarIsValid $1 &> /dev/null; then
-            str_output="$1 "
-        fi
-
+        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         declare -r str_output+="${var_green}[Y/n]:${var_reset_color}"
 
         while [[ $int_count -le $int_max_count ]]; do
@@ -654,14 +600,12 @@
         var_input=""
         # </params>
 
-        if ( ! CheckIfVarIsNum $var_min || ! CheckIfVarIsNum $var_max ) &> /dev/null ; then
+        if ( ! CheckIfVarIsNum $var_min || ! CheckIfVarIsNum $var_max ) &> /dev/null; then
             echo -e $str_output_extrema_are_not_valid
             return 1
         fi
 
-        if CheckIfVarIsValid $1 &> /dev/null; then
-            str_output="$1 "
-        fi
+        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
 
         readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
 
@@ -729,10 +673,7 @@
         if CheckIfVarIsValid $8 &> /dev/null; then arr_input+=( $8 ); fi
         if CheckIfVarIsValid $9 &> /dev/null; then arr_input+=( $9 ); fi
 
-        if CheckIfVarIsValid $1 &> /dev/null; then
-            str_output="$1 "
-        fi
-
+        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         # <summary> Read input </summary>
@@ -794,10 +735,7 @@
         if CheckIfVarIsValid $8 &> /dev/null; then arr_input+=( $8 ); fi
         if CheckIfVarIsValid $9 &> /dev/null; then arr_input+=( $9 ); fi
 
-        if CheckIfVarIsValid $1 &> /dev/null; then
-            str_output="$1 "
-        fi
-
+        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         # <summary> Read input </summary>
@@ -834,13 +772,7 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return 1
-        fi
-
-        if ! CheckIfVarIsValid $str_package_manager; then
-            return $?
-        fi
+        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return $?
 
         case $str_package_manager in
             "apt" )
@@ -889,13 +821,7 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        if ! CheckIfVarIsValid $1; then
-            return 1
-        fi
-
-        if ! CheckIfVarIsValid $str_package_manager; then
-            return $?
-        fi
+        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return $?
 
         # <summary> Auto-update and auto-install selected packages </summary>
         case $str_package_manager in
@@ -972,7 +898,7 @@
     declare -gir int_code_dir_is_null=249
     declare -gir int_code_file_is_null=248
     declare -gir int_code_cmd_is_null=247
-    declare -gi int_exit_code="$?"
+    declare -gi int_exit_code=$?
 
     # <summary>
     # Color coding
