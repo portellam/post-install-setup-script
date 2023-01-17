@@ -11,35 +11,32 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
         bash installer.bash
 
 ## Main logic
-[1] Check if user is root or not (set boolean).
+* Check if user is root or not (set boolean).
 
-[2] Distro-agnostic setup; Check if system is a recognized Linux distribution (set string).
+* Distro-agnostic setup; Check if system is a recognized Linux distribution (set string).
 
-[3] Setup Software sources and installation.
+* Setup Software sources and installation. [A]
 
-[4] Setup Git repositories.
+* Setup Git repositories. [B]
 
-[5] Setup system.
+* Setup system. [C]
 
 ## Middle-man logic
-[3]
-
+* [A]
     * Check current system is...
         * Debian Linux => Modify Debian APT sources.
     * Test network connection.
     * If user is root...
-        * Install from Linux package manager sources (if system is recognized and lists are available). [A]
+        * Install from Linux package manager sources (if system is recognized and lists are available). [1]
     * Else...
-        * Install from Flathub (security measure; install as user is more secure than system-wide). [A]
+        * Install from Flathub (security measure; install as user is more secure than system-wide). [1]
 
-[4]
-
+* [B]
     * Test network connection.
     * Clone Git repositories.
     * Install scripts from Git repositories (different for root and user).
 
-[5]
-
+* [C]
     * Test network connection.
     * If user is root...
         * Modify SSH.
@@ -49,7 +46,8 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
 
 ## Sources
 
-**[A]** Install listed software by given category (of all sources)
+**[1]** Install listed software by given category (of all sources)
+
     * Development
     * Games
     * Internet-based and Communication
