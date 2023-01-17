@@ -32,17 +32,17 @@ Post-install changes to a Linux system. Distro-agnostic (Debian-optimized).
     * Install from Flathub (security measure; install as user is more secure than system-wide). [1]
 
 #### [B]
-    * Test network connection.
-    * Clone Git repositories.
-    * Install scripts from Git repositories (different for root and user).
+* Test network connection.
+* Clone Git repositories.
+* Install scripts from Git repositories (different for root and user).
 
 #### [C]
-    * Test network connection.
-    * If user is root...
-        * Modify SSH.
-        * Modify system security.
-        * Add SystemD services.
-        * Add Cron jobs.
+* Test network connection.
+* If user is root...
+    * Modify SSH.
+    * Modify system security.
+    * Add SystemD services.
+    * Add Cron jobs.
 
 ## Sources
 #### [1] Install listed software by given category (of all sources)
