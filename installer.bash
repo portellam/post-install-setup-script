@@ -998,8 +998,9 @@
         function AppendCron_Main
         {
             # <params>
-            local readonly str_dir1="/etc/cron.d/"
+            local bool_nonzero_amount_of_failed_operations=false
             declare -a arr_actual_packages=()
+            local readonly str_dir1="/etc/cron.d/"
             # </params>
 
             for var_element1 in ${arr_expected_packages[@]}; do
@@ -1012,7 +1013,18 @@
                 fi
             done
 
-            CheckIfCommandIsInstalled "unattended-upgrades" && arr_actual_packages+=( "apt" )
+            CheckIfVarIsValid $str_package_manager && (
+                case $str_package_manager in
+                    "apt" )
+                        CheckIfCommandIsInstalled "unattended-upgrades" &> /dev/null || arr_actual_packages+=( $str_package_manager )
+                        ;;
+
+                    * )
+                        arr_actual_packages+=( $str_package_manager )
+                        ;;
+                esac
+            )
+
             cd $( dirname $0 )
             CheckIfDirExists $str_files_dir || return $?
 
@@ -1023,12 +1035,10 @@
             {
                 for var_element2 in ${arr_actual_packages[@]}; do
                     if [[ ${var_element1} == *"${var_element2}"* ]]; then
-                        if ! CheckIfCommandIsInstalled $var_element2; then
-                            echo -e "${var_prefix_warn}Missing required package '${var_element2}'. Skipping..."
-
+                        if CheckIfCommandIsInstalled $var_element2; then
+                            cp $var_element1 ${str_dir1}${var_element1} || bool_nonzero_amount_of_failed_operations=true
                         else
-                            cp $var_element1 ${str_dir1}${var_element1}
-                            # echo -e "Appended file '${var_element1}'."
+                            bool_nonzero_amount_of_failed_operations=true
                         fi
                     fi
                 done
@@ -1038,13 +1048,14 @@
             cd $str_files_dir || return 1
 
             for var_element1 in $( ls *-cron ); do
-                if ReadInput "Append '${var_element1}'?"; then
-                    AppendCron_MatchCronFile
-                fi
+                ReadInput "Append '${var_element1}'?" && AppendCron_MatchCronFile
             done
 
             systemctl enable cron || return 1
             systemctl restart cron || return 1
+
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            return 0
         }
 
         # <params>
@@ -1183,10 +1194,7 @@
                 fi
             done
 
-            if $bool_nonzero_amount_of_failed_repos; then
-                return $int_code_partial_completion
-            fi
-
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
 
@@ -1670,10 +1678,7 @@
                 fi
             fi
 
-            if $bool_nonzero_amount_of_failed_repos; then
-                return $int_code_partial_completion
-            fi
-
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
 
@@ -1708,9 +1713,9 @@
             # </params>
 
             CreateBackupFile $str_file1 || return $?
-            ReadInput "Include 'contrib' sources?" || str_sources+="contrib"
+            ReadInput "Include 'contrib' sources?" && str_sources+="contrib"
             CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
-            ReadInput "Include 'non-free' sources?" || str_sources+="non-free"
+            ReadInput "Include 'non-free' sources?" && str_sources+="non-free"
 
             # <summary> Setup mandatory sources. </summary>
             # <summary> User prompt </summary>
@@ -1798,10 +1803,7 @@
             apt update || return 1
             apt full-upgrade || return 1
 
-            if $bool_nonzero_amount_of_failed_operations; then
-                return $int_code_partial_completion
-            fi
-
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
 
@@ -1836,19 +1838,19 @@
             declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
             # </params>
 
-            ReadInput "Modify SSH?"
+            if ReadInput "Modify SSH?"; then
+                for int_count in ${arr_count[@]}; do
+                    ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
+                    local declare -i int_alt_SSH="${var_input}"
 
-            for int_count in ${arr_count[@]}; do
-                ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
-                local declare -i int_alt_SSH="${var_input}"
+                    if [[ $int_alt_SSH -eq 22 || $int_alt_SSH -gt 10000 ]]; then
+                        str_alt_SSH="${int_alt_SSH}"
+                        break
+                    fi
 
-                if [[ $int_alt_SSH -eq 22 || $int_alt_SSH -gt 10000 ]]; then
-                    str_alt_SSH="${int_alt_SSH}"
-                    break
-                fi
-
-                echo -e "${str_prefix_warn}Available port range: 10000-65535"
-            done
+                    echo -e "${str_prefix_warn}Available port range: 10000-65535"
+                done
+            fi
 
             # <params>
             local readonly str_file1="/etc/ssh/ssh_config"
@@ -1981,14 +1983,8 @@
                 )
             )
 
-            if ReadInput "Setup firewall with UFW?"; then
-                ModifySecurity_SetupFirewall || return $?
-            fi
-
-            # if $bool_nonzero_amount_of_failed_operations; then
-            #     return $int_code_partial_completion
-            # fi
-
+            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return $?
+            # $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
 
