@@ -1,0 +1,10 @@
+# /etc/cron.d/dnf-cron:    crontab entries to upgrade software packages
+#
+# Author(s):    Alex Portell <github.com/portellam>
+#
+
+# dnf #
+#
+# auto-upgrade every 8 hours
+0 0,8,16 * * * dnf upgrade -y
+#

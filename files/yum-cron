@@ -1,0 +1,10 @@
+# /etc/cron.d/yum-cron:    crontab entries to upgrade software packages
+#
+# Author(s):    Alex Portell <github.com/portellam>
+#
+
+# yum #
+#
+# auto-upgrade every 8 hours
+0 0,8,16 * * * yum update -y
+#
