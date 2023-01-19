@@ -7,7 +7,9 @@
 # <summary>
 #
 # TODO
-# - create 'CreateBackupFile'
+# - fix 'CreateBackupFile'
+# - test each business logic method
+# - before write, overwrite system file with existing un modified backup.
 # - double check usage of exit code partial completion
 # - reformat all vars in underscore format
 # - debug all functions
@@ -42,15 +44,19 @@
         CheckIfVarIsValid $1 &> /dev/null && echo -en "$1 "
 
         case $int_exit_code in
-            0)
+            0 )
                 echo -e $var_suffix_pass
                 ;;
 
-            $int_code_skipped_operation)
+            $int_code_partial_completion )
+                echo -e $var_suffix_maybe
+                ;;
+
+            $int_code_skipped_operation )
                 echo -e $var_suffix_skip
                 ;;
 
-            *)
+            * )
                 echo -e $var_suffix_fail
                 ;;
         esac
@@ -105,8 +111,9 @@
 
         CheckIfVarIsValid $1 || return "$?"
 
-        # if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
-        if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null; then
+        # if $( ! CheckIfFileExists $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
+        # if ! CheckIfFileExists $var_actual_install_path &> /dev/null; then
+        if [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
             echo -e $str_output_cmd_is_null
             return $int_code_cmd_is_null
         fi
@@ -983,6 +990,7 @@
     declare -gr var_prefix_pass="${var_green}Success:${var_reset_color}"
     declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
     declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
+    declare -gr var_suffix_maybe="${var_yellow}Successfully Incomplete${var_reset_color}"
     declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
     declare -gr var_suffix_skip="${var_yellow}Skipped${var_reset_color}"
 
@@ -1832,9 +1840,8 @@
         function ModifySSH_Main
         {
             # <params>
-            local readonly str_command="ssh"
-            CheckIfCommandIsInstalled "${str_command}" || return "$?"
-
+            local bool=true
+            local str_command="ssh"
             declare -ir int_min_count=1
             declare -ir int_max_count=3
             declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
@@ -1856,10 +1863,11 @@
                 done
             fi
 
-            # <params>
-            local readonly str_file1="/etc/ssh/ssh_config"
-            # local readonly str_file2="/etc/ssh/sshd_config"
+            if [[ $int_alt_SSH -eq 22 ]]; then
+                bool=false
+            fi
 
+            local readonly str_file1="/etc/ssh/ssh_config"
             var_file=(
                 "#"
                 "LoginGraceTime 1m"
@@ -1867,19 +1875,40 @@
                 "MaxAuthTries 6"
                 "MaxSessions 2"
             )
-            # </params>
 
-            CheckIfFileExists $str_file1 || return "$?"
-            # CreateBackupFile $str_file1 || return "$?"
-            # WriteToFile $str_file1 || return "$?"
-            # systemctl restart $str_command || return 1
+            if $bool; then
+                var_file+=(
+                    "Port ${str_alt_SSH}"
+                )
+            fi
 
-            # CheckIfFileExists $str_file2 || return "$?"
-            # CreateBackupFile $str_file2 || return "$?"
-            # WriteToFile $str_file2 || return "$?"
-            # systemctl restart sshd || return 1
+            if CheckIfCommandIsInstalled "${str_command}"; then
+                CheckIfFileExists $str_file1 || return "$?"
+                # CreateBackupFile $str_file1 || return "$?"
+                WriteToFile $str_file1 || return "$?"
+                systemctl restart $str_command || return 1
+            fi
 
-            return 0
+            SaveExitCode
+            str_command="sshd"
+
+            if $bool && CheckIfCommandIsInstalled "${str_command}"; then
+                local readonly str_file2="/etc/ssh/sshd_config"
+                var_file=(
+                    "#"
+                    "Port ${str_alt_SSH}"
+                )
+
+                CheckIfFileExists $str_file2 || return "$?"
+                # CreateBackupFile $str_file2 || return "$?"
+                WriteToFile $str_file2 || return "$?"
+                systemctl restart $str_command || return 1
+            else
+                (return $int_code_partial_completion)
+            fi
+
+            SaveExitCode
+            return $int_exit_code
         }
 
         # <params>
@@ -1891,8 +1920,6 @@
         AppendPassOrFail "${str_output}"
         return $int_exit_code
     }
-
-    ##### NOTE: need to refactor from here on down #####
 
     # <summary> Recommended host security changes. </summary>
     # <returns> exit code </returns>
@@ -2119,8 +2146,6 @@
 
         if $bool_is_user_root; then
             ModifySSH
-            echo $str_alt_SSH
-
             # ModifySecurity || return "$?"
             # AppendServices || return "$?"
             # AppendCron || return "$?"
@@ -2186,7 +2211,6 @@
     # </params>
 
     CheckLinuxDistro &> /dev/null
-    echo $str_package_manager
     # ExecuteSetupOfSoftwareSources || exit $?
     # ExecuteSetupOfGitRepos || exit $?
     ExecuteSystemSetup || exit $?
