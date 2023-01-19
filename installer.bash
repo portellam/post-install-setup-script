@@ -38,17 +38,24 @@
     # <returns> output statement </returns>
     function AppendPassOrFail
     {
+        SaveExitCode
         CheckIfVarIsValid $1 &> /dev/null && echo -en "$1 "
 
-        case $? in
+        case $int_exit_code in
             0)
                 echo -e $var_suffix_pass
-                return 0;;
+                ;;
+
+            $int_code_skipped_operation)
+                echo -e $var_suffix_skip
+                ;;
+
             *)
-                SaveExitCode
                 echo -e $var_suffix_fail
-                return $int_exit_code;;
+                ;;
         esac
+
+        return $int_exit_code
     }
 
     # <summary> Save last exit code. </summary>
@@ -56,7 +63,7 @@
     # <returns> exit code </returns>
     function SaveExitCode
     {
-        int_exit_code=$?
+        int_exit_code="$?"
     }
 
     # <summary> Attempt given command a given number of times before failure. </summary>
@@ -70,7 +77,7 @@
         declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         for int_count in ${arr_count[@]}; do
             if eval $1; then
@@ -96,7 +103,7 @@
         local readonly var_expected_install_path="/usr/bin/$1"
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         # if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
         if $( ! CheckIfVarIsValid $var_actual_install_path ) &> /dev/null; then
@@ -117,7 +124,7 @@
         local readonly str_output_var_is_incorrect_type="${var_prefix_error} Not a boolean."
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         case $1 in
             "true" | "false" )
@@ -140,7 +147,7 @@
         local readonly str_num_regex='^[0-9]+$'
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         if ! [[ $1 =~ $str_num_regex ]]; then
             echo -e $str_output_var_is_NAN
@@ -184,7 +191,7 @@
         local readonly str_output_dir_is_null="${var_prefix_error} Directory '$1' does not exist."
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         if [[ ! -d "$1" ]]; then
             echo -e $str_output_dir_is_null
@@ -204,7 +211,7 @@
         local readonly str_output_file_is_null="${var_prefix_error} File '$1' does not exist."
         # </params>
 
-        CheckIfVarIsValid $1 || return $?
+        CheckIfVarIsValid $1 || return "$?"
 
         if [[ ! -e "$1" ]]; then
             echo -e $str_output_file_is_null
@@ -224,7 +231,7 @@
         local readonly str_output_file_is_not_executable="${var_prefix_error} File '$1' is not executable."
         # </params>
 
-        CheckIfFileExists $1 || return $?
+        CheckIfFileExists $1 || return "$?"
 
         if [[ ! -x "$1" ]]; then
             echo -e $str_output_file_is_not_executable
@@ -244,7 +251,7 @@
         local readonly str_output_file_is_not_readable="${var_prefix_error} File '$1' is not readable."
         # </params>
 
-        CheckIfFileExists $1 || return $?
+        CheckIfFileExists $1 || return "$?"
 
         if [[ ! -r "$1" ]]; then
             echo -e $str_output_file_is_not_readable
@@ -264,7 +271,7 @@
         local readonly str_output_file_is_not_writable="${var_prefix_error} File '$1' is not writable."
         # </params>
 
-        CheckIfFileExists $1 || return $?
+        CheckIfFileExists $1 || return "$?"
 
         if [[ ! -w "$1" ]]; then
             echo -e $str_output_file_is_not_writable
@@ -316,7 +323,7 @@
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        ( CheckIfFileExists $1 && CheckIfFileExists $2 ) || return $?
+        ( CheckIfFileExists $1 && CheckIfFileExists $2 ) || return "$?"
         cmp -s "$1" "$2" || return 1
         return 0
     }
@@ -331,7 +338,7 @@
         local readonly str_file1=$1
         local readonly str_dir1=$( dirname $1 )
         local readonly str_suffix=".old"
-        local declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $str_file1 | grep $str_suffix | uniq ) )
+        declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $str_file1 | grep $str_suffix | uniq ) )
 
         local var_element1=${arr_dir1[0]}
         var_element1=${var_element1%"${str_suffix}"}             # substitution
@@ -360,12 +367,12 @@
         # <params>
         var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
         var_element1=${var_element1##*.}                        # ditto
-        local declare -i int_last_index=0
+        declare -i int_last_index=0
         # </params>
 
         # <summary> Increment number of backup file suffix. </summary>
         if CheckIfVarIsNum $var_element1; then
-            local declare -i int_last_index="${var_element1}"
+            declare -i int_last_index="${var_element1}"
             (( int_last_index++ ))
         fi
 
@@ -386,7 +393,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not create directory '$1'."
         # </params>
 
-        CheckIfFileExists $1 || return $?
+        CheckIfFileExists $1 || return "$?"
 
         mkdir -p $1 || (
             echo -e $str_output_fail
@@ -445,7 +452,7 @@
         var_file=$( cat $1 )
         # </params>
 
-        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return $?
+        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return "$?"
 
         return 0
     }
@@ -461,7 +468,7 @@
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '$1'."
         # </params>
 
-        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return $?
+        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return "$?"
 
         # ( printf "%s\n" "${var_file[@]}" >> $1 ) || (
             # echo -e $str_output_fail
@@ -499,7 +506,7 @@
         local readonly str_OS_with_zypper="mandriva mageia"
         # </params>
 
-        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return $?
+        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return "$?"
 
         if [[ "${str_kernel}" != *"linux"* ]]; then
             echo -e $str_output_kernel_is_not_valid
@@ -828,7 +835,7 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return $?
+        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return "$?"
 
         case $str_package_manager in
             "apt" )
@@ -877,7 +884,7 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return $?
+        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return "$?"
 
         # <summary> Auto-update and auto-install selected packages </summary>
         case $str_package_manager in
@@ -928,13 +935,13 @@
         # <summary> Update existing GitHub repository. </summary>
         if CheckIfDirExists "$1$2"; then
             cd "$1$2" && TryThisXTimesBeforeFail "git pull"
-            return $?
+            return "$?"
 
         # <summary> Clone new GitHub repository. </summary>
         else
             if ReadInput "Clone repo '$2'?"; then
                 cd "$1$3" && TryThisXTimesBeforeFail "git clone https://github.com/$2"
-                return $?
+                return "$?"
             fi
         fi
     }
@@ -947,6 +954,7 @@
 
     # <summary> Exit codes </summary>
     declare -gir int_code_partial_completion=255
+    declare -gir int_code_skipped_operation=254
     declare -gir int_code_var_is_null=253
     declare -gir int_code_var_is_empty=252
     declare -gir int_code_var_is_not_bool=251
@@ -976,6 +984,7 @@
     declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
     declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
     declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
+    declare -gr var_suffix_skip="${var_yellow}Skipped${var_reset_color}"
 
     # <summary> Output statement </summary>
     declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
@@ -1019,7 +1028,7 @@
             )
 
             cd $( dirname $0 )
-            CheckIfDirExists $str_files_dir || return $?
+            CheckIfDirExists $str_files_dir || return "$?"
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
             # <param name="${var_element1}"> cron file </param>
@@ -1037,7 +1046,7 @@
                 done
             }
 
-            CheckIfDirExists $str_files_dir | return $?
+            CheckIfDirExists $str_files_dir | return "$?"
             cd $str_files_dir || return 1
 
             for var_element1 in $( ls *-cron ); do
@@ -1057,7 +1066,7 @@
 
         echo -e $str_output
         AppendCron_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
@@ -1087,7 +1096,7 @@
                     cp $1 $2 || return 1
                     chown root $2 || return 1
                     chmod +x $2 || return 1
-                    CheckIfDirExists $str_files_dir || return $?
+                    CheckIfDirExists $str_files_dir || return "$?"
                     cd $str_files_dir
                 fi
 
@@ -1125,7 +1134,7 @@
 
         echo -e $str_output
         AppendServices_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
@@ -1147,7 +1156,7 @@
             if $bool_is_user_root; then
                 local readonly str_dir1="/root/source/"
 
-                local declare -ar arr_repo=(
+                declare -ar arr_repo=(
                     "corna/me_cleaner"
                     "dt-zero/me_cleaner"
                     "foundObjects/zram-swap"
@@ -1159,7 +1168,7 @@
             else
                 local readonly str_dir1=$( echo ~/ )"source/"
 
-                local declare -ar arr_repo=(
+                declare -ar arr_repo=(
                     "awilliam/rom-parser"
                     #"pixelplanetdev/4chan-flag-filter"
                     #"pyllyukko/user.js"
@@ -1198,7 +1207,7 @@
 
         echo -e $str_output
         CloneOrUpdateGitRepositories_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
@@ -1217,13 +1226,13 @@
         function InstallFromLinuxRepos_GetAPTPackages
         {
             # <params>
-            local declare -a arr_packages_to_install=()
+            declare -a arr_packages_to_install=()
 
-            local declare -ar arr_packages_Required=(
+            declare -ar arr_packages_Required=(
                 "systemd-timesyncd"
             )
 
-            local declare -ar arr_packages_Commands=(
+            declare -ar arr_packages_Commands=(
                 "curl"
                 "flashrom"
                 "lm-sensors"
@@ -1233,7 +1242,7 @@
                 "youtube-dl"
             )
 
-            local declare -ar arr_packages_Compatibilty=(
+            declare -ar arr_packages_Compatibilty=(
                 "java-common"
                 "python3"
                 "qemu"
@@ -1241,44 +1250,44 @@
                 "wine"
             )
 
-            local declare -ar arr_packages_Developer=(
+            declare -ar arr_packages_Developer=(
                 ""
             )
 
-            local declare -ar arr_packages_Drivers=(
+            declare -ar arr_packages_Drivers=(
                 "apcupsd"
                 "rtl-sdr"
                 "steam-devices"
             )
 
-            local declare -ar arr_packages_Games=(
+            declare -ar arr_packages_Games=(
                 ""
             )
 
-            local declare -ar arr_packages_Internet=(
+            declare -ar arr_packages_Internet=(
                 "firefox-esr"
                 "filezilla"
             )
 
-            local declare -ar arr_packages_Media=(
+            declare -ar arr_packages_Media=(
                 "vlc"
             )
 
-            local declare -ar arr_packages_Office=(
+            declare -ar arr_packages_Office=(
                 "libreoffice"
             )
 
-            local declare -ar arr_packages_PrismBreak=(
+            declare -ar arr_packages_PrismBreak=(
                 ""
             )
 
-            local declare -ar arr_packages_Repos=(
+            declare -ar arr_packages_Repos=(
                 "git"
                 "flatpak"
                 "snap"
             )
 
-            local declare -ar arr_packages_Security=(
+            declare -ar arr_packages_Security=(
                 "apt-listchanges"
                 "bsd-mailx"
                 "fail2ban"
@@ -1288,12 +1297,12 @@
                 "unattended-upgrades"
             )
 
-            local declare -ar arr_packages_Suites=(
+            declare -ar arr_packages_Suites=(
                 "debian-edu-install"
                 "science-all"
             )
 
-            local declare -ar arr_packages_Tools=(
+            declare -ar arr_packages_Tools=(
                 "bleachbit"
                 "cockpit"
                 "grub-customizer"
@@ -1301,7 +1310,7 @@
                 "zram-tools"
             )
 
-            local declare -ar arr_packages_VGA_drivers=(
+            declare -ar arr_packages_VGA_drivers=(
                 "nvidia-detect"
                 "xserver-xorg-video-all"
                 "xserver-xorg-video-amdgpu"
@@ -1329,7 +1338,7 @@
                 "xserver-xorg-video-vmware"
             )
 
-            local declare -ar arr_packages_Unsorted=(
+            declare -ar arr_packages_Unsorted=(
                 ""
             )
 
@@ -1345,7 +1354,7 @@
         function InstallFromLinuxRepos_InstallByType
         {
             if CheckIfVarIsValid $1; then
-                local declare -i int_i=1
+                declare -i int_i=1
                 local str_list_of_packages_to_install=$1
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
 
@@ -1356,7 +1365,7 @@
                 done
 
                 echo
-                ReadInput $2 || return $?
+                ReadInput $2 || return "$?"
                 arr_packages_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1366,7 +1375,7 @@
 
         function InstallFromLinuxRepos_Main
         {
-            CheckIfVarIsValid $str_package_manager || return $?
+            CheckIfVarIsValid $str_package_manager || return "$?"
 
             # <params>
             case $str_package_manager in
@@ -1396,7 +1405,7 @@
             InstallFromLinuxRepos_InstallByType ${arr_packages_Tools[@]}  "Select software tools?"
             InstallFromLinuxRepos_InstallByType ${arr_packages_VGA_drivers[@]}  "Select VGA drivers?"
 
-            CheckIfVarIsValid ${arr_packages_to_install[@]} || return $?
+            CheckIfVarIsValid ${arr_packages_to_install[@]} || return "$?"
             ReadInput "Install selected packages?" && InstallPackage ${arr_packages_to_install[@]}
         }
 
@@ -1406,7 +1415,7 @@
 
         echo -e $str_output
         InstallFromLinuxRepos_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
         return $int_exit_code
     }
 
@@ -1422,7 +1431,7 @@
         function InstallFromFlathubRepos_InstallByType
         {
             if CheckIfVarIsValid $1; then
-                local declare -i int_i=1
+                declare -i int_i=1
                 local str_list_of_packages_to_install=$1
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
 
@@ -1433,7 +1442,7 @@
                 done
 
                 echo
-                ReadInput $2 || return $?
+                ReadInput $2 || return "$?"
                 arr_flatpak_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1447,9 +1456,9 @@
             local str_command="flatpak"
             # </params>
 
-            CheckIfCommandIsInstalled $str_command || (
+            CheckIfCommandIsInstalled "${str_command}" || (
                 InstallPackage $str_command
-                CheckIfCommandIsInstalled $str_command || return $?
+                CheckIfCommandIsInstalled "${str_command}" || return "$?"
             )
 
             # <summary> Pre-requisites. </summary>
@@ -1463,7 +1472,7 @@
             # <summary> Select and Install software sorted by type. </summary>
             InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
             InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
-            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return $?
+            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "$?"
             ReadInput "Install selected Flatpak apps?" && flatpak install --user ${arr_flatpak_to_install[@]}
         }
 
@@ -1472,10 +1481,10 @@
         # <params>
             local readonly str_output="Installing from Flathub repositories..."
 
-            local declare -a arr_flatpak_to_install=()
+            declare -a arr_flatpak_to_install=()
 
             # NOTE: update here!
-            local declare -ar arr_flatpak_Compatibility=(
+            declare -ar arr_flatpak_Compatibility=(
                 "org.freedesktop.Platform"
                 "org.freedesktop.Platform.Compat.i386"
                 "org.freedesktop.Platform.GL.default"
@@ -1484,25 +1493,25 @@
                 "org.freedesktop.Platform.VAAPI.Intel.i386"
             )
 
-            local declare -ar arr_flatpak_Developer=(
+            declare -ar arr_flatpak_Developer=(
                 "com.visualstudio.code"
                 "com.vscodium.codium"
             )
 
-            local declare -ar arr_flatpak_Games=(
+            declare -ar arr_flatpak_Games=(
                 "org.libretro.RetroArch"
                 "com.valvesoftware.Steam"
                 "com.valvesoftware.SteamLink"
             )
 
-            local declare -ar arr_flatpak_Internet=(
+            declare -ar arr_flatpak_Internet=(
                 "org.filezillaproject.Filezilla"
                 "io.gitlab.librewolf-community"
                 "nz.mega.MEGAsync"
                 "com.obsproject.Studio"
             )
 
-            local declare -ar arr_flatpak_Media=(
+            declare -ar arr_flatpak_Media=(
                 "org.freedesktop.LinuxAudio.Plugins.TAP"
                 "org.freedesktop.LinuxAudio.Plugins.swh"
                 "com.stremio.Stremio"
@@ -1510,16 +1519,16 @@
                 "org.videolan.VLC.Plugin.makemkv"
             )
 
-            local declare -ar arr_flatpak_Office=(
+            declare -ar arr_flatpak_Office=(
                 "org.libreoffice.LibreOffice"
                 "org.mozilla.Thunderbird"
             )
 
-            local declare -ar arr_flatpak_PrismBreak=(
+            declare -ar arr_flatpak_PrismBreak=(
                 "org.getmonero.Monero"
             )
 
-            local declare -ar arr_flatpak_Tools=(
+            declare -ar arr_flatpak_Tools=(
                 "org.openshot.OpenShot"
                 "org.kde.digikam"
                 "org.kde.kdenlive"
@@ -1534,7 +1543,7 @@
                 "fr.handbrake.ghb io.github.Hexchat"
             )
 
-            local declare -ar arr_flatpak_Unsorted=(
+            declare -ar arr_flatpak_Unsorted=(
                 "org.freedesktop.Sdk"
                 "org.gnome.Platform"
                 "org.gtk.Gtk3theme.Breeze"
@@ -1545,7 +1554,7 @@
 
         echo -e $str_output
         InstallFromFlathubRepos_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
         return $int_exit_code
     }
 
@@ -1633,21 +1642,21 @@
             # </params>
 
             cd $str_dir1 || return 1
-            ( CheckIfDirExists $1 && ( cd $1 || false ) ) || return $?
-            CheckIfFileExists $2|| return $?
+            ( CheckIfDirExists $1 && ( cd $1 || false ) ) || return "$?"
+            CheckIfFileExists $2|| return "$?"
 
             if ReadInput "Execute script '${str_dir2}$2'?"; then
                 ( chmod +x $2 &> /dev/null ) || return 1
-                CheckIfFileIsExecutable || return $?
+                CheckIfFileIsExecutable || return "$?"
 
                 if $bool_is_user_root; then
-                    ( sudo bash $2 &> /dev/null ) || return $?
+                    ( sudo bash $2 &> /dev/null ) || return "$?"
                 else
-                    ( bash $2 &> /dev/null ) || return $?
+                    ( bash $2 &> /dev/null ) || return "$?"
                 fi
             fi
 
-            AppendPassOrFail $str_output
+            AppendPassOrFail "${str_output}"
             cd $str_dir1 || return 1
         }
 
@@ -1681,7 +1690,7 @@
 
         echo -e $str_output
         InstallFromGitRepos_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
@@ -1705,7 +1714,7 @@
             local str_sources=""
             # </params>
 
-            CreateBackupFile $str_file1 || return $?
+            CreateBackupFile $str_file1 || return "$?"
             ReadInput "Include 'contrib' sources?" && str_sources+="contrib"
             CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
             ReadInput "Include 'non-free' sources?" && str_sources+="non-free"
@@ -1725,7 +1734,7 @@
             ReadMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
             local readonly str_branch_Name=$var_return
 
-            local declare -a arr_sources=(
+            declare -a arr_sources=(
                 "# debian $str_branch_Name"
                 "# See https://wiki.debian.org/SourcesList for more information."
                 "deb http://deb.debian.org/debian/ $str_branch_Name main $str_sources"
@@ -1758,7 +1767,7 @@
             case $str_branch_Name in
                 # <summary> Current branch with backports. </summary>
                 "backports")
-                    local declare -a arr_sources=(
+                    declare -a arr_sources=(
                         "# debian $str_release_Ver/$str_release_Name"
                         "# See https://wiki.debian.org/SourcesList for more information."
                         "deb http://deb.debian.org/debian/ $str_release_Name main $str_sources"
@@ -1806,7 +1815,7 @@
 
         echo -e $str_output
         ModifyDebianRepos_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
             echo -e $str_output_partial_completion
@@ -1824,17 +1833,19 @@
         {
             # <params>
             local readonly str_command="ssh"
-            CheckIfCommandIsInstalled $str_command || return $?
+            CheckIfCommandIsInstalled "${str_command}" || return "$?"
 
             declare -ir int_min_count=1
             declare -ir int_max_count=3
             declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
             # </params>
 
-            if ReadInput "Modify SSH?"; then
+            if ! ReadInput "Modify SSH?"; then
+                return $int_code_skipped_operation
+            else
                 for int_count in ${arr_count[@]}; do
                     ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
-                    local declare -i int_alt_SSH="${var_input}"
+                    declare -i int_alt_SSH="${var_input}"
 
                     if [[ $int_alt_SSH -eq 22 || $int_alt_SSH -gt 10000 ]]; then
                         str_alt_SSH="${int_alt_SSH}"
@@ -1858,14 +1869,14 @@
             )
             # </params>
 
-            CheckIfFileExists $str_file1 || return $?
-            CreateBackupFile $str_file1 || return $?
-            WriteToFile $str_file1 || return $?
-            systemctl restart $str_command || return 1
+            CheckIfFileExists $str_file1 || return "$?"
+            # CreateBackupFile $str_file1 || return "$?"
+            # WriteToFile $str_file1 || return "$?"
+            # systemctl restart $str_command || return 1
 
-            # CheckIfFileExists $str_file2 || return $?
-            # CreateBackupFile $str_file2 || return $?
-            # WriteToFile $str_file2 || return $?
+            # CheckIfFileExists $str_file2 || return "$?"
+            # CreateBackupFile $str_file2 || return "$?"
+            # WriteToFile $str_file2 || return "$?"
             # systemctl restart sshd || return 1
 
             return 0
@@ -1877,7 +1888,7 @@
 
         echo -e $str_output
         ModifySSH_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
         return $int_exit_code
     }
 
@@ -1891,7 +1902,7 @@
         {
             local str_command="ufw"
 
-            CheckIfCommandExists $str_command && (
+            CheckIfCommandExists "${str_command}" && (
                 ufw reset || return 1
                 ufw default allow outgoing || return 1
                 ufw default deny incoming || return 1
@@ -1918,7 +1929,7 @@
             # <summary> SSH on LAN </summary>
             str_command="ssh"
 
-            CheckIfCommandIsInstalled $str_command && (
+            CheckIfCommandIsInstalled "${str_command}" && (
                 ModifySSH
 
                 if CheckIfVarIsValidNum $str_alt_SSH; then
@@ -1958,25 +1969,25 @@
             cd $str_files_dir &> /dev/null || return 1
 
             if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
-                DeleteFile ${arr_files1[0]} || return $?
-                WriteToFile ${arr_files1[0]} || return $?
-                DeleteFile ${arr_files1[1]} || return $?
-                WriteToFile ${arr_files1[1]} || return $?
-                DeleteFile ${arr_files1[2]} || return $?
-                WriteToFile ${arr_files1[2]} || return $?
-                update-initramfs -u -k all || return $?
+                DeleteFile ${arr_files1[0]} || return "$?"
+                WriteToFile ${arr_files1[0]} || return "$?"
+                DeleteFile ${arr_files1[1]} || return "$?"
+                WriteToFile ${arr_files1[1]} || return "$?"
+                DeleteFile ${arr_files1[2]} || return "$?"
+                WriteToFile ${arr_files1[2]} || return "$?"
+                update-initramfs -u -k all || return "$?"
             fi
 
             # fix here
 
             CheckIfFileExists $str_file1 && (
                 ReadInput "Setup '/etc/sysctl.conf' with defaults?" && (
-                    ( cp $str_file1 $str_file2 &> /dev/null ) || return $?
-                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return $?
+                    ( cp $str_file1 $str_file2 &> /dev/null ) || return "$?"
+                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return "$?"
                 )
             )
 
-            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return $?
+            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return "$?"
             # $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
@@ -1987,7 +1998,7 @@
 
         echo -e $str_output
         ModifySecurity_Main
-        AppendPassOrFail $str_output
+        AppendPassOrFail "${str_output}"
 
         # if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
         #     echo -e $str_output_partial_completion
@@ -2108,9 +2119,11 @@
 
         if $bool_is_user_root; then
             ModifySSH
-            ModifySecurity || return $?
-            AppendServices || return $?
-            AppendCron || return $?
+            echo $str_alt_SSH
+
+            # ModifySecurity || return "$?"
+            # AppendServices || return "$?"
+            # AppendCron || return "$?"
         fi
     }
 
@@ -2123,17 +2136,17 @@
         if $bool_is_user_root; then
             case $str_package_manager in
                 "apt" )
-                    ModifyDebianRepos || return $?
+                    ModifyDebianRepos || return "$?"
                     ;;
             esac
         fi
 
-        TryThisXTimesBeforeFail "TestNetwork" || return $?
+        TryThisXTimesBeforeFail "TestNetwork" || return "$?"
 
         if $bool_is_user_root; then
-            InstallFromLinuxRepos || return $?
+            InstallFromLinuxRepos || return "$?"
         else
-            InstallFromFlathubRepos || return $?
+            InstallFromFlathubRepos || return "$?"
         fi
 
         echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
@@ -2148,17 +2161,17 @@
         local readonly str_command="git"
         # </params>
 
-        TryThisXTimesBeforeFail "TestNetwork" || return $?
+        TryThisXTimesBeforeFail "TestNetwork" || return "$?"
 
-        if CheckIfCommandIsInstalled $str_command &> /dev/null; then
+        if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
             bool=true
         else
-            ( InstallPackage $str_command && bool=true ) || return $?
+            ( InstallPackage $str_command && bool=true ) || return "$?"
         fi
 
         if $bool; then
-            CloneOrUpdateGitRepositories || return $?
-            InstallFromGitRepos || return $?
+            CloneOrUpdateGitRepositories || return "$?"
+            InstallFromGitRepos || return "$?"
         fi
     }
 # </code>
@@ -2173,8 +2186,9 @@
     # </params>
 
     CheckLinuxDistro &> /dev/null
-    ExecuteSetupOfSoftwareSources || exit $?
-    ExecuteSetupOfGitRepos || exit $?
+    echo $str_package_manager
+    # ExecuteSetupOfSoftwareSources || exit $?
+    # ExecuteSetupOfGitRepos || exit $?
     ExecuteSystemSetup || exit $?
 
     exit 0
