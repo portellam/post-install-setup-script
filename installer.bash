@@ -65,18 +65,17 @@
     function TryThisXTimesBeforeFail
     {
         # <params>
-        declare -i int_count=0
-        declare -ir int_max_count_of_tries=3
+        declare -ir int_min_count=1
+        declare -ir int_max_count=3
+        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         # </params>
 
         CheckIfVarIsValid $1 || return $?
 
-        while [[ $int_count -lt $int_max_count_of_tries ]]; do
+        for int_count in ${arr_count[@]}; do
             if eval $1; then
                 return 0
             fi
-
-            (( int_count++ ))
         done
 
         return 1
@@ -605,21 +604,16 @@
     function ReadInput
     {
         # <params>
-        declare -i int_count=0
+        declare -ir int_min_count=1
         declare -ir int_max_count=3
+        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         local str_output=""
         # </params>
 
         CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         declare -r str_output+="${var_green}[Y/n]:${var_reset_color}"
 
-        while [[ $int_count -le $int_max_count ]]; do
-
-            # <summary> After given number of attempts, input is set to default. </summary>
-            if [[ $int_count -ge $int_max_count ]]; then
-                echo -e "${var_prefix_warn} Exceeded max attempts. Choice is set to default: N"
-                return 1
-            fi
+        for int_count in ${arr_count[@]}; do
 
             # <summary> Append output. </summary>
             echo -en "${str_output} "
@@ -638,8 +632,11 @@
 
             # <summary> Input is not valid. </summary>
             echo -e "${str_output_var_is_not_valid}"
-            (( int_count++ ))
         done
+
+        # <summary> After given number of attempts, input is set to default. </summary>
+        echo -e "${var_prefix_warn} Exceeded max attempts. Choice is set to default: N"
+        return 1
     }
 
     # <summary>
@@ -654,8 +651,9 @@
     function ReadInputFromRangeOfTwoNums
     {
         # <params>
-        declare -i int_count=0
+        declare -ir int_min_count=1
         declare -ir int_max_count=3
+        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         local readonly var_min=$2
         local readonly var_max=$3
         local str_output=""
@@ -672,15 +670,7 @@
 
         readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
 
-        # <summary> Read input </summary>
-        while [[ $int_count -le $int_max_count ]]; do
-
-            # <summary> After given number of attempts, input is set to first choice. </summary>
-            if [[ $int_count -ge $int_max_count ]]; then
-                var_input=$var_min
-                echo -e "Exceeded max attempts. Choice is set to default: ${var_input}"
-                break
-            fi
+        for int_count in ${arr_count[@]}; do
 
             # <summary> Append output. </summary>
             echo -en "${str_output} "
@@ -693,9 +683,10 @@
 
             # <summary> Input is not valid. </summary>
             echo -e "${str_output_var_is_not_valid}"
-            (( int_count++ ))
         done
 
+        var_input=$var_min
+        echo -e "Exceeded max attempts. Choice is set to default: ${var_input}"
         return 1
     }
 
@@ -711,9 +702,10 @@
     function ReadMultipleChoiceIgnoreCase
     {
         # <params>
-        declare -a arr_input=()
-        declare -i int_count=0
+        declare -ir int_min_count=1
         declare -ir int_max_count=3
+        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+        declare -a arr_input=()
         local str_output=""
         local readonly str_output_multiple_choice_not_valid="${var_prefix_error} Insufficient multiple choice answers."
         var_input=""
@@ -739,8 +731,7 @@
         CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
-        # <summary> Read input </summary>
-        for int_count in {0..2}; do
+        for int_count in ${arr_count[@]}; do
             echo -en "${str_output} "
             read var_input
 
@@ -776,6 +767,9 @@
     function ReadMultipleChoiceMatchCase
     {
         # <params>
+        declare -ir int_min_count=1
+        declare -ir int_max_count=3
+        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         declare -a arr_input=()
         local str_output=""
         local readonly str_output_multiple_choice_not_valid="${var_prefix_error} Insufficient multiple choice answers."
@@ -801,8 +795,7 @@
         CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
-        # <summary> Read input </summary>
-        for int_count in {0..2}; do
+        for int_count in ${arr_count[@]}; do
             echo -en "${str_output} "
             read var_input
 
@@ -2150,10 +2143,23 @@
     # <returns> exit code </returns>
     function ExecuteSetupOfGitRepos
     {
+        # <params>
+        local bool=false
+        local readonly str_command="git"
+        # </params>
+
         TryThisXTimesBeforeFail "TestNetwork" || return $?
-        CheckIfCommandIsInstalled "git" || InstallPackage "git"
-        CheckIfCommandIsInstalled "git" || echo -e "\n${str_prefix_warn} Git is not installed on this system."
-        CloneOrUpdateGitRepositories && ( InstallFromGitRepos || return $? )
+
+        if CheckIfCommandIsInstalled $str_command &> /dev/null; then
+            bool=true
+        else
+            ( InstallPackage $str_command && bool=true ) || return $?
+        fi
+
+        if $bool; then
+            CloneOrUpdateGitRepositories || return $?
+            InstallFromGitRepos || return $?
+        fi
     }
 # </code>
 
