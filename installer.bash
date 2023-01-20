@@ -36,12 +36,12 @@
 # <summary> #1 - Command operation validation </summary>
 # <code>
     # <summary> Append Pass or Fail given exit code. If Fail, call SaveExitCode. </summary>
-    # <param name="$1"> the output statement </param>
+    # <param name="${1}"> the output statement </param>
     # <returns> output statement </returns>
     function AppendPassOrFail
     {
         SaveExitCode
-        CheckIfVarIsValid $1 &> /dev/null && echo -en "$1 "
+        CheckIfVarIsValid "${1}" &> /dev/null && echo -en "${1} "
 
         case $int_exit_code in
             0 )
@@ -69,11 +69,11 @@
     # <returns> exit code </returns>
     function SaveExitCode
     {
-        int_exit_code="$?"
+        int_exit_code="${?}"
     }
 
     # <summary> Attempt given command a given number of times before failure. </summary>
-    # <param name="$1"> the command to execute </param>
+    # <param name="${1}"> the command to execute </param>
     # <returns> exit code </returns>
     function TryThisXTimesBeforeFail
     {
@@ -83,10 +83,10 @@
         declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
         for int_count in ${arr_count[@]}; do
-            if eval $1; then
+            if eval ${1}; then
                 return 0
             fi
         done
@@ -98,18 +98,18 @@
 # <summary> #2 - Data-type and variable validation </summary>
 # <code>
     # <summary> Check if the command is installed. </summary>
-    # <param name="$1"> the command </param>
+    # <param name="${1}"> the command </param>
     # <returns> exit code </returns>
     #
     function CheckIfCommandIsInstalled
     {
         # <params>
-        local readonly str_output_cmd_is_null="${var_prefix_error} Command '$1' is not installed."
-        local readonly var_actual_install_path=$( command -v $1 )
-        local readonly var_expected_install_path="/usr/bin/$1"
+        local readonly str_output_cmd_is_null="${var_prefix_error} Command '${1}' is not installed."
+        local readonly var_actual_install_path=$( command -v "${1}" )
+        local readonly var_expected_install_path="/usr/bin/${1}"
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
         # if $( ! CheckIfFileExists $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
         # if ! CheckIfFileExists $var_actual_install_path &> /dev/null; then
@@ -122,7 +122,7 @@
     }
 
     # <summary> Check if the value is a valid bool. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsBool
@@ -131,9 +131,9 @@
         local readonly str_output_var_is_incorrect_type="${var_prefix_error} Not a boolean."
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
-        case $1 in
+        case "${1}" in
             "true" | "false" )
                 return 0;;
 
@@ -144,7 +144,7 @@
     }
 
     # <summary> Check if the value is a valid number. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsNum
@@ -154,9 +154,9 @@
         local readonly str_num_regex='^[0-9]+$'
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
-        if ! [[ $1 =~ $str_num_regex ]]; then
+        if ! [[ "${1}" =~ $str_num_regex ]]; then
             echo -e $str_output_var_is_NAN
             return $int_code_var_is_NAN
         fi
@@ -165,7 +165,7 @@
     }
 
     # <summary> Check if the value is valid. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsValid
@@ -175,12 +175,12 @@
         local readonly str_output_var_is_empty="${var_prefix_error} Empty string."
         # </params>
 
-        if [[ -z "$1" ]]; then
+        if [[ -z "${1}" ]]; then
             echo -e $str_output_var_is_null
             return $int_code_var_is_null
         fi
 
-        if [[ "$1" == "" ]]; then
+        if [[ "${1}" == "" ]]; then
             echo -e $str_output_var_is_empty
             return $int_code_var_is_empty
         fi
@@ -189,18 +189,18 @@
     }
 
     # <summary> Check if the directory exists. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfDirExists
     {
         # <params>
-        local readonly str_output_dir_is_null="${var_prefix_error} Directory '$1' does not exist."
+        local readonly str_output_dir_is_null="${var_prefix_error} Directory '${1}' does not exist."
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
-        if [[ ! -d "$1" ]]; then
+        if [[ ! -d "${1}" ]]; then
             echo -e $str_output_dir_is_null
             return $int_code_dir_is_null
         fi
@@ -209,18 +209,18 @@
     }
 
     # <summary> Check if the file exists. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileExists
     {
         # <params>
-        local readonly str_output_file_is_null="${var_prefix_error} File '$1' does not exist."
+        local readonly str_output_file_is_null="${var_prefix_error} File '${1}' does not exist."
         # </params>
 
-        CheckIfVarIsValid $1 || return "$?"
+        CheckIfVarIsValid "${1}" || return "${?}"
 
-        if [[ ! -e "$1" ]]; then
+        if [[ ! -e "${1}" ]]; then
             echo -e $str_output_file_is_null
             return $int_code_file_is_null
         fi
@@ -229,18 +229,18 @@
     }
 
     # <summary> Check if the file is executable. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsExecutable
     {
         # <params>
-        local readonly str_output_file_is_not_executable="${var_prefix_error} File '$1' is not executable."
+        local readonly str_output_file_is_not_executable="${var_prefix_error} File '${1}' is not executable."
         # </params>
 
-        CheckIfFileExists $1 || return "$?"
+        CheckIfFileExists "${1}" || return "${?}"
 
-        if [[ ! -x "$1" ]]; then
+        if [[ ! -x "${1}" ]]; then
             echo -e $str_output_file_is_not_executable
             return $int_code_file_is_not_executable
         fi
@@ -249,18 +249,18 @@
     }
 
     # <summary> Check if the file is readable. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsReadable
     {
         # <params>
-        local readonly str_output_file_is_not_readable="${var_prefix_error} File '$1' is not readable."
+        local readonly str_output_file_is_not_readable="${var_prefix_error} File '${1}' is not readable."
         # </params>
 
-        CheckIfFileExists $1 || return "$?"
+        CheckIfFileExists "${1}" || return "${?}"
 
-        if [[ ! -r "$1" ]]; then
+        if [[ ! -r "${1}" ]]; then
             echo -e $str_output_file_is_not_readable
             return $int_code_file_is_not_readable
         fi
@@ -269,18 +269,18 @@
     }
 
     # <summary> Check if the file is writable. </summary>
-    # <param name="$1"> the value </param>
+    # <param name="${1}"> the value </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsWritable
     {
         # <params>
-        local readonly str_output_file_is_not_writable="${var_prefix_error} File '$1' is not writable."
+        local readonly str_output_file_is_not_writable="${var_prefix_error} File '${1}' is not writable."
         # </params>
 
-        CheckIfFileExists $1 || return "$?"
+        CheckIfFileExists "${1}" || return "${?}"
 
-        if [[ ! -w "$1" ]]; then
+        if [[ ! -w "${1}" ]]; then
             echo -e $str_output_file_is_not_writable
             return $int_code_file_is_not_writable
         fi
@@ -292,7 +292,7 @@
     # <returns> boolean </returns>
     function ParseExitCodeAsBool
     {
-        if [[ $? -ne 0 ]]; then
+        if [[ "${?}" -ne 0 ]]; then
             echo false
             return 1
         fi
@@ -309,7 +309,7 @@
     function CheckIfUserIsRoot
     {
         # <params>
-        local readonly str_file=$( basename $0 )
+        local readonly str_file=$( basename "${0}" )
         local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset_color}"
         # </params>
 
@@ -325,84 +325,84 @@
 # <summary> #4 - File operation and validation </summary>
 # <code>
     # <summary> Check if two given files are the same. </summary>
-    # <parameter name="$1"> file </parameter>
-    # <parameter name="$2"> file </parameter>
+    # <parameter name="${1}"> the file </parameter>
+    # <parameter name="${2}"> the file </parameter>
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
-        ( CheckIfFileExists $1 && CheckIfFileExists $2 ) || return "$?"
-        cmp -s "$1" "$2" || return 1
+        ( CheckIfFileExists "${1}" && CheckIfFileExists "${2}" ) || return "${?}"
+        cmp -s "${1}" "${2}" || return 1
         return 0
     }
 
     # <summary> Create latest backup of given file (do not exceed given maximum count). </summary>
-    # <parameter name="$1"> file </parameter>
+    # <parameter name="${1}"> file </parameter>
     # <returns> exit code </returns>
     function CreateBackupFile
     {
-        # <params>
-        declare -ir int_max_count=5
-        local readonly str_dir1=$( dirname $1 )
-        local readonly str_suffix=".old"
-        declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $1 | grep $str_suffix | uniq | sort ) )
-        # </params>
+        CheckIfFileExists "${1}" || return "${?}"
 
-        CheckIfFileExists $1 || return $?
+        # <params>
+        declare -ir int_max_count=4
+
+        local readonly str_dir1=$( dirname "${1}" )
+        local readonly str_suffix=".old"
+
+        var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -V'
+        declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
+
+        local var_first_index=0
+        # </params>
 
         # <summary> Create backup file if none exist. </summary>
         if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
-            cp $1 "${1}.0${str_suffix}" || return 1
+            cp "${1}" "${1}.${var_first_index}${str_suffix}" || return 1
+            return 0
         fi
-
-        # <summary> Oldest backup file has index. </summary>
-        local var_first_index=${arr_dir1[0]%"${str_suffix}"}               # substitution
-        local var_first_index=${var_last_index##*.}                        # ditto
-        # local var_first_index=${${${arr_dir1[0]}%"${str_suffix}"}##*.}
-        CheckIfVarIsNum $var_first_index || return $?
-        declare -i int_first_index=$var_first_index
-
-        # <summary> Delete all older backup file if total exceeds maximum. </summary>
-        while [[ ${#arr_dir1[@]} -ge $int_max_count ]]; do
-            DeleteFile ${arr_dir1[0]}
-            arr_dir1=( $( ls -1v $str_dir | grep $1 | grep $str_suffix | uniq | sort ) )
-        done
 
         # <summary> Oldest backup file is same as original file. </summary>
-        CheckIfTwoFilesAreSame $1 ${arr_dir[0]} && return $?
+        CheckIfTwoFilesAreSame "${1}" "${arr_dir1[0]}" && return 0
+
+        # <summary> Get index of oldest backup file. </summary>
+        local str_oldest_file="${arr_dir1[0]}"
+        str_oldest_file="${str_oldest_file%%"${str_suffix}"*}"
+        local var_first_index="${str_oldest_file##*.}"
+        CheckIfVarIsNum "$var_first_index" || return "${?}"
+
+        # <summary> Delete older backup files, if total matches/exceeds maximum. </summary>
+        while [[ "${#arr_dir1[@]}" -gt "$int_max_count" ]]; do
+            DeleteFile "${arr_dir1[0]}" || return "${?}"
+            arr_dir1=( $( eval "$var_get_dir1" ) )
+        done
 
         # <summary> Increment number of last backup file index. </summary>
-        local var_last_index=${arr_dir1[-1]%"${str_suffix}"}               # substitution
-        local var_last_index=${var_last_index##*.}                         # ditto
-        # local var_last_index=${${${arr_dir1[0]}%"${str_suffix}"}##*.}
-        declare -i int_last_index=0
+        local str_newest_file="${arr_dir1[-1]}"
+        str_newest_file="${str_newest_file%%"${str_suffix}"*}"
+        local var_last_index="${str_newest_file##*.}"
 
-        if CheckIfVarIsNum $var_last_index; then
-            declare -i int_last_index="${var_last_index}"
-            (( int_last_index++ ))
-        else
-            return 1
-        fi
+        CheckIfVarIsNum "${var_last_index}" || return "${?}"
+        (( var_last_index++ ))
 
         # <summary> Newest backup file is different and newer than original file. </summary>
-        if ( ! CheckIfTwoFilesAreSame $1 ${arr_dir1[-1]} &> /dev/null ) && [[ $1 -nt ${arr_dir1[-1]} ]]; then
-            cp $1 "${1}.${int_last_index}${str_suffix}" || return 1
+        if ( ! CheckIfTwoFilesAreSame "${1}" "${arr_dir1[-1]}" &> /dev/null ) && [[ "${1}" -nt "${arr_dir1[-1]}" ]]; then
+            cp "${1}" "${1}.${var_last_index}${str_suffix}" || return 1
         fi
 
         return 0
     }
 
     # <summary> Create a directory. </summary>
-    # <param name="$1"> the directory </param>
+    # <param name="${1}"> the directory </param>
     # <returns> exit code </returns>
     function CreateDir
     {
         # <params>
-        local readonly str_output_fail="${var_prefix_fail} Could not create directory '$1'."
+        local readonly str_output_fail="${var_prefix_fail} Could not create directory '${1}'."
         # </params>
 
-        CheckIfFileExists $1 || return "$?"
+        CheckIfFileExists "${1}" || return "${?}"
 
-        mkdir -p $1 || (
+        mkdir -p "${1}" || (
             echo -e $str_output_fail
             return 1
         )
@@ -411,17 +411,17 @@
     }
 
     # <summary> Create a file. </summary>
-    # <param name="$1"> the file </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     function CreateFile
     {
         # <params>
-        local readonly str_output_fail="${var_prefix_fail} Could not create file '$1'."
+        local readonly str_output_fail="${var_prefix_fail} Could not create file '${1}'."
         # </params>
 
-        CheckIfFileExists $1 &> /dev/null && return 0
+        CheckIfFileExists "${1}" &> /dev/null && return 0
 
-        touch $1 || (
+        touch "${1}" || (
             echo -e $str_output_fail
             return 1
         )
@@ -430,17 +430,17 @@
     }
 
     # <summary> Delete a dir/file. </summary>
-    # <param name="$1"> the file </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     function DeleteFile
     {
         # <params>
-        local readonly str_output_fail="${var_prefix_fail} Could not delete file '$1'."
+        local readonly str_output_fail="${var_prefix_fail} Could not delete file '${1}'."
         # </params>
 
-        CheckIfFileExists $1 || return 0
+        CheckIfFileExists "${1}" || return 0
 
-        rm $1 || (
+        rm "${1}" || (
             echo -e $str_output_fail
             return 1
         )
@@ -449,41 +449,41 @@
     }
 
     # <summary> Read input from a file. Declare '$var_file' before calling this function. </summary>
-    # <param name="$1"> the file </param>
+    # <param name="${1}"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
     function ReadFromFile
     {
         # <params>
-        local readonly str_output_fail="${var_prefix_fail} Could not read from file '$1'."
-        var_file=$( cat $1 )
+        local readonly str_output_fail="${var_prefix_fail} Could not read from file '${1}'."
+        var_file=$( cat "${1}" )
         # </params>
 
-        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return "$?"
+        ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
 
         return 0
     }
 
     # <summary> Write output to a file. Declare '$var_file' before calling this function. </summary>
-    # <param name="$1"> the file </param>
+    # <param name="${1}"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
     function WriteToFile
     {
         # <params>
         IFS=$'\n'
-        local readonly str_output_fail="${var_prefix_fail} Could not write to file '$1'."
+        local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
         # </params>
 
-        ( CheckIfFileExists $1 && CheckIfVarIsValid ${var_file[@]} ) || return "$?"
+        ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
 
-        # ( printf "%s\n" "${var_file[@]}" >> $1 ) || (
+        # ( printf "%s\n" "${var_file[@]}" >> "${1}" ) || (
             # echo -e $str_output_fail
             # return 1
         # )
 
         for var_element in ${var_file[@]}; do
-            echo -e $var_element >> $1 || (
+            echo -e $var_element >> "${1}" || (
                 echo -e $str_output_fail
                 return 1
             )
@@ -513,7 +513,7 @@
         local readonly str_OS_with_zypper="mandriva mageia"
         # </params>
 
-        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return "$?"
+        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return "${?}"
 
         if [[ "${str_kernel}" != *"linux"* ]]; then
             echo -e $str_output_kernel_is_not_valid
@@ -568,7 +568,7 @@
     }
 
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
-    # <param name="$1"> boolean to toggle verbosity </param>
+    # <param name="${1}"> boolean to toggle verbosity </param>
     # <returns> exit code </returns>
     function TestNetwork
     {
@@ -576,8 +576,8 @@
         local bool=false
         # </params>
 
-        if CheckIfVarIsBool $1 &> /dev/null && $1; then
-            local bool=$1
+        if CheckIfVarIsBool "${1}" &> /dev/null && ${1}; then
+            local bool=${1}
         fi
 
         if $bool; then
@@ -612,7 +612,7 @@
 # <summary> #6 - User input </summary>
 # <code>
     # <summary> Ask user Yes/No, read input and return exit code given answer. </summary>
-    # <param name="$1"> the (nullable) output statement </param>
+    # <param name="${1}"> the (nullable) output statement </param>
     # <returns> exit code </returns>
     #
     function ReadInput
@@ -624,7 +624,7 @@
         local str_output=""
         # </params>
 
-        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
+        CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
         declare -r str_output+="${var_green}[Y/n]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
@@ -657,9 +657,9 @@
     # Ask for a number, within a given range, and return given number.
     # If input is not valid, return minimum value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="$1"> nullable output statement </parameter>
-    # <parameter name="$2"> absolute minimum </parameter>
-    # <parameter name="$3"> absolute maximum </parameter>
+    # <parameter name="${1}"> nullable output statement </parameter>
+    # <parameter name="${2}"> absolute minimum </parameter>
+    # <parameter name="${3}"> absolute maximum </parameter>
     # <parameter name="$var_input"> the answer </parameter>
     # <returns> $var_input </returns>
     function ReadInputFromRangeOfTwoNums
@@ -668,8 +668,8 @@
         declare -ir int_min_count=1
         declare -ir int_max_count=3
         declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
-        local readonly var_min=$2
-        local readonly var_max=$3
+        local readonly var_min=${2}
+        local readonly var_max=${3}
         local str_output=""
         local readonly str_output_extrema_are_not_valid="${var_prefix_error} Extrema are not valid."
         var_input=""
@@ -680,7 +680,7 @@
             return 1
         fi
 
-        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
+        CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
 
         readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
 
@@ -708,8 +708,8 @@
     # Ask user for multiple choice, and return choice given answer.
     # If input is not valid, return first value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="$1"> nullable output statement </parameter>
-    # <param name="$2" name="$3" name="$4" name="$5" name="$6" name="$7" name="$8"> multiple choice </param>
+    # <parameter name="${1}"> nullable output statement </parameter>
+    # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
     #
@@ -726,23 +726,23 @@
         # </params>
 
         # <summary> Minimum multiple choice are two answers. </summary>
-        if ( ! CheckIfVarIsValid $2 || ! CheckIfVarIsValid $3 ) &> /dev/null; then
+        if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
             SaveExitCode
             echo -e $str_output_multiple_choice_not_valid
             return $int_exit_code
         fi
 
-        arr_input+=( $2 )
-        arr_input+=( $3 )
+        arr_input+=( "${2}" )
+        arr_input+=( "${3}" )
 
-        if CheckIfVarIsValid $4 &> /dev/null; then arr_input+=( $4 ); fi
-        if CheckIfVarIsValid $5 &> /dev/null; then arr_input+=( $5 ); fi
-        if CheckIfVarIsValid $6 &> /dev/null; then arr_input+=( $6 ); fi
-        if CheckIfVarIsValid $7 &> /dev/null; then arr_input+=( $7 ); fi
-        if CheckIfVarIsValid $8 &> /dev/null; then arr_input+=( $8 ); fi
-        if CheckIfVarIsValid $9 &> /dev/null; then arr_input+=( $9 ); fi
+        if CheckIfVarIsValid "${4}" &> /dev/null; then arr_input+=( "${4}" ); fi
+        if CheckIfVarIsValid "${5}" &> /dev/null; then arr_input+=( "${5}" ); fi
+        if CheckIfVarIsValid "${6}" &> /dev/null; then arr_input+=( "${6}" ); fi
+        if CheckIfVarIsValid "${7}" &> /dev/null; then arr_input+=( "${7}" ); fi
+        if CheckIfVarIsValid "${8}" &> /dev/null; then arr_input+=( "${8}" ); fi
+        if CheckIfVarIsValid "${9}" &> /dev/null; then arr_input+=( "${9}" ); fi
 
-        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
+        CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
@@ -773,8 +773,8 @@
     # If input is not valid, return first value.
     # Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="$1"> nullable output statement </parameter>
-    # <param name="$2" name="$3" name="$4" name="$5" name="$6" name="$7" name="$8"> multiple choice </param>
+    # <parameter name="${1}"> nullable output statement </parameter>
+    # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
     #
@@ -791,22 +791,22 @@
         # </params>
 
         # <summary> Minimum multiple choice are two answers. </summary>
-        if ( ! CheckIfVarIsValid $2 || ! CheckIfVarIsValid $3 ) &> /dev/null; then
+        if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
             echo -e $str_output_multiple_choice_not_valid
             return 1;
         fi
 
-        arr_input+=( $2 )
-        arr_input+=( $3 )
+        arr_input+=( "${2}" )
+        arr_input+=( "${3}" )
 
-        if CheckIfVarIsValid $4 &> /dev/null; then arr_input+=( $4 ); fi
-        if CheckIfVarIsValid $5 &> /dev/null; then arr_input+=( $5 ); fi
-        if CheckIfVarIsValid $6 &> /dev/null; then arr_input+=( $6 ); fi
-        if CheckIfVarIsValid $7 &> /dev/null; then arr_input+=( $7 ); fi
-        if CheckIfVarIsValid $8 &> /dev/null; then arr_input+=( $8 ); fi
-        if CheckIfVarIsValid $9 &> /dev/null; then arr_input+=( $9 ); fi
+        if CheckIfVarIsValid "${4}" &> /dev/null; then arr_input+=( "${4}" ); fi
+        if CheckIfVarIsValid "${5}" &> /dev/null; then arr_input+=( "${5}" ); fi
+        if CheckIfVarIsValid "${6}" &> /dev/null; then arr_input+=( "${6}" ); fi
+        if CheckIfVarIsValid "${7}" &> /dev/null; then arr_input+=( "${7}" ); fi
+        if CheckIfVarIsValid "${8}" &> /dev/null; then arr_input+=( "${8}" ); fi
+        if CheckIfVarIsValid "${9}" &> /dev/null; then arr_input+=( "${9}" ); fi
 
-        CheckIfVarIsValid $1 &> /dev/null && str_output="$1 "
+        CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
         readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
@@ -842,35 +842,35 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return "$?"
+        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid $str_package_manager )|| return "${?}"
 
         case $str_package_manager in
             "apt" )
-                str_commands_to_execute="apt list $1"
+                str_commands_to_execute="apt list ${1}"
                 ;;
 
             "dnf" )
-                str_commands_to_execute="dnf search $1"
+                str_commands_to_execute="dnf search ${1}"
                 ;;
 
             "pacman" )
-                str_commands_to_execute="pacman -Ss $1"
+                str_commands_to_execute="pacman -Ss ${1}"
                 ;;
 
             "gentoo" )
-                str_commands_to_execute="emerge --search $1"
+                str_commands_to_execute="emerge --search ${1}"
                 ;;
 
             "urpmi" )
-                str_commands_to_execute="urpmq $1"
+                str_commands_to_execute="urpmq ${1}"
                 ;;
 
             "yum" )
-                str_commands_to_execute="yum search $1"
+                str_commands_to_execute="yum search ${1}"
                 ;;
 
             "zypper" )
-                str_commands_to_execute="zypper se $1"
+                str_commands_to_execute="zypper se ${1}"
                 ;;
 
             * )
@@ -891,36 +891,36 @@
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid $1 && CheckIfVarIsValid $str_package_manager )|| return "$?"
+        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid $str_package_manager )|| return "${?}"
 
         # <summary> Auto-update and auto-install selected packages </summary>
         case $str_package_manager in
             "apt" )
-                str_commands_to_execute="apt update && apt full-upgrade -y && apt install -y $1"
+                str_commands_to_execute="apt update && apt full-upgrade -y && apt install -y ${1}"
                 ;;
 
             "dnf" )
-                str_commands_to_execute="dnf upgrade && dnf install $1"
+                str_commands_to_execute="dnf upgrade && dnf install ${1}"
                 ;;
 
             "pacman" )
-                str_commands_to_execute="pacman -Syu && pacman -S $1"
+                str_commands_to_execute="pacman -Syu && pacman -S ${1}"
                 ;;
 
             "gentoo" )
-                str_commands_to_execute="emerge -u @world && emerge www-client/$1"
+                str_commands_to_execute="emerge -u @world && emerge www-client/${1}"
                 ;;
 
             "urpmi" )
-                str_commands_to_execute="urpmi --auto-update && urpmi $1"
+                str_commands_to_execute="urpmi --auto-update && urpmi ${1}"
                 ;;
 
             "yum" )
-                str_commands_to_execute="yum update && yum install $1"
+                str_commands_to_execute="yum update && yum install ${1}"
                 ;;
 
             "zypper" )
-                str_commands_to_execute="zypper refresh && zypper in $1"
+                str_commands_to_execute="zypper refresh && zypper in ${1}"
                 ;;
 
             * )
@@ -933,22 +933,22 @@
     }
 
     # <summary> Update or Clone repository given if it exists or not. </summary>
-    # <param name="$1"> the directory </param>
-    # <param name="$2"> the full repo name </param>
-    # <param name="$3"> the username </param>
+    # <param name="${1}"> the directory </param>
+    # <param name="${2}"> the full repo name </param>
+    # <param name="${3}"> the username </param>
     # <returns> exit code </returns>
     function UpdateOrCloneGitRepo
     {
         # <summary> Update existing GitHub repository. </summary>
-        if CheckIfDirExists "$1$2"; then
-            cd "$1$2" && TryThisXTimesBeforeFail "git pull"
-            return "$?"
+        if CheckIfDirExists "${1}${2}"; then
+            cd "${1}${2}" && TryThisXTimesBeforeFail "git pull"
+            return "${?}"
 
         # <summary> Clone new GitHub repository. </summary>
         else
-            if ReadInput "Clone repo '$2'?"; then
-                cd "$1$3" && TryThisXTimesBeforeFail "git clone https://github.com/$2"
-                return "$?"
+            if ReadInput "Clone repo '${2}'?"; then
+                cd "${1}${3}" && TryThisXTimesBeforeFail "git clone https://github.com/${2}"
+                return "${?}"
             fi
         fi
     }
@@ -972,7 +972,7 @@
     declare -gir int_code_file_is_not_writable=246
     declare -gir int_code_file_is_not_readable=245
     declare -gir int_code_cmd_is_null=244
-    declare -gi int_exit_code=$?
+    declare -gi int_exit_code=${?}
 
     # <summary>
     # Color coding
@@ -1035,8 +1035,8 @@
                 esac
             )
 
-            cd $( dirname $0 )
-            CheckIfDirExists $str_files_dir || return "$?"
+            cd $( dirname "${0}" )
+            CheckIfDirExists $str_files_dir || return "${?}"
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
             # <param name="${var_element1}"> cron file </param>
@@ -1054,7 +1054,7 @@
                 done
             }
 
-            CheckIfDirExists $str_files_dir | return "$?"
+            CheckIfDirExists $str_files_dir | return "${?}"
             cd $str_files_dir || return 1
 
             for var_element1 in $( ls *-cron ); do
@@ -1096,15 +1096,15 @@
             # </params>
 
             # <summary> Copy files and set permissions. </summary>
-            # <param name="$2"> the file </param>
+            # <param name="${2}"> the file </param>
             # <returns> exit code </returns>
             function AppendServices_AppendFile
             {
-                if CheckIfFileExists $2 &> /dev/null; then
-                    cp $1 $2 || return 1
-                    chown root $2 || return 1
-                    chmod +x $2 || return 1
-                    CheckIfDirExists $str_files_dir || return "$?"
+                if CheckIfFileExists "${2}" &> /dev/null; then
+                    cp "${1}" "${2}" || return 1
+                    chown root "${2}" || return 1
+                    chmod +x "${2}" || return 1
+                    CheckIfDirExists $str_files_dir || return "${?}"
                     cd $str_files_dir
                 fi
 
@@ -1186,7 +1186,7 @@
             fi
             # </params>
 
-            CreateDir $str_dir1 || return "$?"
+            CreateDir $str_dir1 || return "${?}"
             chmod -R +w $str_dir1 || return 1
 
             # <summary> Should code execution fail at any point, skip to next repo. </summary>
@@ -1356,14 +1356,14 @@
 
         # <summary> Select and Install software sorted by type. </summary>
         # <parameter name="${arr_packages_to_install[@]}"> total list of packages to install </parameter>
-        # <parameter name="$1"> this list packages to install </parameter>
-        # <parameter name="$2"> output statement </parameter>
+        # <parameter name="${1}"> this list packages to install </parameter>
+        # <parameter name="${2}"> output statement </parameter>
         # <returns> ${arr_packages_to_install[@]} </returns>
         function InstallFromLinuxRepos_InstallByType
         {
-            if CheckIfVarIsValid $1; then
+            if CheckIfVarIsValid ${1}; then
                 declare -i int_i=1
-                local str_list_of_packages_to_install=$1
+                local str_list_of_packages_to_install=${1}
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
 
                 while CheckIfVarIsValid $str_package; do
@@ -1373,7 +1373,7 @@
                 done
 
                 echo
-                ReadInput $2 || return "$?"
+                ReadInput "${2}" || return "${?}"
                 arr_packages_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1383,7 +1383,7 @@
 
         function InstallFromLinuxRepos_Main
         {
-            CheckIfVarIsValid $str_package_manager || return "$?"
+            CheckIfVarIsValid $str_package_manager || return "${?}"
 
             # <params>
             case $str_package_manager in
@@ -1413,7 +1413,7 @@
             InstallFromLinuxRepos_InstallByType ${arr_packages_Tools[@]}  "Select software tools?"
             InstallFromLinuxRepos_InstallByType ${arr_packages_VGA_drivers[@]}  "Select VGA drivers?"
 
-            CheckIfVarIsValid ${arr_packages_to_install[@]} || return "$?"
+            CheckIfVarIsValid ${arr_packages_to_install[@]} || return "${?}"
             ReadInput "Install selected packages?" && InstallPackage ${arr_packages_to_install[@]}
         }
 
@@ -1433,14 +1433,14 @@
     {
         # <summary> Select and Install software sorted by type. </summary>
         # <parameter name="${arr_flatpak_to_install[@]}"> total list of packages to install </parameter>
-        # <parameter name="$1"> this list packages to install </parameter>
-        # <parameter name="$2"> output statement </parameter>
+        # <parameter name="${1}"> this list packages to install </parameter>
+        # <parameter name="${2}"> output statement </parameter>
         # <returns> ${arr_flatpak_to_install[@]} </returns>
         function InstallFromFlathubRepos_InstallByType
         {
-            if CheckIfVarIsValid $1; then
+            if CheckIfVarIsValid ${1}; then
                 declare -i int_i=1
-                local str_list_of_packages_to_install=$1
+                local str_list_of_packages_to_install=${1}
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
 
                 while CheckIfVarIsValid $str_package; do
@@ -1450,7 +1450,7 @@
                 done
 
                 echo
-                ReadInput $2 || return "$?"
+                ReadInput "${2}" || return "${?}"
                 arr_flatpak_to_install+=( $str_list_of_packages_to_install )
                 return 0
             fi
@@ -1466,7 +1466,7 @@
 
             CheckIfCommandIsInstalled "${str_command}" || (
                 InstallPackage $str_command
-                CheckIfCommandIsInstalled "${str_command}" || return "$?"
+                CheckIfCommandIsInstalled "${str_command}" || return "${?}"
             )
 
             # <summary> Pre-requisites. </summary>
@@ -1480,7 +1480,7 @@
             # <summary> Select and Install software sorted by type. </summary>
             InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
             InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
-            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "$?"
+            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "${?}"
             ReadInput "Install selected Flatpak apps?" && flatpak install --user ${arr_flatpak_to_install[@]}
         }
 
@@ -1637,30 +1637,30 @@
 
         # <summary> Prompt user to execute script or skip. </summary>
         # <parameter name="$bool"> check if any script failed to execute </parameter>
-        # <parameter name="$1"> script directory </parameter>
-        # <parameter name="$2"> script to execute </parameter>
+        # <parameter name="${1}"> script directory </parameter>
+        # <parameter name="${2}"> script to execute </parameter>
         # <returns> exit code </returns>
         function InstallFromGitRepos_ExecuteScript
         {
             local readonly str_output="Executing Git script..."
 
             # <params>
-            # local str_dir2=$( echo "$1" | awk -F'/' '{print $1"/"$2}' )
-            local str_dir2=$( basename $1 )"/"
+            # local str_dir2=$( echo "${1}" | awk -F'/' '{print ${1}"/"${2}}' )
+            local str_dir2=$( basename "${1}" )"/"
             # </params>
 
             cd $str_dir1 || return 1
-            ( CheckIfDirExists $1 && ( cd $1 || false ) ) || return "$?"
-            CheckIfFileExists $2|| return "$?"
+            ( CheckIfDirExists "${1}" && ( cd "${1}" || false ) ) || return "${?}"
+            CheckIfFileExists ${2}|| return "${?}"
 
-            if ReadInput "Execute script '${str_dir2}$2'?"; then
-                ( chmod +x $2 &> /dev/null ) || return 1
-                CheckIfFileIsExecutable || return "$?"
+            if ReadInput "Execute script '${str_dir2}${2}'?"; then
+                ( chmod +x "${2}" &> /dev/null ) || return 1
+                CheckIfFileIsExecutable || return "${?}"
 
                 if $bool_is_user_root; then
-                    ( sudo bash $2 &> /dev/null ) || return "$?"
+                    ( sudo bash "${2}" &> /dev/null ) || return "${?}"
                 else
-                    ( bash $2 &> /dev/null ) || return "$?"
+                    ( bash "${2}" &> /dev/null ) || return "${?}"
                 fi
             fi
 
@@ -1722,7 +1722,7 @@
             local str_sources=""
             # </params>
 
-            CreateBackupFile $str_file1 || return "$?"
+            CreateBackupFile $str_file1 || return "${?}"
             ReadInput "Include 'contrib' sources?" && str_sources+="contrib"
             CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
             ReadInput "Include 'non-free' sources?" && str_sources+="non-free"
@@ -1883,9 +1883,9 @@
             fi
 
             if CheckIfCommandIsInstalled "${str_command}"; then
-                CheckIfFileExists $str_file1 || return "$?"
-                # CreateBackupFile $str_file1 || return "$?"
-                WriteToFile $str_file1 || return "$?"
+                CheckIfFileExists $str_file1 || return "${?}"
+                # CreateBackupFile $str_file1 || return "${?}"
+                WriteToFile $str_file1 || return "${?}"
                 systemctl restart $str_command || return 1
             fi
 
@@ -1899,9 +1899,9 @@
                     "Port ${str_alt_SSH}"
                 )
 
-                CheckIfFileExists $str_file2 || return "$?"
-                # CreateBackupFile $str_file2 || return "$?"
-                WriteToFile $str_file2 || return "$?"
+                CheckIfFileExists $str_file2 || return "${?}"
+                # CreateBackupFile $str_file2 || return "${?}"
+                WriteToFile $str_file2 || return "${?}"
                 systemctl restart $str_command || return 1
             else
                 (return $int_code_partial_completion)
@@ -1996,25 +1996,25 @@
             cd $str_files_dir &> /dev/null || return 1
 
             if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
-                DeleteFile ${arr_files1[0]} || return "$?"
-                WriteToFile ${arr_files1[0]} || return "$?"
-                DeleteFile ${arr_files1[1]} || return "$?"
-                WriteToFile ${arr_files1[1]} || return "$?"
-                DeleteFile ${arr_files1[2]} || return "$?"
-                WriteToFile ${arr_files1[2]} || return "$?"
-                update-initramfs -u -k all || return "$?"
+                DeleteFile ${arr_files1[0]} || return "${?}"
+                WriteToFile ${arr_files1[0]} || return "${?}"
+                DeleteFile ${arr_files1[1]} || return "${?}"
+                WriteToFile ${arr_files1[1]} || return "${?}"
+                DeleteFile ${arr_files1[2]} || return "${?}"
+                WriteToFile ${arr_files1[2]} || return "${?}"
+                update-initramfs -u -k all || return "${?}"
             fi
 
             # fix here
 
             CheckIfFileExists $str_file1 && (
                 ReadInput "Setup '/etc/sysctl.conf' with defaults?" && (
-                    ( cp $str_file1 $str_file2 &> /dev/null ) || return "$?"
-                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return "$?"
+                    ( cp $str_file1 $str_file2 &> /dev/null ) || return "${?}"
+                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return "${?}"
                 )
             )
 
-            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return "$?"
+            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return "${?}"
             # $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
             return 0
         }
@@ -2041,7 +2041,7 @@
         # <returns> exit code </returns>
         # function Help
         # {
-        #     declare -r str_helpPrompt="Usage: $0 [ OPTIONS ]
+        #     declare -r str_helpPrompt="Usage: "${0}" [ OPTIONS ]
         #         \nwhere OPTIONS
         #         \n\t-h  --help\t\t\tPrint this prompt.
         #         \n\t-d  --delete\t\t\tDelete existing VFIO setup.
@@ -2062,9 +2062,9 @@
         # <returns> exit code </returns>
         # function ParseInputParamForOptions
         # {
-        #     if [[ "$1" =~ ^- || "$1" == "--" ]]; then           # parse input parameters
-        #         while [[ "$1" =~ ^-  ]]; do
-        #             case $1 in
+        #     if [[ "${1}" =~ ^- || "${1}" == "--" ]]; then           # parse input parameters
+        #         while [[ "${1}" =~ ^-  ]]; do
+        #             case "${1}" in
         #                 "")                                     # no option
         #                     SetExitCodeOnError
         #                     SaveExitCode
@@ -2099,7 +2099,7 @@
         #         ExitWithThisExitCode
         #     fi
 
-        #     # if [[ "$1" == '--' ]]; then
+        #     # if [[ "${1}" == '--' ]]; then
         #     #     shift
         #     # fi
 
@@ -2146,9 +2146,9 @@
 
         if $bool_is_user_root; then
             ModifySSH
-            # ModifySecurity || return "$?"
-            # AppendServices || return "$?"
-            # AppendCron || return "$?"
+            # ModifySecurity || return "${?}"
+            # AppendServices || return "${?}"
+            # AppendCron || return "${?}"
         fi
     }
 
@@ -2161,17 +2161,17 @@
         if $bool_is_user_root; then
             case $str_package_manager in
                 "apt" )
-                    ModifyDebianRepos || return "$?"
+                    ModifyDebianRepos || return "${?}"
                     ;;
             esac
         fi
 
-        TryThisXTimesBeforeFail "TestNetwork" || return "$?"
+        TryThisXTimesBeforeFail "TestNetwork" || return "${?}"
 
         if $bool_is_user_root; then
-            InstallFromLinuxRepos || return "$?"
+            InstallFromLinuxRepos || return "${?}"
         else
-            InstallFromFlathubRepos || return "$?"
+            InstallFromFlathubRepos || return "${?}"
         fi
 
         echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
@@ -2186,17 +2186,17 @@
         local readonly str_command="git"
         # </params>
 
-        TryThisXTimesBeforeFail "TestNetwork" || return "$?"
+        TryThisXTimesBeforeFail "TestNetwork" || return "${?}"
 
         if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
             bool=true
         else
-            ( InstallPackage $str_command && bool=true ) || return "$?"
+            ( InstallPackage $str_command && bool=true ) || return "${?}"
         fi
 
         if $bool; then
-            CloneOrUpdateGitRepositories || return "$?"
-            InstallFromGitRepos || return "$?"
+            CloneOrUpdateGitRepositories || return "${?}"
+            InstallFromGitRepos || return "${?}"
         fi
     }
 # </code>
@@ -2211,9 +2211,10 @@
     # </params>
 
     CheckLinuxDistro &> /dev/null
-    # ExecuteSetupOfSoftwareSources || exit $?
-    # ExecuteSetupOfGitRepos || exit $?
-    ExecuteSystemSetup || exit $?
+    # ExecuteSetupOfSoftwareSources || exit "${?}"
+    # ExecuteSetupOfGitRepos || exit "${?}"
+    ExecuteSystemSetup || exit "${?}"
 
     exit 0
 # </code>
+
