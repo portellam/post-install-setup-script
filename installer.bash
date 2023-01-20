@@ -342,50 +342,50 @@
     {
         # <params>
         declare -ir int_max_count=5
-        local readonly str_file1=$1
         local readonly str_dir1=$( dirname $1 )
         local readonly str_suffix=".old"
-        declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $str_file1 | grep $str_suffix | uniq ) )
-
-        local var_element1=${arr_dir1[0]}
-        var_element1=${var_element1%"${str_suffix}"}             # substitution
-        var_element1=${var_element1##*.}                         # ditto
+        declare -a arr_dir1=( $( ls -1v $str_dir1 | grep $1 | grep $str_suffix | uniq | sort ) )
         # </params>
 
-        CheckIfFileExists $str_file1 || return 1
+        CheckIfFileExists $1 || return $?
 
+        # <summary> Create backup file if none exist. </summary>
         if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
-            cp $str_file1 "${str_file1}.0${str_suffix}" || return 1
+            cp $1 "${1}.0${str_suffix}" || return 1
         fi
 
-        CheckIfVarIsNum $var_element1 || return 1
+        # <summary> Oldest backup file has index. </summary>
+        local var_first_index=${arr_dir1[0]%"${str_suffix}"}               # substitution
+        local var_first_index=${var_last_index##*.}                        # ditto
+        # local var_first_index=${${${arr_dir1[0]}%"${str_suffix}"}##*.}
+        CheckIfVarIsNum $var_first_index || return $?
+        declare -i int_first_index=$var_first_index
 
-        # <summary> Before backup, delete all but some number of backup files; Delete first file until file count equals maxmimum. </summary>
+        # <summary> Delete all older backup file if total exceeds maximum. </summary>
         while [[ ${#arr_dir1[@]} -ge $int_max_count ]]; do
-            if DeleteFile ${arr_dir1[0]}; then
-                break
-            fi
-
-            arr_dir1=( $( ls -1v $str_dir | grep $str_file1 | grep $str_suffix | uniq ) )
+            DeleteFile ${arr_dir1[0]}
+            arr_dir1=( $( ls -1v $str_dir | grep $1 | grep $str_suffix | uniq | sort ) )
         done
 
-        CheckIfTwoFilesAreSame $1 ${arr_dir[0]} && return 0
+        # <summary> Oldest backup file is same as original file. </summary>
+        CheckIfTwoFilesAreSame $1 ${arr_dir[0]} && return $?
 
-        # <params>
-        var_element1=${arr_dir1[-1]%"${str_suffix}"}            # substitution
-        var_element1=${var_element1##*.}                        # ditto
+        # <summary> Increment number of last backup file index. </summary>
+        local var_last_index=${arr_dir1[-1]%"${str_suffix}"}               # substitution
+        local var_last_index=${var_last_index##*.}                         # ditto
+        # local var_last_index=${${${arr_dir1[0]}%"${str_suffix}"}##*.}
         declare -i int_last_index=0
-        # </params>
 
-        # <summary> Increment number of backup file suffix. </summary>
-        if CheckIfVarIsNum $var_element1; then
-            declare -i int_last_index="${var_element1}"
+        if CheckIfVarIsNum $var_last_index; then
+            declare -i int_last_index="${var_last_index}"
             (( int_last_index++ ))
+        else
+            return 1
         fi
 
-        # <summary> Source file is newer and different than backup, add to backups. </summary>
-        if [[ $str_file1 -nt ${arr_dir1[-1]} && ! ( $str_file1 -ef ${arr_dir1[-1]} ) ]]; then
-            cp $str_file1 "${str_file1}.${int_last_index}${str_suffix}" || return 1
+        # <summary> Newest backup file is different and newer than original file. </summary>
+        if ( ! CheckIfTwoFilesAreSame $1 ${arr_dir1[-1]} &> /dev/null ) && [[ $1 -nt ${arr_dir1[-1]} ]]; then
+            cp $1 "${1}.${int_last_index}${str_suffix}" || return 1
         fi
 
         return 0
@@ -1186,7 +1186,7 @@
             fi
             # </params>
 
-            CreateDir $str_dir1 || return 1
+            CreateDir $str_dir1 || return "$?"
             chmod -R +w $str_dir1 || return 1
 
             # <summary> Should code execution fail at any point, skip to next repo. </summary>
