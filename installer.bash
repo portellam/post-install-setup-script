@@ -61,7 +61,7 @@
                 ;;
         esac
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Redirect current directory to script root folder. </summary>
@@ -295,6 +295,7 @@
     }
 
     # <summary> Parse exit code as boolean. If non-zero, return false. </summary>
+    # <param name="${?}"> the exit code </param>
     # <returns> boolean </returns>
     function ParseExitCodeAsBool
     {
@@ -342,59 +343,66 @@
     }
 
     # <summary> Create latest backup of given file (do not exceed given maximum count). </summary>
-    # <parameter name="${1}"> file </parameter>
+    # <parameter name="${1}"> the file </parameter>
     # <returns> exit code </returns>
     function CreateBackupFile
     {
-        CheckIfFileExists "${1}" || return "${?}"
+        function CreateBackupFile_Main
+        {
+            CheckIfFileExists "${1}" || return "${?}"
+
+            # <params>
+            declare -ir int_max_count=4
+            local readonly str_dir1=$( dirname "${1}" )
+            local readonly str_suffix=".old"
+            var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -V'
+            declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
+            # </params>
+
+            # <summary> Create backup file if none exist. </summary>
+            if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
+                cp "${1}" "${1}.${var_first_index}${str_suffix}" || return 1
+                return 0
+            fi
+
+            # <summary> Oldest backup file is same as original file. </summary>
+            CheckIfTwoFilesAreSame "${1}" "${arr_dir1[0]}" && return 0
+
+            # <summary> Get index of oldest backup file. </summary>
+            local str_oldest_file="${arr_dir1[0]}"
+            str_oldest_file="${str_oldest_file%%"${str_suffix}"*}"
+            local var_first_index="${str_oldest_file##*.}"
+            CheckIfVarIsNum "$var_first_index" || return "${?}"
+
+            # <summary> Delete older backup files, if total matches/exceeds maximum. </summary>
+            while [[ "${#arr_dir1[@]}" -gt "$int_max_count" ]]; do
+                DeleteFile "${arr_dir1[0]}" || return "${?}"
+                arr_dir1=( $( eval "$var_get_dir1" ) )
+            done
+
+            # <summary> Increment number of last backup file index. </summary>
+            local str_newest_file="${arr_dir1[-1]}"
+            str_newest_file="${str_newest_file%%"${str_suffix}"*}"
+            local var_last_index="${str_newest_file##*.}"
+            CheckIfVarIsNum "${var_last_index}" || return "${?}"
+            (( var_last_index++ ))
+
+            # <summary> Newest backup file is different and newer than original file. </summary>
+            if ( ! CheckIfTwoFilesAreSame "${1}" "${arr_dir1[-1]}" &> /dev/null ) && [[ "${1}" -nt "${arr_dir1[-1]}" ]]; then
+                cp "${1}" "${1}.${var_last_index}${str_suffix}" || return 1
+            fi
+
+            return 0
+        }
 
         # <params>
-        declare -ir int_max_count=4
-
-        local readonly str_dir1=$( dirname "${1}" )
-        local readonly str_suffix=".old"
-
-        var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -V'
-        declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
-
-        local var_first_index=0
+        local readonly str_output="Creating backup file..."
         # </params>
 
-        # <summary> Create backup file if none exist. </summary>
-        if [[ "${#arr_dir1[@]}" -eq 0 ]]; then
-            cp "${1}" "${1}.${var_first_index}${str_suffix}" || return 1
-            return 0
-        fi
-
-        # <summary> Oldest backup file is same as original file. </summary>
-        CheckIfTwoFilesAreSame "${1}" "${arr_dir1[0]}" && return 0
-
-        # <summary> Get index of oldest backup file. </summary>
-        local str_oldest_file="${arr_dir1[0]}"
-        str_oldest_file="${str_oldest_file%%"${str_suffix}"*}"
-        local var_first_index="${str_oldest_file##*.}"
-        CheckIfVarIsNum "$var_first_index" || return "${?}"
-
-        # <summary> Delete older backup files, if total matches/exceeds maximum. </summary>
-        while [[ "${#arr_dir1[@]}" -gt "$int_max_count" ]]; do
-            DeleteFile "${arr_dir1[0]}" || return "${?}"
-            arr_dir1=( $( eval "$var_get_dir1" ) )
-        done
-
-        # <summary> Increment number of last backup file index. </summary>
-        local str_newest_file="${arr_dir1[-1]}"
-        str_newest_file="${str_newest_file%%"${str_suffix}"*}"
-        local var_last_index="${str_newest_file##*.}"
-
-        CheckIfVarIsNum "${var_last_index}" || return "${?}"
-        (( var_last_index++ ))
-
-        # <summary> Newest backup file is different and newer than original file. </summary>
-        if ( ! CheckIfTwoFilesAreSame "${1}" "${arr_dir1[-1]}" &> /dev/null ) && [[ "${1}" -nt "${arr_dir1[-1]}" ]]; then
-            cp "${1}" "${1}.${var_last_index}${str_suffix}" || return 1
-        fi
-
-        return 0
+        echo -e "${str_output}"
+        CreateBackupFile_Main
+        AppendPassOrFail "${str_output}"
+        return "${int_exit_code}"
     }
 
     # <summary> Create a directory. </summary>
@@ -468,6 +476,39 @@
         ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
 
         return 0
+    }
+
+    # <summary> Restore latest valid backup of given file. </summary>
+    # <parameter name="${1}"> the file </parameter>
+    # <returns> exit code </returns>
+    function RestoreBackupFile
+    {
+        function RestoreBackupFile_Main
+        {
+            # <params>
+            local readonly str_dir1=$( dirname "${1}" )
+            local readonly str_suffix=".old"
+            var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -rV'
+            declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
+            # </params>
+
+            CheckIfVarIsValid ${arr_dir1[@]} || return "${?}"
+
+            for var_element1 in ${arr_dir1[@]}; do
+                CheckIfFileExists "${var_element1}" && cp "${var_element1}" "${1}" && return 0
+            done
+
+            return 1
+        }
+
+        # <params>
+        local readonly str_output="Restoring backup file..."
+        # </params>
+
+        echo -e "${str_output}"
+        RestoreBackupFile_Main
+        AppendPassOrFail "${str_output}"
+        return "${int_exit_code}"
     }
 
     # <summary> Write output to a file. Declare '$var_file' before calling this function. </summary>
@@ -574,7 +615,7 @@
     }
 
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
-    # <param name="${1}"> boolean to toggle verbosity </param>
+    # <param name="${1}"> the boolean to toggle verbosity </param>
     # <returns> exit code </returns>
     function TestNetwork
     {
@@ -595,7 +636,7 @@
         SaveExitCode
 
         if $bool; then
-            (return "$int_exit_code")
+            (return "${int_exit_code}")
             AppendPassOrFail
             echo -en "Testing connection to DNS...\t"
         fi
@@ -605,7 +646,7 @@
         SaveExitCode
 
         if $bool; then
-            (return "$int_exit_code")
+            (return "${int_exit_code}")
             AppendPassOrFail
         fi
 
@@ -613,7 +654,7 @@
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 # </code>
 
@@ -665,7 +706,7 @@
     # Ask for a number, within a given range, and return given number.
     # If input is not valid, return minimum value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> nullable output statement </parameter>
+    # <parameter name="${1}"> the (nullable) output statement </parameter>
     # <parameter name="${2}"> absolute minimum </parameter>
     # <parameter name="${3}"> absolute maximum </parameter>
     # <parameter name="$var_input"> the answer </parameter>
@@ -716,7 +757,7 @@
     # Ask user for multiple choice, and return choice given answer.
     # If input is not valid, return first value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> nullable output statement </parameter>
+    # <parameter name="${1}"> the (nullable) output statement </parameter>
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
@@ -737,7 +778,7 @@
         if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
             SaveExitCode
             echo -e $str_output_multiple_choice_not_valid
-            return "$int_exit_code"
+            return "${int_exit_code}"
         fi
 
         arr_input+=( "${2}" )
@@ -781,7 +822,7 @@
     # If input is not valid, return first value.
     # Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> nullable output statement </parameter>
+    # <parameter name="${1}"> the (nullable) output statement </parameter>
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
@@ -842,6 +883,7 @@
 # <summary> #7 - Software installation </summary>
 # <code>
     # <summary> Distro-agnostic, Check if package exists on-line. </summary>
+    # <param name="${1}"> the software package(s) </param>
     # <returns> exit code </returns>
     function CheckIfPackageExists
     {
@@ -892,7 +934,7 @@
 
     # <summary> Distro-agnostic, Install a software package. </summary>
     # <param name="${1}"> the software package(s) </param>
-    # <param name="${2}"> boolean; true, reinstall software package and configuration files (if possible) </param>
+    # <param name="${2}"> the boolean to toggle: reinstall software package and configuration files (if possible) </param>
     # <returns> exit code </returns>
     function InstallPackage
     {
@@ -947,7 +989,7 @@
         echo "${str_output}"
         eval "${str_commands_to_execute}" &> /dev/null || ( return 1 )
         AppendPassOrFail "${str_output}"
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Update or Clone repository given if it exists or not. </summary>
@@ -1098,7 +1140,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -1166,7 +1208,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Clone given GitHub repositories. </summary>
@@ -1239,7 +1281,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Install from this Linux distribution's repositories. </summary>
@@ -1442,7 +1484,7 @@
         echo -e $str_output
         InstallFromLinuxRepos_Main
         AppendPassOrFail "${str_output}"
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Install from Flathub software repositories. </summary>
@@ -1581,7 +1623,7 @@
         echo -e $str_output
         InstallFromFlathubRepos_Main
         AppendPassOrFail "${str_output}"
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Install from Git repositories. </summary>
@@ -1722,7 +1764,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
@@ -1847,7 +1889,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Configuration of SSH. </summary>
@@ -1885,7 +1927,6 @@
                 bool=false
             fi
 
-            local readonly str_file1="/etc/ssh/ssh_config"
             var_file=(
                 "#"
                 "LoginGraceTime 1m"
@@ -1901,43 +1942,60 @@
             fi
 
             if CheckIfCommandIsInstalled "${str_command}"; then
-                if CheckIfFileExists $str_file1; then
-                    CreateBackupFile "${str_file1}" || return "${?}"
-                    $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
-                fi
+                local readonly str_file1="/etc/ssh/ssh_config"
+                CreateBackupFile "${str_file1}" || return "${?}"
+                $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )                # TODO: refactor, do this action once for all related files for given related commands
 
-                # <summary> Reinstall package to regenerate system configuration file. </summary>       # TODO: account for a lack of internet connection?
+                # <summary> Reinstall package to regenerate system configuration file. </summary>
                 case $str_package_manager in
                     "apt" )
                         local str_package_to_install="openssh-client"
-                        $bool_is_connected_to_Internet && ( InstallPackage "${str_package_to_install}" true || return "${?}" )
+                        ;;
+
+                    * )
+                        return 1
                         ;;
                 esac
+
+                if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
+                    RestoreBackupFile "${str_file1}"
+                    return "${?}"
+                fi
 
                 WriteToFile "${str_file1}" || return "${?}"
                 systemctl restart "${str_command}" || return 1
             fi
 
-            # SaveExitCode
-            # str_command="sshd"
+            SaveExitCode
+            str_command="sshd"
 
-            # if $bool && CheckIfCommandIsInstalled "${str_command}"; then
-            #     local readonly str_file2="/etc/ssh/sshd_config"
-            #     var_file=(
-            #         "#"
-            #         "Port ${str_alt_SSH}"
-            #     )
+            # if CheckIfCommandIsInstalled "${str_command}"; then
+            #     local readonly str_file1="/etc/ssh/sshd_config"
+            #     CreateBackupFile "${str_file1}" || return "${?}"
+            #     $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
 
-            #     CheckIfFileExists "${str_file2}" || return "${?}"
-            #     CreateBackupFile "${str_file2}" || return "${?}"
-            #     WriteToFile "${str_file2}" || return "${?}"
+            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
+            #     case $str_package_manager in
+            #         "apt" )
+            #             local str_package_to_install="openssh-client"
+            #             ;;
+
+            #         * )
+            #             return 1
+            #             ;;
+            #     esac
+
+            #     if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
+            #         RestoreBackupFile "${str_file1}"
+            #         return "${?}"
+            #     fi
+
+            #     WriteToFile "${str_file1}" || return "${?}"
             #     systemctl restart "${str_command}" || return 1
-            # else
-            #     (return $int_code_partial_completion)
             # fi
 
             SaveExitCode
-            return "$int_exit_code"
+            return "${int_exit_code}"
         }
 
         # <params>
@@ -1947,7 +2005,7 @@
         echo -e $str_output
         ModifySSH_Main
         AppendPassOrFail "${str_output}"
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 
     # <summary> Recommended host security changes. </summary>
@@ -2060,7 +2118,7 @@
         #     echo -e $str_output_partial_completion
         # fi
 
-        return "$int_exit_code"
+        return "${int_exit_code}"
     }
 # </code>
 
