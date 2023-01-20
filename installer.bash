@@ -7,7 +7,7 @@
 # <summary>
 #
 # TODO
-# - fix 'CreateBackupFile'
+# - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
 # - test each business logic method
 # - before write, overwrite system file with existing un modified backup.
 # - double check usage of exit code partial completion
@@ -33,7 +33,7 @@
 #
 # </summary>
 
-# <summary> #1 - Command operation validation </summary>
+# <summary> #1 - Command operation validation and Misc. </summary>
 # <code>
     # <summary> Append Pass or Fail given exit code. If Fail, call SaveExitCode. </summary>
     # <param name="${1}"> the output statement </param>
@@ -61,7 +61,15 @@
                 ;;
         esac
 
-        return $int_exit_code
+        return "$int_exit_code"
+    }
+
+    # <summary> Redirect current directory to script root folder. </summary>
+    # <returns> exit code </returns>
+    function GoToScriptDir
+    {
+        cd $( dirname $0 ) || return 1
+        return 0
     }
 
     # <summary> Save last exit code. </summary>
@@ -86,9 +94,7 @@
         CheckIfVarIsValid "${1}" || return "${?}"
 
         for int_count in ${arr_count[@]}; do
-            if eval ${1}; then
-                return 0
-            fi
+            eval "${1}" && return 0
         done
 
         return 1
@@ -586,26 +592,28 @@
 
         ( ping -q -c 1 8.8.8.8 || ping -q -c 1 1.1.1.1 ) &> /dev/null || false
 
+        SaveExitCode
+
         if $bool; then
+            (return "$int_exit_code")
             AppendPassOrFail
             echo -en "Testing connection to DNS...\t"
-        else
-            SaveExitCode
         fi
 
         ( ping -q -c 1 www.google.com && ping -q -c 1 www.yandex.com ) &> /dev/null || false
 
+        SaveExitCode
+
         if $bool; then
+            (return "$int_exit_code")
             AppendPassOrFail
-        else
-            SaveExitCode
         fi
 
         if [[ $int_exit_code -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 # </code>
 
@@ -729,7 +737,7 @@
         if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
             SaveExitCode
             echo -e $str_output_multiple_choice_not_valid
-            return $int_exit_code
+            return "$int_exit_code"
         fi
 
         arr_input+=( "${2}" )
@@ -883,20 +891,27 @@
     }
 
     # <summary> Distro-agnostic, Install a software package. </summary>
+    # <param name="${1}"> the software package(s) </param>
+    # <param name="${2}"> boolean; true, reinstall software package and configuration files (if possible) </param>
     # <returns> exit code </returns>
     function InstallPackage
     {
         # <params>
+        local bool_option_reinstall=false
         local str_commands_to_execute=""
-        local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
+        local readonly str_output_fail="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
+        local readonly str_output="Installing software packages..."
         # </params>
 
         ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid $str_package_manager )|| return "${?}"
 
+        ( CheckIfVarIsBool "${2}" &> /dev/null && bool_option_reinstall=${2} )
+
         # <summary> Auto-update and auto-install selected packages </summary>
         case $str_package_manager in
             "apt" )
-                str_commands_to_execute="apt update && apt full-upgrade -y && apt install -y ${1}"
+                str_option1="--reinstall -o Dpkg::Options::=--force-confmiss"
+                str_commands_to_execute="apt update && apt full-upgrade -y && apt install ${str_option1} -y ${1}"
                 ;;
 
             "dnf" )
@@ -924,12 +939,15 @@
                 ;;
 
             * )
-                echo -e $str_output
+                echo -e $str_output_fail
                 return 1
                 ;;
         esac
 
-        eval $str_commands_to_execute || return 1
+        echo "${str_output}"
+        eval "${str_commands_to_execute}" &> /dev/null || ( return 1 )
+        AppendPassOrFail "${str_output}"
+        return "$int_exit_code"
     }
 
     # <summary> Update or Clone repository given if it exists or not. </summary>
@@ -1080,7 +1098,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Append SystemD services to host. </summary>
@@ -1148,7 +1166,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Clone given GitHub repositories. </summary>
@@ -1221,7 +1239,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Install from this Linux distribution's repositories. </summary>
@@ -1424,7 +1442,7 @@
         echo -e $str_output
         InstallFromLinuxRepos_Main
         AppendPassOrFail "${str_output}"
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Install from Flathub software repositories. </summary>
@@ -1563,7 +1581,7 @@
         echo -e $str_output
         InstallFromFlathubRepos_Main
         AppendPassOrFail "${str_output}"
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Install from Git repositories. </summary>
@@ -1704,7 +1722,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Setup software repositories for Debian Linux. </summary>
@@ -1829,7 +1847,7 @@
             echo -e $str_output_partial_completion
         fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Configuration of SSH. </summary>
@@ -1883,32 +1901,43 @@
             fi
 
             if CheckIfCommandIsInstalled "${str_command}"; then
-                CheckIfFileExists $str_file1 || return "${?}"
-                # CreateBackupFile $str_file1 || return "${?}"
-                WriteToFile $str_file1 || return "${?}"
-                systemctl restart $str_command || return 1
+                if CheckIfFileExists $str_file1; then
+                    CreateBackupFile "${str_file1}" || return "${?}"
+                    $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
+                fi
+
+                # <summary> Reinstall package to regenerate system configuration file. </summary>       # TODO: account for a lack of internet connection?
+                case $str_package_manager in
+                    "apt" )
+                        local str_package_to_install="openssh-client"
+                        $bool_is_connected_to_Internet && ( InstallPackage "${str_package_to_install}" true || return "${?}" )
+                        ;;
+                esac
+
+                WriteToFile "${str_file1}" || return "${?}"
+                systemctl restart "${str_command}" || return 1
             fi
 
+            # SaveExitCode
+            # str_command="sshd"
+
+            # if $bool && CheckIfCommandIsInstalled "${str_command}"; then
+            #     local readonly str_file2="/etc/ssh/sshd_config"
+            #     var_file=(
+            #         "#"
+            #         "Port ${str_alt_SSH}"
+            #     )
+
+            #     CheckIfFileExists "${str_file2}" || return "${?}"
+            #     CreateBackupFile "${str_file2}" || return "${?}"
+            #     WriteToFile "${str_file2}" || return "${?}"
+            #     systemctl restart "${str_command}" || return 1
+            # else
+            #     (return $int_code_partial_completion)
+            # fi
+
             SaveExitCode
-            str_command="sshd"
-
-            if $bool && CheckIfCommandIsInstalled "${str_command}"; then
-                local readonly str_file2="/etc/ssh/sshd_config"
-                var_file=(
-                    "#"
-                    "Port ${str_alt_SSH}"
-                )
-
-                CheckIfFileExists $str_file2 || return "${?}"
-                # CreateBackupFile $str_file2 || return "${?}"
-                WriteToFile $str_file2 || return "${?}"
-                systemctl restart $str_command || return 1
-            else
-                (return $int_code_partial_completion)
-            fi
-
-            SaveExitCode
-            return $int_exit_code
+            return "$int_exit_code"
         }
 
         # <params>
@@ -1918,7 +1947,7 @@
         echo -e $str_output
         ModifySSH_Main
         AppendPassOrFail "${str_output}"
-        return $int_exit_code
+        return "$int_exit_code"
     }
 
     # <summary> Recommended host security changes. </summary>
@@ -2031,7 +2060,7 @@
         #     echo -e $str_output_partial_completion
         # fi
 
-        return $int_exit_code
+        return "$int_exit_code"
     }
 # </code>
 
@@ -2166,7 +2195,7 @@
             esac
         fi
 
-        TryThisXTimesBeforeFail "TestNetwork" || return "${?}"
+        TryThisXTimesBeforeFail "TestNetwork true" || return "${?}"
 
         if $bool_is_user_root; then
             InstallFromLinuxRepos || return "${?}"
@@ -2186,7 +2215,7 @@
         local readonly str_command="git"
         # </params>
 
-        TryThisXTimesBeforeFail "TestNetwork" || return "${?}"
+        TryThisXTimesBeforeFail "TestNetwork true"|| return "${?}"
 
         if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
             bool=true
@@ -2204,10 +2233,14 @@
 # <summary> Program Main logic </summary>
 # <code>
     # <params>
-    declare -gr str_files_dir=$( dirname $( find .. -name files | uniq | head -n1 ) )
+    GoToScriptDir
+    declare -gr str_files_dir=$( find . -name files | uniq | head -n1 )
 
     CheckIfUserIsRoot &> /dev/null
     declare -g bool_is_user_root=$( ParseExitCodeAsBool )
+
+    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null
+    declare -g bool_is_connected_to_Internet=$( ParseExitCodeAsBool )
     # </params>
 
     CheckLinuxDistro &> /dev/null
