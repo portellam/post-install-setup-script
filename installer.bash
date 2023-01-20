@@ -2012,39 +2012,42 @@
     # <returns> exit code </returns>
     function ModifySecurity
     {
+        # <summary> Services to Enable or Disable (security-benefits or risks). </summary>
+        # <returns> exit code </returns>
         function ModifySecurity_SetupFirewall
         {
+            # <params>
             local str_command="ufw"
+            # </params>
 
-            CheckIfCommandExists "${str_command}" && (
-                ufw reset || return 1
-                ufw default allow outgoing || return 1
-                ufw default deny incoming || return 1
+            CheckIfCommandExists "${str_command}" || return "${?}"
+            ufw reset || return 1
+            ufw default allow outgoing || return 1
+            ufw default deny incoming || return 1
 
-                # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
-                # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
-                ( ufw allow DNS comment 'dns' &> /dev/null ) || return 1
-                ( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
-                ( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
-                ( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null ) || return 1
-                ( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null ) || return 1
-                ( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null ) || return 1
-                ( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null ) || return 1
+            # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
+            # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
+            ( ufw allow DNS comment 'dns' &> /dev/null ) || return 1
+            ( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
+            ( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
+            ( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null ) || return 1
+            ( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null ) || return 1
+            ( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null ) || return 1
+            ( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null ) || return 1
 
-                # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
-                ( ufw allow http comment 'HTTP, local Web server' &> /dev/null ) || return 1
-                ( ufw allow https comment 'HTTPS, local Web server' &> /dev/null ) || return 1
-                ( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null ) || return 1
-                ( ufw allow 110 comment 'POP3, local mail server' &> /dev/null ) || return 1
-                ( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null ) || return 1
-                ( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null ) || return 1
-            )
+            # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
+            ( ufw allow http comment 'HTTP, local Web server' &> /dev/null ) || return 1
+            ( ufw allow https comment 'HTTPS, local Web server' &> /dev/null ) || return 1
+            ( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null ) || return 1
+            ( ufw allow 110 comment 'POP3, local mail server' &> /dev/null ) || return 1
+            ( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null ) || return 1
+            ( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null ) || return 1
 
             # <summary> SSH on LAN </summary>
             str_command="ssh"
 
             CheckIfCommandIsInstalled "${str_command}" && (
-                ModifySSH
+                # ModifySSH
 
                 if CheckIfVarIsValidNum $str_alt_SSH; then
                     ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
@@ -2062,40 +2065,86 @@
             return 0
         }
 
+        # <summary> Modify system files for security. </summary>
+        # <returns> exit code </returns>
+        function ModifySecurity_AppendFiles
+        {
+            if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
+                local str_file="/etc/modprobe.d/disable-usb-storage.conf"
+                var_file='install usb-storage /bin/true'
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
+
+                local str_file1="/etc/modprobe.d/disable-firewire.conf"
+                var_file='blacklist firewire-core'
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
+
+                local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
+                var_file='blacklist thunderbolt'
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
+
+                update-initramfs -u -k all || return "${?}"
+            fi
+        }
+
+        # <summary> Services to Enable or Disable (security-benefits or risks). </summary>
+        # <returns> exit code </returns>
+        function ModifySecurity_SetupServices
+        {
+            # <params>
+            declare -a arr_services_to_disable=()
+            declare -a arr_services_to_enable=()
+            # </params>
+
+            # <summary> Update here! </summary>
+            local arr_services_list=(
+                "apcupsd"
+                "cockpit"
+                "fail2ban"
+                "ssh"
+                "ufw"
+            )
+
+            for var_element in ${arr_services_list}; do
+                if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
+                    if ReadInput "Enable or Disable '${str_command}'?"; then
+                        arr_services_to_enable+=( "${str_command}" )
+                    else
+                        arr_services_to_disable+=( "${str_command}" )
+                    fi
+                fi
+            done
+
+            systemctl stop "${arr_services_to_disable[@]}" && systemctl disable "${arr_services_to_disable[@]}" || return 1
+            systemctl start "${arr_services_to_enable[@]}" && systemctl disable "${arr_services_to_enable[@]}" || return 1
+
+            return 0
+        }
+
+
+        # <summary> ModifySecurity main code block </summary>
+        # <returns> exit code </returns>
         function ModifySecurity_Main
         {
             # <params>
             # local bool_nonzero_amount_of_failed_operations=false
-            local str_file1="sysctl.conf"
-            local str_file2="/etc/sysctl.conf"
+            local readonly str_file1="sysctl.conf"
+            local readonly str_file2="/etc/${str_file1}"
             # str_packages_to_remove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
-            var_file=(
-                "/etc/modprobe.d/disable-usb-storage.conf"
-                "/etc/modprobe.d/disable-firewire.conf"
-                "/etc/modprobe.d/disable-thunderbolt.conf"
-            )
 
-            # NOTE: include services to enable OR disable: cockpit, ssh, some/all packages installed that are a security-risk or benefit.
             # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"
             # </params>
 
-            CheckIfDirExists $str_files_dir
-            cd $str_files_dir &> /dev/null || return 1
+            CheckIfDirExists $str_files_dir || return "${?}"
+            declare -a arr_file1=( )
 
-            if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
-                DeleteFile ${arr_files1[0]} || return "${?}"
-                WriteToFile ${arr_files1[0]} || return "${?}"
-                DeleteFile ${arr_files1[1]} || return "${?}"
-                WriteToFile ${arr_files1[1]} || return "${?}"
-                DeleteFile ${arr_files1[2]} || return "${?}"
-                WriteToFile ${arr_files1[2]} || return "${?}"
-                update-initramfs -u -k all || return "${?}"
-            fi
-
-            # fix here
+            ModifySecurity_SetupServices
+            ModifySecurity_AppendFiles
 
             CheckIfFileExists $str_file1 && (
-                ReadInput "Setup '/etc/sysctl.conf' with defaults?" && (
+                ReadInput "Setup '${str_file2}' with defaults?" && (
                     ( cp $str_file1 $str_file2 &> /dev/null ) || return "${?}"
                     ( cat $str_file2 >> $str_file1 &> /dev/null ) || return "${?}"
                 )
@@ -2113,6 +2162,7 @@
         echo -e $str_output
         ModifySecurity_Main
         AppendPassOrFail "${str_output}"
+        GoToScriptDir
 
         # if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
         #     echo -e $str_output_partial_completion
@@ -2308,4 +2358,3 @@
 
     exit 0
 # </code>
-
