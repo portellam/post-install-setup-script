@@ -504,7 +504,7 @@
         return 0
     }
 
-    # <summary> Read input from a file. Declare '$var_file' before calling this function. </summary>
+    # <summary> Read input from a file. Call '$var_file' after calling this function. </summary>
     # <param name="${1}"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
@@ -553,7 +553,7 @@
         return "${int_exit_code}"
     }
 
-    # <summary> Write output to a file. Declare '$var_file' before calling this function. </summary>
+    # <summary> Write output to a file. Call '$var_file' after calling this function. </summary>
     # <param name="${1}"> the file </param>
     # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
