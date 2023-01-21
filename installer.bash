@@ -35,7 +35,8 @@
 
 # <summary> #1 - Command operation validation and Misc. </summary>
 # <code>
-    # <summary> Append Pass or Fail given exit code. If Fail, call SaveExitCode. </summary>
+    # <summary> Append Pass or Fail given exit code. </summary>
+    # <param name="${int_exit_code}"> the last exit code </param>
     # <param name="${1}"> the output statement </param>
     # <returns> output statement </returns>
     function AppendPassOrFail
@@ -43,38 +44,75 @@
         SaveExitCode
         CheckIfVarIsValid "${1}" &> /dev/null && echo -en "${1} "
 
-        case $int_exit_code in
+        case "${int_exit_code}" in
             0 )
-                echo -e $var_suffix_pass
+                echo -e "${var_suffix_pass}"
                 ;;
 
-            $int_code_partial_completion )
-                echo -e $var_suffix_maybe
+            "${int_code_partial_completion}" )
+                echo -e "${var_suffix_maybe}"
                 ;;
 
-            $int_code_skipped_operation )
-                echo -e $var_suffix_skip
+            "${int_code_skipped_operation}" )
+                echo -e "${var_suffix_skip}"
                 ;;
 
             * )
-                echo -e $var_suffix_fail
+                echo -e "${var_suffix_fail}"
                 ;;
         esac
 
         return "${int_exit_code}"
     }
 
-    # <summary> Redirect current directory to script root folder. </summary>
+    # <summary> Redirect current directory to shell script root directory. </summary>
+    # <param name="${1}"> the shell script name </param>
     # <returns> exit code </returns>
     function GoToScriptDir
     {
-        cd $( dirname $0 ) || return 1
+        cd $( dirname "${0}" ) || return 1
         return 0
     }
 
-    # <summary> Save last exit code. </summary>
-    # <param name="$int_exit_code"> the exit code </param>
+    # <summary> Parse and execute from a list of command(s) </summary>
+    # <param name="${1}"> the list of command(s) </param>
+    # <param name="${2}"> the list of output statements for each command call </param>
     # <returns> exit code </returns>
+    function ParseAndExecuteListOfCommands
+    {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
+        # <params>
+        declare -ar arr_commands=( "${1}" )
+        declare -a arr_commands_output=()
+        local bool_is_valid_commands_output=false
+        local readonly str_output_fail="${var_prefix_error} Execution of command failed."
+        # </params>
+
+        CheckIfVarIsValid "${2}" && arr_commands_output=( "${2}" )
+
+        if [[ "${#arr_commands_output[@]}" -ge "${#arr_commands[@]}" ]]; then
+            local bool_is_valid_commands_output=true
+        fi
+
+        for int_key in ${!arr_commands[@]}; do
+            local var_command=${arr_commands[$int_key]}
+            local str_output="Execute '${var_command}'?"
+            $bool_is_valid_commands_output && local str_output="${arr_commands_output[$int_key]}"
+
+            if ReadInput "Execute '${var_command}'?"; then
+                eval "${var_command}" || ( echo -e "${str_output_fail}"; return "${?}" )
+            fi
+
+            SaveExitCode
+        done
+
+        return "${int_exit_code}"
+    }
+
+    # <summary> Save last exit code. </summary>
+    # <param name=""${int_exit_code}""> the exit code </param>
+    # <returns> void </returns>
     function SaveExitCode
     {
         int_exit_code="${?}"
@@ -85,16 +123,17 @@
     # <returns> exit code </returns>
     function TryThisXTimesBeforeFail
     {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
         # <params>
         declare -ir int_min_count=1
         declare -ir int_max_count=3
         declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+        local readonly str_output_fail="${var_prefix_error} Execution of command failed."
         # </params>
 
-        CheckIfVarIsValid "${1}" || return "${?}"
-
         for int_count in ${arr_count[@]}; do
-            eval "${1}" && return 0
+            eval "${1}" && return 0 || echo -e "${str_output_fail}"
         done
 
         return 1
@@ -109,19 +148,20 @@
     #
     function CheckIfCommandIsInstalled
     {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
         # <params>
-        local readonly str_output_cmd_is_null="${var_prefix_error} Command '${1}' is not installed."
+        local readonly str_output_fail="${var_prefix_error} Command '${1}' is not installed."
         local readonly var_actual_install_path=$( command -v "${1}" )
         local readonly var_expected_install_path="/usr/bin/${1}"
         # </params>
 
-        CheckIfVarIsValid "${1}" || return "${?}"
-
         # if $( ! CheckIfFileExists $var_actual_install_path ) &> /dev/null || [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
         # if ! CheckIfFileExists $var_actual_install_path &> /dev/null; then
+
         if [[ "${var_actual_install_path}" != "${var_expected_install_path}" ]]; then
-            echo -e $str_output_cmd_is_null
-            return $int_code_cmd_is_null
+            echo -e "${str_output_fail}"
+            return "${int_code_cmd_is_null}"
         fi
 
         return 0
@@ -133,19 +173,21 @@
     #
     function CheckIfVarIsBool
     {
-        # <params>
-        local readonly str_output_var_is_incorrect_type="${var_prefix_error} Not a boolean."
-        # </params>
-
         CheckIfVarIsValid "${1}" || return "${?}"
+
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} Not a boolean."
+        # </params>
 
         case "${1}" in
             "true" | "false" )
-                return 0;;
+                return 0
+                ;;
 
             * )
-                echo -e $str_output_var_is_incorrect_type
-                return $int_code_var_is_not_bool;;
+                echo -e "${str_output_fail}"
+                return "${int_code_var_is_not_bool}"
+                ;;
         esac
     }
 
@@ -155,16 +197,16 @@
     #
     function CheckIfVarIsNum
     {
-        # <params>
-        local readonly str_output_var_is_NAN="${var_prefix_error} NaN."
-        local readonly str_num_regex='^[0-9]+$'
-        # </params>
-
         CheckIfVarIsValid "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_num_regex='^[0-9]+$'
+        local readonly str_output_fail="${var_prefix_error} NaN."
+        # </params>
+
         if ! [[ "${1}" =~ $str_num_regex ]]; then
-            echo -e $str_output_var_is_NAN
-            return $int_code_var_is_NAN
+            echo -e "${str_output_fail}"
+            return "${int_code_var_is_NAN}"
         fi
 
         return 0
@@ -182,112 +224,112 @@
         # </params>
 
         if [[ -z "${1}" ]]; then
-            echo -e $str_output_var_is_null
-            return $int_code_var_is_null
+            echo -e "${str_output_var_is_null}"
+            return "${int_code_var_is_null}"
         fi
 
         if [[ "${1}" == "" ]]; then
-            echo -e $str_output_var_is_empty
-            return $int_code_var_is_empty
+            echo -e "${str_output_var_is_empty}"
+            return "${int_code_var_is_empty}"
         fi
 
         return 0
     }
 
     # <summary> Check if the directory exists. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> the directory </param>
     # <returns> exit code </returns>
     #
     function CheckIfDirExists
     {
-        # <params>
-        local readonly str_output_dir_is_null="${var_prefix_error} Directory '${1}' does not exist."
-        # </params>
-
         CheckIfVarIsValid "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} Directory '${1}' does not exist."
+        # </params>
+
         if [[ ! -d "${1}" ]]; then
-            echo -e $str_output_dir_is_null
-            return $int_code_dir_is_null
+            echo -e "${str_output_fail}"
+            return "${int_code_dir_is_null}"
         fi
 
         return 0
     }
 
     # <summary> Check if the file exists. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileExists
     {
-        # <params>
-        local readonly str_output_file_is_null="${var_prefix_error} File '${1}' does not exist."
-        # </params>
-
         CheckIfVarIsValid "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} File '${1}' does not exist."
+        # </params>
+
         if [[ ! -e "${1}" ]]; then
-            echo -e $str_output_file_is_null
-            return $int_code_file_is_null
+            echo -e "${str_output_fail}"
+            return "${int_code_file_is_null}"
         fi
 
         return 0
     }
 
     # <summary> Check if the file is executable. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsExecutable
     {
-        # <params>
-        local readonly str_output_file_is_not_executable="${var_prefix_error} File '${1}' is not executable."
-        # </params>
-
         CheckIfFileExists "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} File '${1}' is not executable."
+        # </params>
+
         if [[ ! -x "${1}" ]]; then
-            echo -e $str_output_file_is_not_executable
-            return $int_code_file_is_not_executable
+            echo -e "${str_output_fail}"
+            return "${int_code_file_is_not_executable}"
         fi
 
         return 0
     }
 
     # <summary> Check if the file is readable. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsReadable
     {
-        # <params>
-        local readonly str_output_file_is_not_readable="${var_prefix_error} File '${1}' is not readable."
-        # </params>
-
         CheckIfFileExists "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} File '${1}' is not readable."
+        # </params>
+
         if [[ ! -r "${1}" ]]; then
-            echo -e $str_output_file_is_not_readable
-            return $int_code_file_is_not_readable
+            echo -e "${str_output_fail}"
+            return "${int_code_file_is_not_readable}"
         fi
 
         return 0
     }
 
     # <summary> Check if the file is writable. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsWritable
     {
-        # <params>
-        local readonly str_output_file_is_not_writable="${var_prefix_error} File '${1}' is not writable."
-        # </params>
-
         CheckIfFileExists "${1}" || return "${?}"
 
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} File '${1}' is not writable."
+        # </params>
+
         if [[ ! -w "${1}" ]]; then
-            echo -e $str_output_file_is_not_writable
+            echo -e "${str_output_fail}"
             return $int_code_file_is_not_writable
         fi
 
@@ -417,7 +459,7 @@
         CheckIfFileExists "${1}" || return "${?}"
 
         mkdir -p "${1}" || (
-            echo -e $str_output_fail
+            echo -e "${str_output_fail}"
             return 1
         )
 
@@ -436,7 +478,7 @@
         CheckIfFileExists "${1}" &> /dev/null && return 0
 
         touch "${1}" || (
-            echo -e $str_output_fail
+            echo -e "${str_output_fail}"
             return 1
         )
 
@@ -455,7 +497,7 @@
         CheckIfFileExists "${1}" || return 0
 
         rm "${1}" || (
-            echo -e $str_output_fail
+            echo -e "${str_output_fail}"
             return 1
         )
 
@@ -525,13 +567,13 @@
         ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
 
         # ( printf "%s\n" "${var_file[@]}" >> "${1}" ) || (
-            # echo -e $str_output_fail
+            # echo -e "${str_output_fail}"
             # return 1
         # )
 
         for var_element in ${var_file[@]}; do
             echo -e $var_element >> "${1}" || (
-                echo -e $str_output_fail
+                echo -e "${str_output_fail}"
                 return 1
             )
         done
@@ -650,7 +692,7 @@
             AppendPassOrFail
         fi
 
-        if [[ $int_exit_code -ne 0 ]]; then
+        if [[ "${int_exit_code}" -ne 0 ]]; then
             echo -e "Failed to ping Internet/DNS servers. Check network settings or firewall, and try again."
         fi
 
@@ -981,7 +1023,7 @@
                 ;;
 
             * )
-                echo -e $str_output_fail
+                echo -e "${str_output_fail}"
                 return 1
                 ;;
         esac
@@ -1032,7 +1074,7 @@
     declare -gir int_code_file_is_not_writable=246
     declare -gir int_code_file_is_not_readable=245
     declare -gir int_code_cmd_is_null=244
-    declare -gi int_exit_code=${?}
+    declare -gi int_exit_code="${?}"
 
     # <summary>
     # Color coding
@@ -1124,7 +1166,7 @@
             systemctl enable cron || return 1
             systemctl restart cron || return 1
 
-            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -1136,7 +1178,7 @@
         AppendCron_Main
         AppendPassOrFail "${str_output}"
 
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
             echo -e $str_output_partial_completion
         fi
 
@@ -1204,7 +1246,7 @@
         AppendServices_Main
         AppendPassOrFail "${str_output}"
 
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
             echo -e $str_output_partial_completion
         fi
 
@@ -1264,7 +1306,7 @@
                 fi
             done
 
-            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -1277,7 +1319,7 @@
         CloneOrUpdateGitRepositories_Main
         AppendPassOrFail "${str_output}"
 
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
             echo -e $str_output_partial_completion
         fi
 
@@ -1748,7 +1790,7 @@
                 fi
             fi
 
-            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -1760,7 +1802,7 @@
         InstallFromGitRepos_Main
         AppendPassOrFail "${str_output}"
 
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
             echo -e $str_output_partial_completion
         fi
 
@@ -1873,7 +1915,7 @@
             apt update || return 1
             apt full-upgrade || return 1
 
-            $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -1885,7 +1927,7 @@
         ModifyDebianRepos_Main
         AppendPassOrFail "${str_output}"
 
-        if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
             echo -e $str_output_partial_completion
         fi
 
@@ -1908,7 +1950,7 @@
             # </params>
 
             if ! ReadInput "Modify SSH?"; then
-                return $int_code_skipped_operation
+                return "${int_code_skipped_operation}"
             else
                 for int_count in ${arr_count[@]}; do
                     ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
@@ -2151,7 +2193,7 @@
             )
 
             ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return "${?}"
-            # $bool_nonzero_amount_of_failed_operations &> /dev/null && return $int_code_partial_completion
+            # $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -2164,7 +2206,7 @@
         AppendPassOrFail "${str_output}"
         GoToScriptDir
 
-        # if [[ $int_exit_code -eq $int_code_partial_completion ]]; then
+        # if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
         #     echo -e $str_output_partial_completion
         # fi
 
@@ -2275,7 +2317,7 @@
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> exit code </returns>
-    function ExecuteSystemSetup
+    function SystemSetup
     {
         # <params>
         declare -g str_alt_SSH=""
@@ -2291,7 +2333,7 @@
 
     # <summary> Execute setup of all software repositories. </summary>
     # <returns> exit code </returns>
-    function ExecuteSetupOfSoftwareSources
+    function SoftwareSetup
     {
         # CheckLinuxDistro
 
@@ -2316,7 +2358,7 @@
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
     # <returns> exit code </returns>
-    function ExecuteSetupOfGitRepos
+    function GitSetup
     {
         # <params>
         local bool=false
@@ -2341,20 +2383,29 @@
 # <summary> Program Main logic </summary>
 # <code>
     # <params>
-    GoToScriptDir
-    declare -gr str_files_dir=$( find . -name files | uniq | head -n1 )
+    GoToScriptDir; declare -gr str_files_dir=$( find . -name files | uniq | head -n1 )
+    CheckIfUserIsRoot &> /dev/null; declare -g bool_is_user_root=$( ParseExitCodeAsBool )
+    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null; declare -g bool_is_connected_to_Internet=$( ParseExitCodeAsBool )
 
-    CheckIfUserIsRoot &> /dev/null
-    declare -g bool_is_user_root=$( ParseExitCodeAsBool )
-
-    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null
-    declare -g bool_is_connected_to_Internet=$( ParseExitCodeAsBool )
+    # <summary> Update Here! </summary>
+    declare -agr arr_functions_to_execute=(
+        'SystemSetup'
+        'GitSetup'
+        'SoftwareSetup'
+    )
     # </params>
 
     CheckLinuxDistro &> /dev/null
-    # ExecuteSetupOfSoftwareSources || exit "${?}"
-    # ExecuteSetupOfGitRepos || exit "${?}"
-    ExecuteSystemSetup || exit "${?}"
 
-    exit 0
+    for var_element in ${arr_functions_to_execute[@]}; do
+        if ReadInput "Execute '${var_element}'?"; then
+            eval "${var_element}" || return "${?}"
+        fi
+
+        SaveExitCode
+    done
+
+
+
+    exit "${int_exit_code}"
 # </code>
