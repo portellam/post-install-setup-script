@@ -37,7 +37,7 @@
 # <code>
     # <summary> Append Pass or Fail given exit code. </summary>
     # <param name="${int_exit_code}"> the last exit code </param>
-    # <param name="${1}"> the output statement </param>
+    # <param name="${1}"> string: the output statement </param>
     # <returns> output statement </returns>
     function AppendPassOrFail
     {
@@ -66,7 +66,7 @@
     }
 
     # <summary> Redirect current directory to shell script root directory. </summary>
-    # <param name="${1}"> the shell script name </param>
+    # <param name="${1}"> string: the shell script name </param>
     # <returns> exit code </returns>
     function GoToScriptDir
     {
@@ -75,36 +75,40 @@
     }
 
     # <summary> Parse and execute from a list of command(s) </summary>
-    # <param name="${1}"> the list of command(s) </param>
-    # <param name="${2}"> the list of output statements for each command call </param>
+    # <param name="${1}"> array: the list of command(s) </param>
+    # <param name="${2}"> array: the list of output statements for each command call </param>
     # <returns> exit code </returns>
     function ParseAndExecuteListOfCommands
     {
         CheckIfVarIsValid "${1}" || return "${?}"
 
         # <params>
-        declare -ar arr_commands=( "${1}" )
+        local readonly var_delimiter='|'
+        declare -a arr_commands=()
         declare -a arr_commands_output=()
-        local bool_is_valid_commands_output=false
         local readonly str_output_fail="${var_prefix_error} Execution of command failed."
         # </params>
 
-        CheckIfVarIsValid "${2}" && arr_commands_output=( "${2}" )
+        readarray -t -d ${var_delimiter} <<< ${1} &> /dev/null
+        readonly arr_commands=( "${MAPFILE[@]}" )
+        CheckIfVarIsValid "${arr_commands[@]}" || return "${?}"
 
-        if [[ "${#arr_commands_output[@]}" -ge "${#arr_commands[@]}" ]]; then
-            local bool_is_valid_commands_output=true
+        if CheckIfVarIsValid "${2}" &> /dev/null && readarray -t -d ${var_delimiter} <<< ${2} &> /dev/null; then
+            readonly arr_commands_output=( "${MAPFILE[@]}" )
         fi
 
         for int_key in ${!arr_commands[@]}; do
-            local var_command=${arr_commands[$int_key]}
+            local var_command="${arr_commands[$int_key]}"
+            local var_command_output="${arr_commands_output[$int_key]}"
             local str_output="Execute '${var_command}'?"
-            $bool_is_valid_commands_output && local str_output="${arr_commands_output[$int_key]}"
 
-            if ReadInput "Execute '${var_command}'?"; then
-                eval "${var_command}" || ( echo -e "${str_output_fail}"; return "${?}" )
+            if CheckIfVarIsValid "${var_command_output}" &> /dev/null; then
+                str_output="${var_command_output}"
             fi
 
-            SaveExitCode
+            if ReadInput "${str_output}"; then
+                ( eval "${var_command}" ) || ( SaveExitCode; echo -e "${str_output_fail}" )
+            fi
         done
 
         return "${int_exit_code}"
@@ -119,7 +123,7 @@
     }
 
     # <summary> Attempt given command a given number of times before failure. </summary>
-    # <param name="${1}"> the command to execute </param>
+    # <param name="${1}"> string: the command to execute </param>
     # <returns> exit code </returns>
     function TryThisXTimesBeforeFail
     {
@@ -143,7 +147,7 @@
 # <summary> #2 - Data-type and variable validation </summary>
 # <code>
     # <summary> Check if the command is installed. </summary>
-    # <param name="${1}"> the command </param>
+    # <param name="${1}"> string: the command </param>
     # <returns> exit code </returns>
     #
     function CheckIfCommandIsInstalled
@@ -168,7 +172,7 @@
     }
 
     # <summary> Check if the value is a valid bool. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> var: the boolean </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsBool
@@ -192,7 +196,7 @@
     }
 
     # <summary> Check if the value is a valid number. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> var: the number </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsNum
@@ -213,7 +217,7 @@
     }
 
     # <summary> Check if the value is valid. </summary>
-    # <param name="${1}"> the value </param>
+    # <param name="${1}"> string: the variable </param>
     # <returns> exit code </returns>
     #
     function CheckIfVarIsValid
@@ -237,7 +241,7 @@
     }
 
     # <summary> Check if the directory exists. </summary>
-    # <param name="${1}"> the directory </param>
+    # <param name="${1}"> string: the directory </param>
     # <returns> exit code </returns>
     #
     function CheckIfDirExists
@@ -257,7 +261,7 @@
     }
 
     # <summary> Check if the file exists. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileExists
@@ -277,7 +281,7 @@
     }
 
     # <summary> Check if the file is executable. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsExecutable
@@ -297,7 +301,7 @@
     }
 
     # <summary> Check if the file is readable. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsReadable
@@ -317,7 +321,7 @@
     }
 
     # <summary> Check if the file is writable. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     #
     function CheckIfFileIsWritable
@@ -337,7 +341,7 @@
     }
 
     # <summary> Parse exit code as boolean. If non-zero, return false. </summary>
-    # <param name="${?}"> the exit code </param>
+    # <param name="${?}"> int: the exit code </param>
     # <returns> boolean </returns>
     function ParseExitCodeAsBool
     {
@@ -374,8 +378,8 @@
 # <summary> #4 - File operation and validation </summary>
 # <code>
     # <summary> Check if two given files are the same. </summary>
-    # <parameter name="${1}"> the file </parameter>
-    # <parameter name="${2}"> the file </parameter>
+    # <parameter name="${1}"> string: the file </parameter>
+    # <parameter name="${2}"> string: the file </parameter>
     # <returns> exit code </returns>
     function CheckIfTwoFilesAreSame
     {
@@ -385,7 +389,7 @@
     }
 
     # <summary> Create latest backup of given file (do not exceed given maximum count). </summary>
-    # <parameter name="${1}"> the file </parameter>
+    # <parameter name="${1}"> string: the file </parameter>
     # <returns> exit code </returns>
     function CreateBackupFile
     {
@@ -448,7 +452,7 @@
     }
 
     # <summary> Create a directory. </summary>
-    # <param name="${1}"> the directory </param>
+    # <param name="${1}"> string: the directory </param>
     # <returns> exit code </returns>
     function CreateDir
     {
@@ -467,7 +471,7 @@
     }
 
     # <summary> Create a file. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     function CreateFile
     {
@@ -486,7 +490,7 @@
     }
 
     # <summary> Delete a dir/file. </summary>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
     function DeleteFile
     {
@@ -505,8 +509,8 @@
     }
 
     # <summary> Read input from a file. Call '$var_file' after calling this function. </summary>
-    # <param name="${var_file}"> the file contents </param>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
+    # <param name="${2}"> array: the file contents </param>
     # <returns> exit code </returns>
     function ReadFromFile
     {
@@ -514,15 +518,15 @@
 
         # <params>
         local readonly str_output_fail="${var_prefix_fail} Could not read from file '${1}'."
-        var_file=$( cat "${1}" )
+        local readonly var_command='cat "${1}"'
         # </params>
 
-        CheckIfVarIsValid "${var_file[@]}" || return "${?}"
+        eval "${var_command}" || return 1
         return 0
     }
 
     # <summary> Restore latest valid backup of given file. </summary>
-    # <parameter name="${1}"> the file </parameter>
+    # <parameter name="${1}"> string: the file </parameter>
     # <returns> exit code </returns>
     function RestoreBackupFile
     {
@@ -557,8 +561,8 @@
     }
 
     # <summary> Write output to a file. Call '$var_file' after calling this function. </summary>
-    # <param name="${var_file}"> the file contents </param>
-    # <param name="${1}"> the file </param>
+    # <param name="${1}"> string: the file </param>
+    # <param name="${2}"> array: the file contents </param>
     # <returns> exit code </returns>
     function WriteToFile
     {
@@ -566,17 +570,23 @@
 
         # <params>
         IFS=$'\n'
+        declare -a arr_file=()
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
+        local readonly var_delimiter='|'
         # </params>
 
-        CheckIfVarIsValid "${var_file[@]}" || return "${?}"
+        if readarray -t -d ${var_delimiter} <<< ${1} &> /dev/null; then
+            readonly arr_file=( "${MAPFILE[@]}" )
+        fi
 
-        # ( printf "%s\n" "${var_file[@]}" >> "${1}" ) || (
-            # echo -e "${str_output_fail}"
-            # return 1
+        CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
+
+        # ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
+        #     echo -e "${str_output_fail}"
+        #     return 1
         # )
 
-        for var_element in ${var_file[@]}; do
+        for var_element in ${arr_file[@]}; do
             echo -e "${var_element}" >> "${1}" || (
                 echo -e "${str_output_fail}"
                 return 1
@@ -656,7 +666,7 @@
     }
 
     # <summary> Test network connection to Internet. Ping DNS servers by address and name. </summary>
-    # <param name="${1}"> the boolean to toggle verbosity </param>
+    # <param name="${1}"> boolean: true/false set/unset verbosity </param>
     # <returns> exit code </returns>
     function TestNetwork
     {
@@ -702,7 +712,7 @@
 # <summary> #6 - User input </summary>
 # <code>
     # <summary> Ask user Yes/No, read input and return exit code given answer. </summary>
-    # <param name="${1}"> the (nullable) output statement </param>
+    # <param name="${1}"> string: the output statement </param>
     # <returns> exit code </returns>
     #
     function ReadInput
@@ -747,9 +757,9 @@
     # Ask for a number, within a given range, and return given number.
     # If input is not valid, return minimum value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> the (nullable) output statement </parameter>
-    # <parameter name="${2}"> absolute minimum </parameter>
-    # <parameter name="${3}"> absolute maximum </parameter>
+    # <parameter name="${1}"> string: the output statement </parameter>
+    # <parameter name="${2}"> num: absolute minimum </parameter>
+    # <parameter name="${3}"> num: absolute maximum </parameter>
     # <parameter name="$var_input"> the answer </parameter>
     # <returns> $var_input </returns>
     function ReadInputFromRangeOfTwoNums
@@ -798,7 +808,7 @@
     # Ask user for multiple choice, and return choice given answer.
     # If input is not valid, return first value. Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> the (nullable) output statement </parameter>
+    # <parameter name="${1}"> string: the output statement </parameter>
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
@@ -863,7 +873,7 @@
     # If input is not valid, return first value.
     # Declare '$var_input' before calling this function.
     # </summary>
-    # <parameter name="${1}"> the (nullable) output statement </parameter>
+    # <parameter name="${1}"> string: the output statement </parameter>
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
@@ -924,7 +934,7 @@
 # <summary> #7 - Software installation </summary>
 # <code>
     # <summary> Distro-agnostic, Check if package exists on-line. </summary>
-    # <param name="${1}"> the software package(s) </param>
+    # <param name="${1}"> string: the software package(s) </param>
     # <returns> exit code </returns>
     function CheckIfPackageExists
     {
@@ -974,8 +984,8 @@
     }
 
     # <summary> Distro-agnostic, Install a software package. </summary>
-    # <param name="${1}"> the software package(s) </param>
-    # <param name="${2}"> the boolean to toggle: reinstall software package and configuration files (if possible) </param>
+    # <param name="${1}"> string: the software package(s) </param>
+    # <param name="${2}"> boolean: true/false do/don't reinstall software package and configuration files (if possible) </param>
     # <returns> exit code </returns>
     function InstallPackage
     {
@@ -1032,9 +1042,9 @@
     }
 
     # <summary> Update or Clone repository given if it exists or not. </summary>
-    # <param name="${1}"> the directory </param>
-    # <param name="${2}"> the full repo name </param>
-    # <param name="${3}"> the username </param>
+    # <param name="${1}"> string: the directory </param>
+    # <param name="${2}"> string: the full repo name </param>
+    # <param name="${3}"> string: the username </param>
     # <returns> exit code </returns>
     function UpdateOrCloneGitRepo
     {
@@ -1110,15 +1120,16 @@
             local bool_nonzero_amount_of_failed_operations=false
             declare -a arr_actual_packages=()
             local readonly str_dir1="/etc/cron.d/"
+            local readonly var_command='ls *-cron'
             # </params>
 
-            for var_element1 in ${arr_expected_packages[@]}; do
-                if ! CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
-                    InstallPackage $var_element1
+            for str_expected_package in ${arr_expected_packages[@]}; do
+                if ! CheckIfCommandIsInstalled "${str_expected_package}" &> /dev/null; then
+                    InstallPackage "${str_expected_package}"
                 fi
 
-                if CheckIfCommandIsInstalled $var_element1 &> /dev/null; then
-                    arr_actual_packages+=( "${var_element1}" )
+                if CheckIfCommandIsInstalled "${str_expected_package}" &> /dev/null; then
+                    arr_actual_packages+=( "${str_expected_package}" )
                 fi
             done
 
@@ -1138,14 +1149,15 @@
             CheckIfDirExists $str_files_dir || return "${?}"
 
             # <summary> Match given cron file, append only if package exists in system. </summary>
-            # <param name="${var_element1}"> cron file </param>
-            # <returns> exit code </returns>
+            # <param name="${str_file}"> str: the cron file </param>
+            # <param name="${bool_nonzero_amount_of_failed_operations}"> bool: flag for failed operation </param>
+            # <returns> flag for failed operation </returns>
             function AppendCron_MatchCronFile
             {
-                for var_element2 in ${arr_actual_packages[@]}; do
-                    if [[ ${var_element1} == *"${var_element2}"* ]]; then
-                        if CheckIfCommandIsInstalled $var_element2; then
-                            cp $var_element1 ${str_dir1}${var_element1} || bool_nonzero_amount_of_failed_operations=true
+                for str_actual_package in ${arr_actual_packages[@]}; do
+                    if [[ "${str_file}" == *"${str_actual_package}"* ]]; then
+                        if CheckIfCommandIsInstalled "${str_actual_package}"; then
+                            cp "${str_file}" "${str_dir1}${str_file}" || bool_nonzero_amount_of_failed_operations=true
                         else
                             bool_nonzero_amount_of_failed_operations=true
                         fi
@@ -1156,8 +1168,8 @@
             CheckIfDirExists $str_files_dir | return "${?}"
             cd $str_files_dir || return 1
 
-            for var_element1 in $( ls *-cron ); do
-                ReadInput "Append '${var_element1}'?" && AppendCron_MatchCronFile
+            for str_file in eval "${var_command}"; do
+                ReadInput "Append '${str_file}'?" && AppendCron_MatchCronFile
             done
 
             systemctl enable cron || return 1
@@ -1195,7 +1207,7 @@
             # </params>
 
             # <summary> Copy files and set permissions. </summary>
-            # <param name="${2}"> the file </param>
+            # <param name="${2}"> string: the file </param>
             # <returns> exit code </returns>
             function AppendServices_AppendFile
             {
@@ -1454,7 +1466,7 @@
         }
 
         # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_packages_to_install[@]}"> total list of packages to install </parameter>
+        # <parameter name="${arr_packages_to_install[@]}"> arr: total list of packages to install </parameter>
         # <parameter name="${1}"> this list packages to install </parameter>
         # <parameter name="${2}"> output statement </parameter>
         # <returns> ${arr_packages_to_install[@]} </returns>
@@ -1932,7 +1944,7 @@
     }
 
     # <summary> Configuration of SSH. </summary>
-    # <parameter name="$str_alt_SSH"> chosen alternate SSH port value </parameter>
+    # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
     function ModifySSH
     {
@@ -2311,7 +2323,7 @@
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <returns> exit code </returns>
-    function SystemSetup
+    function ExecuteSystemSetup
     {
         # <params>
         declare -g str_alt_SSH=""
@@ -2327,7 +2339,7 @@
 
     # <summary> Execute setup of all software repositories. </summary>
     # <returns> exit code </returns>
-    function SoftwareSetup
+    function ExecuteSoftwareSetup
     {
         # CheckLinuxDistro
 
@@ -2352,7 +2364,7 @@
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
     # <returns> exit code </returns>
-    function GitSetup
+    function ExecuteGitSetup
     {
         # <params>
         local bool=false
@@ -2382,24 +2394,11 @@
     TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null; declare -g bool_is_connected_to_Internet=$( ParseExitCodeAsBool )
 
     # <summary> Update Here! </summary>
-    declare -agr arr_functions_to_execute=(
-        'SystemSetup'
-        'GitSetup'
-        'SoftwareSetup'
-    )
+    declare -gr str_functions_to_execute='ExecuteSystemSetup|ExecuteGitSetup|ExecuteSoftwareSetup'
+    declare -gr str_functions_to_execute_output='Execute System setup?|Execute Git setup and installation?|Execute software setup and installation?'
     # </params>
 
     CheckLinuxDistro &> /dev/null
-
-    for var_element in ${arr_functions_to_execute[@]}; do
-        if ReadInput "Execute '${var_element}'?"; then
-            eval "${var_element}" || return "${?}"
-        fi
-
-        SaveExitCode
-    done
-
-
-
+    ParseAndExecuteListOfCommands "${str_functions_to_execute}" "${str_functions_to_execute_output}"
     exit "${int_exit_code}"
 # </code>
