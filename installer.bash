@@ -363,7 +363,7 @@
         # </params>
 
         if [[ $( whoami ) != "root" ]]; then
-            echo -e $str_output_user_is_not_root
+            echo -e "${str_output}"_user_is_not_root
             return 1
         fi
 
@@ -766,7 +766,7 @@
         # </params>
 
         if ( ! CheckIfVarIsNum $var_min || ! CheckIfVarIsNum $var_max ) &> /dev/null; then
-            echo -e $str_output_extrema_are_not_valid
+            echo -e "${str_output}"_extrema_are_not_valid
             return 1
         fi
 
@@ -818,7 +818,7 @@
         # <summary> Minimum multiple choice are two answers. </summary>
         if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
             SaveExitCode
-            echo -e $str_output_multiple_choice_not_valid
+            echo -e "${str_output}"_multiple_choice_not_valid
             return "${int_exit_code}"
         fi
 
@@ -882,7 +882,7 @@
 
         # <summary> Minimum multiple choice are two answers. </summary>
         if ( ! CheckIfVarIsValid "${2}" || ! CheckIfVarIsValid "${3}" ) &> /dev/null; then
-            echo -e $str_output_multiple_choice_not_valid
+            echo -e "${str_output}"_multiple_choice_not_valid
             return 1;
         fi
 
@@ -965,7 +965,7 @@
                 ;;
 
             * )
-                echo -e $str_output
+                echo -e "${str_output}"
                 return 1
                 ;;
         esac
@@ -1171,12 +1171,12 @@
         local readonly str_output="Appending cron entries..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         AppendCron_Main
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-            echo -e $str_output_partial_completion
+            echo -e "${str_output_partial_completion}"
         fi
 
         return "${int_exit_code}"
@@ -1239,12 +1239,12 @@
         local readonly str_output="Appending files to Systemd..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         AppendServices_Main
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-            echo -e $str_output_partial_completion
+            echo -e "${str_output_partial_completion}"
         fi
 
         return "${int_exit_code}"
@@ -1312,12 +1312,12 @@
         local readonly str_output_partial_completion="${var_prefix_warn} One or more Git repositories were not cloned."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         CloneOrUpdateGitRepositories_Main
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-            echo -e $str_output_partial_completion
+            echo -e "${str_output_partial_completion}"
         fi
 
         return "${int_exit_code}"
@@ -1520,7 +1520,7 @@
         local readonly str_output="Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         InstallFromLinuxRepos_Main
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
@@ -1659,7 +1659,7 @@
             )
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         InstallFromFlathubRepos_Main
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
@@ -1795,12 +1795,12 @@
         local readonly str_output="Executing Git scripts..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         InstallFromGitRepos_Main
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-            echo -e $str_output_partial_completion
+            echo -e "${str_output_partial_completion}"
         fi
 
         return "${int_exit_code}"
@@ -1920,12 +1920,12 @@
         local str_output="Modifying $( lsb_release -is ) $( uname -o ) repositories..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         ModifyDebianRepos_Main
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-            echo -e $str_output_partial_completion
+            echo -e "${str_output_partial_completion}"
         fi
 
         return "${int_exit_code}"
@@ -2041,7 +2041,7 @@
         local str_output="Configuring SSH..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         ModifySSH_Main
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
@@ -2162,9 +2162,6 @@
             return 0
         }
 
-
-        # <summary> ModifySecurity main code block </summary>
-        # <returns> exit code </returns>
         function ModifySecurity_Main
         {
             # <params>
@@ -2198,13 +2195,13 @@
         local str_output="Configuring system security..."
         # </params>
 
-        echo -e $str_output
+        echo -e "${str_output}"
         ModifySecurity_Main
         AppendPassOrFail "${str_output}"
         GoToScriptDir
 
         # if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-        #     echo -e $str_output_partial_completion
+        #     echo -e "${str_output_partial_completion}"
         # fi
 
         return "${int_exit_code}"
