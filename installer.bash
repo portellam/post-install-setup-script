@@ -1194,6 +1194,8 @@
         return "${int_exit_code}"
     }
 
+    ### NOTE: review AppendCron. Implement script-wide naming conventions and proper comments, and use of readarray.
+
     # <summary> Append SystemD services to host. </summary>
     # <returns> exit code </returns>
     function AppendServices
