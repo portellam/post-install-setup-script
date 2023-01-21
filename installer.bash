@@ -33,7 +33,7 @@
 #
 # </summary>
 
-# <summary> #1 - Command operation validation and Misc. </summary>
+# <summary> #1 - Command operation and validation, and Miscellaneous </summary>
 # <code>
     # <summary> Append Pass or Fail given exit code. </summary>
     # <param name="${int_exit_code}"> the last exit code </param>
@@ -442,7 +442,7 @@
         # </params>
 
         echo -e "${str_output}"
-        CreateBackupFile_Main
+        CreateBackupFile_Main "${1}"
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
     }
@@ -452,11 +452,11 @@
     # <returns> exit code </returns>
     function CreateDir
     {
+        CheckIfDirExists "${1}" || return "${?}"
+
         # <params>
         local readonly str_output_fail="${var_prefix_fail} Could not create directory '${1}'."
         # </params>
-
-        CheckIfFileExists "${1}" || return "${?}"
 
         mkdir -p "${1}" || (
             echo -e "${str_output_fail}"
@@ -471,11 +471,11 @@
     # <returns> exit code </returns>
     function CreateFile
     {
+        CheckIfFileExists "${1}" &> /dev/null && return 0
+
         # <params>
         local readonly str_output_fail="${var_prefix_fail} Could not create file '${1}'."
         # </params>
-
-        CheckIfFileExists "${1}" &> /dev/null && return 0
 
         touch "${1}" || (
             echo -e "${str_output_fail}"
@@ -490,11 +490,11 @@
     # <returns> exit code </returns>
     function DeleteFile
     {
+        CheckIfFileExists "${1}" || return 0
+
         # <params>
         local readonly str_output_fail="${var_prefix_fail} Could not delete file '${1}'."
         # </params>
-
-        CheckIfFileExists "${1}" || return 0
 
         rm "${1}" || (
             echo -e "${str_output_fail}"
@@ -505,18 +505,19 @@
     }
 
     # <summary> Read input from a file. Call '$var_file' after calling this function. </summary>
+    # <param name="${var_file}"> the file contents </param>
     # <param name="${1}"> the file </param>
-    # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
     function ReadFromFile
     {
+        CheckIfFileExists "${1}" || return "${?}"
+
         # <params>
         local readonly str_output_fail="${var_prefix_fail} Could not read from file '${1}'."
         var_file=$( cat "${1}" )
         # </params>
 
-        ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
-
+        CheckIfVarIsValid "${var_file[@]}" || return "${?}"
         return 0
     }
 
@@ -527,6 +528,8 @@
     {
         function RestoreBackupFile_Main
         {
+            CheckIfFileExists "${1}" || return "${?}"
+
             # <params>
             local readonly str_dir1=$( dirname "${1}" )
             local readonly str_suffix=".old"
@@ -548,23 +551,25 @@
         # </params>
 
         echo -e "${str_output}"
-        RestoreBackupFile_Main
+        RestoreBackupFile_Main "${1}"
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
     }
 
     # <summary> Write output to a file. Call '$var_file' after calling this function. </summary>
+    # <param name="${var_file}"> the file contents </param>
     # <param name="${1}"> the file </param>
-    # <param name="$var_file"> the file contents </param>
     # <returns> exit code </returns>
     function WriteToFile
     {
+        CheckIfFileExists "${1}" || return "${?}"
+
         # <params>
         IFS=$'\n'
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
         # </params>
 
-        ( CheckIfFileExists "${1}" && CheckIfVarIsValid ${var_file[@]} ) || return "${?}"
+        CheckIfVarIsValid "${var_file[@]}" || return "${?}"
 
         # ( printf "%s\n" "${var_file[@]}" >> "${1}" ) || (
             # echo -e "${str_output_fail}"
@@ -572,7 +577,7 @@
         # )
 
         for var_element in ${var_file[@]}; do
-            echo -e $var_element >> "${1}" || (
+            echo -e "${var_element}" >> "${1}" || (
                 echo -e "${str_output_fail}"
                 return 1
             )
@@ -602,10 +607,10 @@
         local readonly str_OS_with_zypper="mandriva mageia"
         # </params>
 
-        ( CheckIfVarIsValid $str_kernel &> /dev/null && CheckIfVarIsValid $str_operating_system &> /dev/null ) || return "${?}"
+        ( CheckIfVarIsValid "${str_kernel}" &> /dev/null && CheckIfVarIsValid "${str_operating_system}" &> /dev/null ) || return "${?}"
 
         if [[ "${str_kernel}" != *"linux"* ]]; then
-            echo -e $str_output_kernel_is_not_valid
+            echo -e "${str_output_kernel_is_not_valid}"
             return 1
         fi
 
@@ -613,43 +618,37 @@
         # <returns> exit code </returns>
         function CheckLinuxDistro_GetPackageManagerByOS
         {
-            if [[ ${str_OS_with_apt} =~ .*"${str_operating_system}".* ]]; then
+            if [[ "${str_OS_with_apt}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="apt"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
-            elif [[ ${str_OS_with_dnf_yum} =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str_OS_with_dnf_yum}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="dnf"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
-
+                CheckIfCommandIsInstalled "${str_package_manager}" &> /dev/null && return 0
                 str_package_manager="yum"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
-            elif [[ ${str_OS_with_pacman} =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str_OS_with_pacman}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="pacman"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
-            elif [[ ${str_OS_with_portage} =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str_OS_with_portage}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="portage"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
-            elif [[ ${str_OS_with_urpmi} =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str_OS_with_urpmi}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="urpmi"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
-            elif [[ ${str_OS_with_zypper} =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str_OS_with_zypper}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="zypper"
-                CheckIfCommandIsInstalled $str_package_manager &> /dev/null && return 0
 
             else
                 str_package_manager=""
                 return 1
             fi
 
+            CheckIfCommandIsInstalled "${str_package_manager}" &> /dev/null && return 0
             return 1
         }
 
         if ! CheckLinuxDistro_GetPackageManagerByOS; then
-            echo -e $str_output_distro_is_not_valid
+            echo -e "${str_output_distro_is_not_valid}"
             return 1
         fi
 
@@ -665,7 +664,7 @@
         local bool=false
         # </params>
 
-        if CheckIfVarIsBool "${1}" &> /dev/null && ${1}; then
+        if CheckIfVarIsBool "${1}" &> /dev/null && "${1}"; then
             local bool=${1}
         fi
 
@@ -678,7 +677,7 @@
         SaveExitCode
 
         if $bool; then
-            (return "${int_exit_code}")
+            ( return "${int_exit_code}" )
             AppendPassOrFail
             echo -en "Testing connection to DNS...\t"
         fi
@@ -688,7 +687,7 @@
         SaveExitCode
 
         if $bool; then
-            (return "${int_exit_code}")
+            ( return "${int_exit_code}" )
             AppendPassOrFail
         fi
 
@@ -929,14 +928,14 @@
     # <returns> exit code </returns>
     function CheckIfPackageExists
     {
+        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid "${str_package_manager}" )|| return "${?}"
+
         # <params>
         local str_commands_to_execute=""
         local readonly str_output="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid $str_package_manager )|| return "${?}"
-
-        case $str_package_manager in
+        case "${str_package_manager}" in
             "apt" )
                 str_commands_to_execute="apt list ${1}"
                 ;;
@@ -980,19 +979,17 @@
     # <returns> exit code </returns>
     function InstallPackage
     {
+        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid "${str_package_manager}" )|| return "${?}"
+
         # <params>
-        local bool_option_reinstall=false
+        ( CheckIfVarIsBool "${2}" &> /dev/null && local bool_option_reinstall=${2} )
         local str_commands_to_execute=""
-        local readonly str_output_fail="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         local readonly str_output="Installing software packages..."
+        local readonly str_output_fail="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
 
-        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid $str_package_manager )|| return "${?}"
-
-        ( CheckIfVarIsBool "${2}" &> /dev/null && bool_option_reinstall=${2} )
-
         # <summary> Auto-update and auto-install selected packages </summary>
-        case $str_package_manager in
+        case "${str_package_manager}" in
             "apt" )
                 str_option1="--reinstall -o Dpkg::Options::=--force-confmiss"
                 str_commands_to_execute="apt update && apt full-upgrade -y && apt install ${str_option1} -y ${1}"
@@ -1125,14 +1122,14 @@
                 fi
             done
 
-            CheckIfVarIsValid $str_package_manager && (
-                case $str_package_manager in
+            CheckIfVarIsValid "${str_package_manager}" && (
+                case "${str_package_manager}" in
                     "apt" )
-                        CheckIfCommandIsInstalled "unattended-upgrades" &> /dev/null || arr_actual_packages+=( $str_package_manager )
+                        CheckIfCommandIsInstalled "unattended-upgrades" &> /dev/null || arr_actual_packages+=( "${str_package_manager}" )
                         ;;
 
                     * )
-                        arr_actual_packages+=( $str_package_manager )
+                        arr_actual_packages+=( "${str_package_manager}" )
                         ;;
                 esac
             )
@@ -1463,7 +1460,7 @@
         # <returns> ${arr_packages_to_install[@]} </returns>
         function InstallFromLinuxRepos_InstallByType
         {
-            if CheckIfVarIsValid ${1}; then
+            if CheckIfVarIsValid "${1}"; then
                 declare -i int_i=1
                 local str_list_of_packages_to_install=${1}
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
@@ -1485,10 +1482,10 @@
 
         function InstallFromLinuxRepos_Main
         {
-            CheckIfVarIsValid $str_package_manager || return "${?}"
+            CheckIfVarIsValid "${str_package_manager}" || return "${?}"
 
             # <params>
-            case $str_package_manager in
+            case "${str_package_manager}" in
                 "apt" )
                     InstallFromLinuxRepos_GetAPTPackages
                     ;;
@@ -1540,7 +1537,7 @@
         # <returns> ${arr_flatpak_to_install[@]} </returns>
         function InstallFromFlathubRepos_InstallByType
         {
-            if CheckIfVarIsValid ${1}; then
+            if CheckIfVarIsValid "${1}"; then
                 declare -i int_i=1
                 local str_list_of_packages_to_install=${1}
                 local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
@@ -1989,7 +1986,7 @@
                 $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )                # TODO: refactor, do this action once for all related files for given related commands
 
                 # <summary> Reinstall package to regenerate system configuration file. </summary>
-                case $str_package_manager in
+                case "${str_package_manager}" in
                     "apt" )
                         local str_package_to_install="openssh-client"
                         ;;
@@ -2017,7 +2014,7 @@
             #     $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
 
             #     # <summary> Reinstall package to regenerate system configuration file. </summary>
-            #     case $str_package_manager in
+            #     case "${str_package_manager}" in
             #         "apt" )
             #             local str_package_to_install="openssh-client"
             #             ;;
@@ -2338,7 +2335,7 @@
         # CheckLinuxDistro
 
         if $bool_is_user_root; then
-            case $str_package_manager in
+            case "${str_package_manager}" in
                 "apt" )
                     ModifyDebianRepos || return "${?}"
                     ;;
