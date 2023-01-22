@@ -697,6 +697,8 @@
     function ReadInput
     {
         # <params>
+        local readonly str_no="N"
+        local readonly str_yes="Y"
         declare -ir int_min_count=1
         declare -ir int_max_count=3
         declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
@@ -710,15 +712,15 @@
 
             # <summary> Append output. </summary>
             echo -en "${str_output} "
-            read var_input
+            read local var_input
             var_input=$( echo $var_input | tr '[:lower:]' '[:upper:]' )
 
             # <summary> Check if input is valid. </summary>
             if CheckIfVarIsValid $var_input; then
                 case $var_input in
-                    "Y")
+                    "${str_yes}" )
                         return 0;;
-                    "N")
+                    "${str_no}" )
                         return 1;;
                 esac
             fi
@@ -728,7 +730,7 @@
         done
 
         # <summary> After given number of attempts, input is set to default. </summary>
-        echo -e "${var_prefix_warn} Exceeded max attempts. Choice is set to default: N"
+        echo -e "${var_prefix_warn} Exceeded max attempts. Choice is set to default: ${str_no}"
         return 1
     }
 
