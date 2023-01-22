@@ -1203,8 +1203,6 @@
         return "${int_exit_code}"
     }
 
-    ### NOTE: review AppendCron. Implement script-wide naming conventions and proper comments, and use of readarray.
-
     # <summary> Append SystemD services to host. </summary>
     # <returns> exit code </returns>
     function AppendServices
@@ -1652,15 +1650,20 @@
         # <returns> ${arr_flatpak_to_install[@]} </returns>
         function InstallFromFlathubRepos_InstallByType
         {
+            # <params>
+            local str_package=""
+            local var_command='echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}"'
+            # </params>
+
             if CheckIfVarIsValid "${1}"; then
                 declare -i int_i=1
                 local str_list_of_packages_to_install="${1}"
-                local str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
+                str_package=$( eval "${var_command}" )
 
                 while CheckIfVarIsValid $str_package; do
                     echo -e "\t${str_package}"
                     (( int_i++ ))
-                    str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
+                    str_package=$( eval "${var_command}" )
                 done
 
                 echo
@@ -1727,7 +1730,7 @@
         function InstallFromGitRepos_SetSudoScripts
         {
             # <summary> portellam/Auto-Xorg </summary>
-            local str_file1="installer.bash"
+            local str_file="installer.bash"
             local str_repo="portellam/auto-xorg"
             local str_scriptDir="${str_dir1}${str_repo}/"
             InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
@@ -1739,7 +1742,7 @@
 
             if CheckIfDirExists $str_scriptDir; then
                 cd $str_scriptDir
-                local str_file1="/etc/hosts"
+                local str_file="/etc/hosts"
 
                 CreateBackupFile "${str_file}" && ( cp hosts "${str_file}" &> /dev/null || bool_nonzero_amount_of_failed_operations=false )
             fi
@@ -1759,7 +1762,7 @@
             fi
 
             # <summary> foundObjects/zram-swap </summary>
-            local str_file1="installer.sh"
+            local str_file="installer.sh"
             local str_repo="foundObjects/zram-swap"
             local str_scriptDir="${str_dir1}${str_repo}/"
             InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
@@ -1806,7 +1809,7 @@
             local str_dir2=$( basename "${1}" )"/"
             # </params>
 
-            cd "${str_dir}"1 || return 1
+            cd "${str_dir}" || return 1
             ( CheckIfDirExists "${1}" && ( cd "${1}" || false ) ) || return "${?}"
             CheckIfFileExists ${2}|| return "${?}"
 
@@ -1830,7 +1833,7 @@
             # <params>
             local bool_nonzero_amount_of_failed_operations=false
 
-            if [[ $bool_is_user_root == true ]]; then
+            if $bool_is_user_root; then
                 local readonly str_dir1="/root/source/"
             else
                 local readonly str_dir1="~/source/"
@@ -1838,7 +1841,7 @@
             # </params>
 
             if CheckIfDirExists "${str_dir}"1; then
-                if [[ $bool_is_user_root == true ]]; then
+                if $bool_is_user_root; then
                     InstallFromGitRepos_SetSudoScripts
                 else
                     InstallFromGitRepos_SetUserScripts
@@ -1873,7 +1876,7 @@
             # <params>
             IFS=$'\n'
             local bool_nonzero_amount_of_failed_operations=false
-            local readonly str_file1="/etc/apt/sources.list"
+            local readonly str_file="/etc/apt/sources.list"
             local readonly str_release_name=$( lsb_release -sc )
             local readonly str_release_Ver=$( lsb_release -sr )
             local str_sources=""
@@ -1958,7 +1961,7 @@
             # <summary> Output to sources file. </summary>
             local readonly str_file2="/etc/apt/sources.list.d/${str_branch_name}.list"
             # DeleteFile $str_file2 &> /dev/null
-            # CreateFile $str_file2 &> /dev/nullca
+            # CreateFile $str_file2 &> /dev/null
 
             case "${str_branch_name}" in
                 "backports"|"testing"|"unstable" )
@@ -2009,14 +2012,17 @@
             declare -a arr_file=()
             # </params>
 
-            if ! ReadInput "Modify SSH?"; then
+            local str_output="Modify SSH?"
+
+            if ! ReadInput "${str_output}"; then
                 return "${int_code_skipped_operation}"
             else
                 local readonly int_port_min=22
                 local readonly int_port_max=65536
+                local str_output="Enter a new IP Port number for SSH (leave blank for default)."
 
                 for int_count in ${arr_count[@]}; do
-                    ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." "${int_port_min}" "${int_port_max}"
+                    ReadInputFromRangeOfTwoNums "${str_output}" "${int_port_min}" "${int_port_max}"
                     declare -i int_alt_SSH="${var_input}"
 
                     if [[ "${int_alt_SSH}" -eq "${int_port_min}" || $int_alt_SSH -gt "${int_port_max}" ]]; then
