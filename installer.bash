@@ -11,7 +11,6 @@
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
 # - debug all functions
 # - make functions distro-agnostic, OR disclose functions that do not support given distros
-# - check for systemd
 # </summary>
 
 # <summary> #1 - Command operation and validation, and Miscellaneous </summary>
@@ -2368,7 +2367,7 @@
 
             CheckIfDirExists "${str_file1}" || return "${?}"
             ModifySecurity_SetupPackages || bool_nonzero_amount_of_failed_operations=true
-            ModifySecurity_SetupServices || bool_nonzero_amount_of_failed_operations=true
+            ( $bool_is_installed_systemd && ModifySecurity_SetupServices ) || bool_nonzero_amount_of_failed_operations=true
             ModifySecurity_AppendFiles || bool_nonzero_amount_of_failed_operations=true
 
             if CheckIfFileExists "${str_file1}"; then
@@ -2515,7 +2514,7 @@
         if $bool_is_user_root; then
             ModifySSH
             ModifySecurity || return "${?}"
-            AppendServices || return "${?}"
+            ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
             AppendCron || return "${?}"
         fi
     }
