@@ -7,30 +7,10 @@
 # <summary>
 #
 # TODO
+# - use rsync over copy
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
-# - test each business logic method
-# - before write, overwrite system file with existing un modified backup.
-# - double check usage of exit code partial completion
-# - reformat all vars in underscore format
 # - debug all functions
-# - replace while loops and hard coded num counts with squiggly-bracket ranges (arrays)
-#
-# RULES
-#
-# - functions shall be in UpperCamelCase
-# - params shall be in lowercase underscore format
-# - params tag shall not be nested within a function. It should only be declare once.
-# - code should be self-documenting: summary tag is not necessary, but is better for functions and less for code blocks.
-# - param tag and returns tag are welcome.
-# - create nested subfunctions in business logic with name + "_Main"
-#   * such that return statements can be used effectively
-#   * and echo statements can pass or fail at any point of a subfunction's end.
-# - de-nest as much as possible
-# - make package installation distro-agnostic
-#   * prioritize debian over other families.
-#   * if I can find arch or fedora versions of debian packages, do so. Otherwise, do not execute code.
-# - any changes to bash-libraries, upstream back to dev branch.
-#
+# - make functions distro-agnostic, OR disclose functions that do not support given distros
 # </summary>
 
 # <summary> #1 - Command operation and validation, and Miscellaneous </summary>
@@ -979,7 +959,7 @@
                 ;;
         esac
 
-        eval "${str_command}"s_to_execute || return 1
+        eval "${str_commands_to_execute}" || return 1
     }
 
     # <summary> Distro-agnostic, Install a software package. </summary>
