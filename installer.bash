@@ -1281,6 +1281,7 @@
     # <returns> exit code </returns>
     function CloneOrUpdateGitRepositories
     {
+        # NOTE: Update Here!
         # <summary> Get params. </summary>
         # <returns> params </returns>
         function CloneOrUpdateGitRepositories_GetParams
@@ -1309,6 +1310,8 @@
                     "spheenik/vfio-isolate"
                 )
             fi
+
+            echo
         }
 
         function CloneOrUpdateGitRepositories_Main
@@ -1718,7 +1721,10 @@
     # <returns> exit code </returns>
     function InstallFromGitRepos
     {
-        function InstallFromGitRepos_GetSudoScripts
+        # NOTE: Update Here!
+        # <summary> Set params. </summary>
+        # <returns> params </returns>
+        function InstallFromGitRepos_SetSudoScripts
         {
             # <summary> portellam/Auto-Xorg </summary>
             local str_file1="installer.bash"
@@ -1759,7 +1765,10 @@
             InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
         }
 
-        function InstallFromGitRepos_GetUserScripts
+        # NOTE: Update Here!
+        # <summary> Set params. </summary>
+        # <returns> params </returns>
+        function InstallFromGitRepos_SetUserScripts
         {
             # <summary> awilliam/rom-parser </summary>
             # local str_file1="installer.sh"
@@ -1830,9 +1839,9 @@
 
             if CheckIfDirExists "${str_dir}"1; then
                 if [[ $bool_is_user_root == true ]]; then
-                    InstallFromGitRepos_GetSudoScripts
+                    InstallFromGitRepos_SetSudoScripts
                 else
-                    InstallFromGitRepos_GetUserScripts
+                    InstallFromGitRepos_SetUserScripts
                 fi
             fi
 
@@ -2003,11 +2012,14 @@
             if ! ReadInput "Modify SSH?"; then
                 return "${int_code_skipped_operation}"
             else
+                local readonly int_port_min=22
+                local readonly int_port_max=65536
+
                 for int_count in ${arr_count[@]}; do
-                    ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." 22 65536
+                    ReadInputFromRangeOfTwoNums "Enter a new IP Port number for SSH (leave blank for default)." "${int_port_min}" "${int_port_max}"
                     declare -i int_alt_SSH="${var_input}"
 
-                    if [[ $int_alt_SSH -eq 22 || $int_alt_SSH -gt 10000 ]]; then
+                    if [[ "${int_alt_SSH}" -eq "${int_port_min}" || $int_alt_SSH -gt "${int_port_max}" ]]; then
                         str_alt_SSH="${int_alt_SSH}"
                         break
                     fi
@@ -2016,7 +2028,7 @@
                 done
             fi
 
-            if [[ $int_alt_SSH -eq 22 ]]; then
+            if [[ "${str_alt_SSH}" -eq "${int_port_min}" ]]; then
                 bool=false
             fi
 
@@ -2106,6 +2118,82 @@
     # <returns> exit code </returns>
     function ModifySecurity
     {
+        # <summary> Modify system files for security. </summary>
+        # <returns> exit code </returns>
+        function ModifySecurity_AppendFiles
+        {
+            local readonly str_output="Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+
+            if ReadInput "${str_output}"; then
+                local str_file="/etc/modprobe.d/disable-usb-storage.conf"
+                declare -a arr_file=(
+                    'install usb-storage /bin/true'
+                )
+
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+
+                local str_file="/etc/modprobe.d/disable-firewire.conf"
+                declare -a arr_file=(
+                    'blacklist firewire-core'
+                )
+
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+
+                local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
+                declare -a arr_file=(
+                    'blacklist thunderbolt'
+                )
+
+                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+
+                update-initramfs -u -k all || return "${?}"
+            fi
+        }
+
+        # NOTE: Update Here!
+        # <summary> Get params. </summary>
+        # <returns> params </returns>
+        function ModifySecurity_GetPackages
+        {
+            # <params>
+            local readonly arr_params=(
+                "atftpd"
+                "nis"
+                "rsh-redone-server"
+                "rsh-server"
+                "telnetd"
+                "tftpd"
+                "tftpd-hpa"
+                "xinetd"
+                "yp-tools"
+            )
+            # </params>
+
+            echo -e "${arr_params[@]}"
+        }
+
+        # NOTE: Update Here!
+        # <summary> Get params. </summary>
+        # <returns> params </returns>
+        function ModifySecurity_GetServices
+        {
+            # <params>
+            local readonly arr_params=(
+                "apcupsd"
+                "cockpit"
+                "fail2ban"
+                "ssh"
+                "ufw"
+            )
+            # </params>
+
+            echo -e "${arr_params[@]}"
+        }
+
+        # NOTE: Update Here!
         # <summary> Services to Enable or Disable (security-benefits or risks). </summary>
         # <returns> exit code </returns>
         function ModifySecurity_SetupFirewall
@@ -2140,7 +2228,7 @@
             # <summary> SSH on LAN </summary>
             str_command="ssh"
 
-            CheckIfCommandIsInstalled "${str_command}" && (
+            if CheckIfCommandIsInstalled "${str_command}"; then
                 # ModifySSH
 
                 if CheckIfVarIsValidNum $str_alt_SSH; then
@@ -2151,7 +2239,7 @@
                 fi
 
                 ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
-            )
+            fi
 
             ( ufw enable &> /dev/null ) || return 1
             ( ufw reload &> /dev/null ) || return 1
@@ -2159,28 +2247,35 @@
             return 0
         }
 
-        # <summary> Modify system files for security. </summary>
+        # <summary> Software packages to uninstall. </summary>
         # <returns> exit code </returns>
-        function ModifySecurity_AppendFiles
+        function ModifySecurity_SetupPackages
         {
-            if ReadInput "Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"; then
-                local str_file="/etc/modprobe.d/disable-usb-storage.conf"
-                var_file='install usb-storage /bin/true'
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" || return "${?}"
+            # <params>
+            declare -a arr_packages=()
+            declare -a arr_packages_to_uninstall=()
+            local readonly str_packages=$( ModifySecurity_GetPackages )
+            local readonly var_delimiter=' '
+            # </params>
 
-                local str_file1="/etc/modprobe.d/disable-firewire.conf"
-                var_file='blacklist firewire-core'
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" || return "${?}"
-
-                local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
-                var_file='blacklist thunderbolt'
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" || return "${?}"
-
-                update-initramfs -u -k all || return "${?}"
+            if readarray -t -d ${var_delimiter} <<< ${str_packages} &> /dev/null; then
+                readonly arr_packages=( "${MAPFILE[@]}" )
             fi
+
+            CheckIfVarIsValid "${arr_packages[@]}" || return "${?}"
+
+            for str_package in ${arr_packages}; do
+                if CheckIfCommandIsInstalled "${str_package}" &> /dev/null; then
+                    local str_output="Uninstall '${str_package}'?"
+
+                    if ReadInput "${str_output}"; then
+                        arr_packages_to_uninstall+=( "${str_package}" )
+                    fi
+                fi
+            done
+
+            UninstallPackage "${arr_packages_to_uninstall[@]}" || return "${?}"
+            return 0
         }
 
         # <summary> Services to Enable or Disable (security-benefits or risks). </summary>
@@ -2188,61 +2283,61 @@
         function ModifySecurity_SetupServices
         {
             # <params>
+            declare -a arr_services=()
             declare -a arr_services_to_disable=()
             declare -a arr_services_to_enable=()
+            local readonly str_services=$( ModifySecurity_GetServices )
+            local readonly var_delimiter=' '
             # </params>
 
-            # <summary> Update here! </summary>
-            local arr_services_list=(
-                "apcupsd"
-                "cockpit"
-                "fail2ban"
-                "ssh"
-                "ufw"
-            )
+            if readarray -t -d ${var_delimiter} <<< ${str_services} &> /dev/null; then
+                readonly arr_services=( "${MAPFILE[@]}" )
+            fi
 
-            for var_element in ${arr_services_list}; do
-                if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
-                    if ReadInput "Enable or Disable '${str_command}'?"; then
-                        arr_services_to_enable+=( "${str_command}" )
+            CheckIfVarIsValid "${arr_services[@]}" || return "${?}"
+
+            for str_service in ${arr_services}; do
+                if CheckIfCommandIsInstalled "${str_service}" &> /dev/null; then
+                    local str_output="Enable or Disable '${str_service}'?"
+
+                    if ReadInput "${str_output}"; then
+                        arr_services_to_enable+=( "${str_service}" )
                     else
-                        arr_services_to_disable+=( "${str_command}" )
+                        arr_services_to_disable+=( "${str_service}" )
                     fi
                 fi
             done
 
             systemctl stop "${arr_services_to_disable[@]}" && systemctl disable "${arr_services_to_disable[@]}" || return 1
             systemctl start "${arr_services_to_enable[@]}" && systemctl disable "${arr_services_to_enable[@]}" || return 1
-
             return 0
         }
 
         function ModifySecurity_Main
         {
             # <params>
-            # local bool_nonzero_amount_of_failed_operations=false
-            local readonly str_file1="sysctl.conf"
+            local bool_nonzero_amount_of_failed_operations=false
+            local readonly str_file1="${str_files_dir}sysctl.conf"
             local readonly str_file2="/etc/${str_file1}"
-            # str_packages_to_remove="atftpd nis rsh-redone-server rsh-server telnetd tftpd tftpd-hpa xinetd yp-tools"
-
-            # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"
             # </params>
 
-            CheckIfDirExists "${str_files_dir}" || return "${?}"
-            declare -a arr_file1=( )
+            CheckIfDirExists "${str_file1}" || return "${?}"
+            ModifySecurity_SetupPackages || bool_nonzero_amount_of_failed_operations=true
+            ModifySecurity_SetupServices || bool_nonzero_amount_of_failed_operations=true
+            ModifySecurity_AppendFiles || bool_nonzero_amount_of_failed_operations=true
 
-            ModifySecurity_SetupServices
-            ModifySecurity_AppendFiles
+            if CheckIfFileExists "${str_file1}"; then
+                local str_output="Setup '${str_file2}' with defaults?"
 
-            CheckIfFileExists "${str_file}" && (
-                ReadInput "Setup '${str_file2}' with defaults?" && (
-                    ( cp "${str_file}" $str_file2 &> /dev/null ) || return "${?}"
-                    ( cat $str_file2 >> "${str_file}" &> /dev/null ) || return "${?}"
-                )
-            )
+                if ReadInput "${str_output}"; then
+                    ( cp "${str_file1}" "${str_file2}" &> /dev/null ) || return "${?}"
+                    ( cat "${str_file2}" >> "${str_file1}" &> /dev/null ) || return "${?}"
+                fi
+            fi
 
-            ReadInput "Setup firewall with UFW?" && ModifySecurity_SetupFirewall || return "${?}"
-            # $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
+            local str_output="Setup firewall with UFW?"
+            ReadInput "${str_output}" && ModifySecurity_SetupFirewall || return "${?}"
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -2255,9 +2350,9 @@
         AppendPassOrFail "${str_output}"
         GoToScriptDir
 
-        # if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
-        #     echo -e "${str_output_partial_completion}"
-        # fi
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
+            echo -e "${str_output_partial_completion}"
+        fi
 
         return "${int_exit_code}"
     }
@@ -2374,9 +2469,9 @@
 
         if $bool_is_user_root; then
             ModifySSH
-            # ModifySecurity || return "${?}"
-            # AppendServices || return "${?}"
-            # AppendCron || return "${?}"
+            ModifySecurity || return "${?}"
+            AppendServices || return "${?}"
+            AppendCron || return "${?}"
         fi
     }
 
@@ -2384,7 +2479,7 @@
     # <returns> exit code </returns>
     function ExecuteSoftwareSetup
     {
-        # CheckLinuxDistro
+        local readonly str_disclaimer="${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
 
         if $bool_is_user_root; then
             case "${str_package_manager}" in
@@ -2394,7 +2489,8 @@
             esac
         fi
 
-        TryThisXTimesBeforeFail "TestNetwork true" || return "${?}"
+        local var_command="TestNetwork true"
+        TryThisXTimesBeforeFail "${var_command}" || return "${?}"
 
         if $bool_is_user_root; then
             InstallFromLinuxRepos || return "${?}"
@@ -2402,7 +2498,7 @@
             InstallFromFlathubRepos || return "${?}"
         fi
 
-        echo -e "${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
+        echo -e "${str_disclaimer}"
     }
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
@@ -2432,7 +2528,7 @@
 # <summary> Program Main logic </summary>
 # <code>
     # <params>
-    GoToScriptDir; declare -gr str_files_dir=$( find . -name files | uniq | head -n1 )
+    GoToScriptDir; declare -gr str_files_dir="$( find . -name files | uniq | head -n1 )/"
     declare -g bool_is_connected_to_Internet=false
     TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true
 
@@ -2441,7 +2537,6 @@
     declare -gr str_functions_to_execute_output='Execute System setup?|Execute Git setup and installation?|Execute software setup and installation?'
     # </params>
 
-    CheckLinuxDistro &> /dev/null
     ParseAndExecuteListOfCommands "${str_functions_to_execute}" "${str_functions_to_execute_output}"
     exit "${int_exit_code}"
 # </code>
