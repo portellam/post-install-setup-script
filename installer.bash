@@ -7,11 +7,11 @@
 # <summary>
 #
 # TODO
-# - create UninstallPackage
 # - use rsync over copy
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
 # - debug all functions
 # - make functions distro-agnostic, OR disclose functions that do not support given distros
+# - check for systemd
 # </summary>
 
 # <summary> #1 - Command operation and validation, and Miscellaneous </summary>
@@ -994,7 +994,7 @@
                 ;;
 
             "gentoo" )
-                str_commands_to_execute="emerge -u @world && emerge www-client/${1}"
+                str_commands_to_execute="emerge -u @world && emerge ${1}"
                 ;;
 
             "urpmi" )
@@ -1007,6 +1007,61 @@
 
             "zypper" )
                 str_commands_to_execute="zypper refresh && zypper in ${1}"
+                ;;
+
+            * )
+                echo -e "${str_output_fail}"
+                return 1
+                ;;
+        esac
+
+        echo "${str_output}"
+        eval "${str_commands_to_execute}" &> /dev/null || ( return 1 )
+        AppendPassOrFail "${str_output}"
+        return "${int_exit_code}"
+    }
+
+    # <summary> Distro-agnostic, Uninstall a software package. </summary>
+    # <param name="${1}"> string: the software package(s) </param>
+    # <returns> exit code </returns>
+    function UninstallPackage
+    {
+        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid "${str_package_manager}" )|| return "${?}"
+
+        # <params>
+        local str_commands_to_execute=""
+        local readonly str_output="Uninstalling software packages..."
+        local readonly str_output_fail="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
+        # </params>
+
+        # <summary> Auto-update and auto-install selected packages </summary>
+        case "${str_package_manager}" in
+            "apt" )
+                str_commands_to_execute="apt uninstall -y ${1}"
+                ;;
+
+            "dnf" )
+                str_commands_to_execute="dnf remove ${1}"
+                ;;
+
+            "pacman" )
+                str_commands_to_execute="pacman -R ${1}"
+                ;;
+
+            "gentoo" )
+                str_commands_to_execute="emerge -Cv ${1}"
+                ;;
+
+            "urpmi" )
+                str_commands_to_execute="urpme ${1}"
+                ;;
+
+            "yum" )
+                str_commands_to_execute="yum remove ${1}"
+                ;;
+
+            "zypper" )
+                str_commands_to_execute="zypper remove ${1}"
                 ;;
 
             * )
