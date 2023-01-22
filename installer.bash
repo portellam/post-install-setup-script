@@ -343,7 +343,8 @@
     {
         # <params>
         local readonly str_file=$( basename "${0}" )
-        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset_color}"
+        # local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset_color}"
+        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not sudo/root."
         # </params>
 
         if [[ $( whoami ) != "root" ]]; then
@@ -712,13 +713,13 @@
 
             # <summary> Append output. </summary>
             echo -en "${str_output} "
-            read local var_input
+            read var_input
             var_input=$( echo $var_input | tr '[:lower:]' '[:upper:]' )
 
             # <summary> Check if input is valid. </summary>
             if CheckIfVarIsValid $var_input; then
                 case $var_input in
-                    "${str_yes}" )
+                    ""${str_yes}"" )
                         return 0;;
                     "${str_no}" )
                         return 1;;
@@ -962,6 +963,47 @@
         esac
 
         eval "${str_commands_to_execute}" || return 1
+    }
+
+    # <summary> Check if system file is original or not. Reinstall package for system file, and/or create backups as necessary </summary>
+    # <parameter name="${1}"> string: the system file </parameter>
+    # <parameter name="${bool_is_connected_to_Internet}"> boolean: TestNetwork </parameter>
+    # <returns> exit code </returns>
+    function CheckIfSystemFileIsOriginal
+    {
+        # <params>
+        local bool_backup_file_exists=false
+        local bool_package_is_reinstalled=false
+        local bool_system_file_is_original=false
+        # </params>
+
+        # <summary> Original system file does not exist. </summary>
+        if $bool_is_connected_to_Internet && ! CheckIfFileExists "${1}"; then
+            InstallPackage "${str_package_to_install}" true && bool_system_file_is_original=true
+        fi
+
+        if CreateBackupFile "${1}"; then
+            bool_backup_file_exists=true
+        fi
+
+        # <summary> It is unknown if system file *is* original. </summary>
+        if $bool_backup_file_exists && $bool_is_connected_to_Internet && ! $bool_system_file_is_original; then
+            DeleteFile "${1}"
+            InstallPackage "${str_package_to_install}" true && bool_system_file_is_original=true
+        fi
+
+        # <summary> Do no harm, system file *is not* original. Attempt to restore and exit. </summary>
+        if $bool_backup_file_exists && ! $bool_package_is_reinstalled; then
+            RestoreBackupFile "${1}"
+            return "${?}"
+        fi
+
+        # <summary> Do no work, system file *is not* original. File failed to backup, and file failed to reinstall. </summary>
+        if ! $bool_backup_file_exists && ! $bool_package_is_reinstalled; then
+            return 1
+        fi
+
+        return 0
     }
 
     # <summary> Distro-agnostic, Install a software package. </summary>
@@ -1933,7 +1975,7 @@
             # <summary> User prompt </summary>
             echo
             echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_release_name})."
-            echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_name} release branch."
+            echo -e "${var_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_name} release branch."
             echo -e "Release branches:"
             echo -e "\t'stable'\t== '${str_release_name}'"
             echo -e "\t'testing'\t*more recent updates; slightly less stability"
@@ -2033,130 +2075,6 @@
             echo -e "${str_output_partial_completion}"
         fi
 
-        return "${int_exit_code}"
-    }
-
-    # <summary> Configuration of SSH. </summary>
-    # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
-    # <returns> exit code </returns>
-    function ModifySSH
-    {
-        function ModifySSH_Main
-        {
-            # <params>
-            local bool=true
-            local str_command="ssh"
-            declare -ir int_min_count=1
-            declare -ir int_max_count=3
-            declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
-            declare -a arr_file=()
-            # </params>
-
-            local str_output="Modify SSH?"
-
-            if ! ReadInput "${str_output}"; then
-                return "${int_code_skipped_operation}"
-            else
-                local readonly int_port_min=22
-                local readonly int_port_max=65536
-                local str_output="Enter a new IP Port number for SSH (leave blank for default)."
-
-                for int_count in ${arr_count[@]}; do
-                    ReadInputFromRangeOfTwoNums "${str_output}" "${int_port_min}" "${int_port_max}"
-                    declare -i int_alt_SSH="${var_input}"
-
-                    if [[ "${int_alt_SSH}" -eq "${int_port_min}" || $int_alt_SSH -gt "${int_port_max}" ]]; then
-                        str_alt_SSH="${int_alt_SSH}"
-                        break
-                    fi
-
-                    echo -e "${str_prefix_warn}Available port range: 10000-65535"
-                done
-            fi
-
-            if [[ "${str_alt_SSH}" -eq "${int_port_min}" ]]; then
-                bool=false
-            fi
-
-            arr_file+=(
-                "#"
-                "LoginGraceTime 1m"
-                "PermitRootLogin prohibit-password"
-                "MaxAuthTries 6"
-                "MaxSessions 2"
-            )
-
-            if $bool; then
-                arr_file+=(
-                    "Port ${str_alt_SSH}"
-                )
-            fi
-
-            if CheckIfCommandIsInstalled "${str_command}"; then
-                local readonly str_file1="/etc/ssh/ssh_config"
-                CreateBackupFile "${str_file1}" || return "${?}"
-                # TODO: refactor, do this action once for all related files for given related commands.  $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
-                $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
-
-                # <summary> Reinstall package to regenerate system configuration file. </summary>
-                case "${str_package_manager}" in
-                    "apt" )
-                        local str_package_to_install="openssh-client"
-                        ;;
-
-                    * )
-                        return 1
-                        ;;
-                esac
-
-                if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
-                    RestoreBackupFile "${str_file1}"
-                    return "${?}"
-                fi
-
-                WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
-                systemctl restart "${str_command}" || return 1
-            fi
-
-            SaveExitCode
-            str_command="sshd"
-
-            # if CheckIfCommandIsInstalled "${str_command}"; then
-            #     local readonly str_file1="/etc/ssh/sshd_config"
-            #     CreateBackupFile "${str_file1}" || return "${?}"
-            #     $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
-
-            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
-            #     case "${str_package_manager}" in
-            #         "apt" )
-            #             local str_package_to_install="openssh-client"
-            #             ;;
-
-            #         * )
-            #             return 1
-            #             ;;
-            #     esac
-
-            #     if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
-            #         RestoreBackupFile "${str_file1}"
-            #         return "${?}"
-            #     fi
-
-            #     WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
-            #     systemctl restart "${str_command}" || return 1
-            # fi
-
-            SaveExitCode
-            return "${int_exit_code}"
-        }
-
-        # <params>
-        local readonly str_output="Configuring SSH..."
-        # </params>
-
-        echo -e "${str_output}"
-        ModifySSH_Main
-        AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
     }
 
@@ -2402,6 +2320,136 @@
 
         return "${int_exit_code}"
     }
+
+    # <summary> Configuration of SSH. </summary>
+    # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
+    # <returns> exit code </returns>
+    function ModifySSH
+    {
+        function ModifySSH_Main
+        {
+            # <params>
+            local bool=true
+            local bool_nonzero_amount_of_failed_operations=false
+            local str_command="ssh"
+            declare -ir int_min_count=1
+            declare -ir int_max_count=3
+            declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+            declare -a arr_file=()
+            # </params>
+
+            local str_output="Modify SSH?"
+
+            if ! ReadInput "${str_output}"; then
+                return "${int_code_skipped_operation}"
+            else
+                local readonly int_port_default=22
+                local readonly int_port_min=10000
+                local readonly int_port_max=65536
+                local str_output="Enter a new IP Port number for SSH (leave blank for default)."
+
+                for int_count in ${arr_count[@]}; do
+                    ReadInputFromRangeOfTwoNums "${str_output}" "${int_port_default}" "${int_port_max}"
+                    echo "${var_input}"
+                    declare -i int_alt_SSH="${var_input}"
+
+                    if [[ "${int_alt_SSH}" -eq "${int_port_default}" || ( "${int_alt_SSH}" -ge "${int_port_min}" && "${int_alt_SSH}" -le "${int_port_max}" ) ]]; then
+                        str_alt_SSH="${int_alt_SSH}"
+                        break
+                    fi
+
+                    echo -e "${var_prefix_warn}Available port range: 10000-65535"
+                done
+            fi
+
+            if [[ "${str_alt_SSH}" -eq "${int_port_min}" ]]; then
+                bool=false
+            fi
+
+            arr_file+=(
+                "#"
+                "LoginGraceTime 1m"
+                "PermitRootLogin prohibit-password"
+                "MaxAuthTries 6"
+                "MaxSessions 2"
+            )
+
+            if $bool; then
+                arr_file+=(
+                    "Port ${str_alt_SSH}"
+                )
+            fi
+
+            # <summary> Write to original file. Make backups as necessary. </summary>
+            if CheckIfCommandIsInstalled "${str_command}"; then
+                local str_file="/etc/ssh/ssh_config"
+
+                # <summary> Reinstall package to regenerate system configuration file. </summary>
+                case "${str_package_manager}" in
+                    "apt" )
+                        local str_package_to_install="openssh-client"
+                        ;;
+
+                    * )
+                        return 1
+                        ;;
+                esac
+
+                
+
+                if CheckIfSystemFileIsOriginal "${str_file}"; then
+                    WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+                    systemctl restart "${str_command}" || return 1
+                else
+                    bool_nonzero_amount_of_failed_operations=true
+                fi
+            fi
+
+            str_command="sshd"
+
+            # if CheckIfCommandIsInstalled "${str_command}"; then
+            #     local readonly str_file1="/etc/ssh/sshd_config"
+            #     CreateBackupFile "${str_file1}" || return "${?}"
+            #     $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
+
+            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
+            #     case "${str_package_manager}" in
+            #         "apt" )
+            #             local str_package_to_install="openssh-client"
+            #             ;;
+
+            #         * )
+            #             return 1
+            #             ;;
+            #     esac
+
+            #     if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
+            #         RestoreBackupFile "${str_file1}"
+            #         return "${?}"
+            #     fi
+
+            #     WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
+            #     systemctl restart "${str_command}" || return 1
+            # fi
+
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
+            return 0
+        }
+
+        # <params>
+        local readonly str_output="Configuring SSH..."
+        # </params>
+
+        echo -e "${str_output}"
+        ModifySSH_Main
+        AppendPassOrFail "${str_output}"
+
+        if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
+            echo -e "${str_output_partial_completion}"
+        fi
+
+        return "${int_exit_code}"
+    }
 # </code>
 
 # <summary> Program middleman logic </summary>
@@ -2513,19 +2561,25 @@
         declare -g str_alt_SSH=""
         # </params>
 
-        if $bool_is_user_root; then
-            ModifySSH
-            ModifySecurity || return "${?}"
-            ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
-            AppendCron || return "${?}"
+        if ! $bool_is_user_root; then
+            echo -e "${var_prefix_warn} User is not root."
+            return 1
         fi
+
+        ModifySSH
+        echo $str_alt_SSH
+        return 0
+        ModifySecurity || return "${?}"
+        ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
+        AppendCron || return "${?}"
+        return 0
     }
 
     # <summary> Execute setup of all software repositories. </summary>
     # <returns> exit code </returns>
     function ExecuteSoftwareSetup
     {
-        local readonly str_disclaimer="${str_prefix_warn}If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
+        local readonly str_disclaimer="${var_prefix_warn} If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
 
         if $bool_is_user_root; then
             case "${str_package_manager}" in
@@ -2545,6 +2599,7 @@
         fi
 
         echo -e "${str_disclaimer}"
+        return 0
     }
 
     # <summary> Execute setup of GitHub repositories (of which that are executable and installable). </summary>
@@ -2568,6 +2623,8 @@
             CloneOrUpdateGitRepositories || return "${?}"
             InstallFromGitRepos || return "${?}"
         fi
+
+        return 0
     }
 # </code>
 
