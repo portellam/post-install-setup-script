@@ -606,7 +606,6 @@
         # <params>
         local readonly str_kernel="$( uname -o | tr '[:upper:]' '[:lower:]' )"
         local readonly str_operating_system="$( lsb_release -is | tr '[:upper:]' '[:lower:]' )"
-        # local str_package_manager=""
         local readonly str_output_distro_is_not_valid="${var_prefix_error} Distribution '$( lsb_release -is )' is not supported."
         local readonly str_output_kernel_is_not_valid="${var_prefix_error} Kernel '$( uname -o )' is not supported."
         local readonly str_OS_with_apt="debian bodhi deepin knoppix mint peppermint pop ubuntu kubuntu lubuntu xubuntu "
@@ -675,7 +674,7 @@
         # </params>
 
         if CheckIfVarIsBool "${1}" &> /dev/null && "${1}"; then
-            local bool=${1}
+            local bool="${1}"
         fi
 
         if $bool; then
@@ -980,7 +979,7 @@
                 ;;
         esac
 
-        eval $str_commands_to_execute || return 1
+        eval "${str_command}"s_to_execute || return 1
     }
 
     # <summary> Distro-agnostic, Install a software package. </summary>
@@ -1065,47 +1064,55 @@
 
 # <summary> Global parameters </summary>
 # <params>
-    # <summary> Misc. </summary>
-    declare -gl str_package_manager=""
+    # <summary> Getters and Setters </summary>
+        declare -g bool_is_installed_systemd=false
+        CheckIfCommandIsInstalled "systemd" &> /dev/null && bool_is_installed_systemd=true
 
-    # <summary> Exit codes </summary>
-    declare -gir int_code_partial_completion=255
-    declare -gir int_code_skipped_operation=254
-    declare -gir int_code_var_is_null=253
-    declare -gir int_code_var_is_empty=252
-    declare -gir int_code_var_is_not_bool=251
-    declare -gir int_code_var_is_NAN=250
-    declare -gir int_code_dir_is_null=249
-    declare -gir int_code_file_is_null=248
-    declare -gir int_code_file_is_not_executable=247
-    declare -gir int_code_file_is_not_writable=246
-    declare -gir int_code_file_is_not_readable=245
-    declare -gir int_code_cmd_is_null=244
-    declare -gi int_exit_code="${?}"
+        declare -g bool_is_user_root=false
+        CheckIfUserIsRoot &> /dev/null && bool_is_user_root=true
 
-    # <summary>
-    # Color coding
-    # Reference URL: 'https://www.shellhacks.com/bash-colors'
-    # </summary>
-    declare -gr var_blinking_red='\033[0;31;5m'
-    declare -gr var_green='\033[0;32m'
-    declare -gr var_red='\033[0;31m'
-    declare -gr var_yellow='\033[0;33m'
-    declare -gr var_reset_color='\033[0m'
+        declare -gl str_package_manager=""
+        CheckLinuxDistro &> /dev/null
 
-    # <summary> Append output </summary>
-    declare -gr var_prefix_error="${var_yellow}Error:${var_reset_color}"
-    declare -gr var_prefix_fail="${var_red}Failure:${var_reset_color}"
-    declare -gr var_prefix_pass="${var_green}Success:${var_reset_color}"
-    declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
-    declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
-    declare -gr var_suffix_maybe="${var_yellow}Successfully Incomplete${var_reset_color}"
-    declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
-    declare -gr var_suffix_skip="${var_yellow}Skipped${var_reset_color}"
+    # <summary> Setters </summary>
+        # <summary> Exit codes </summary>
+        declare -gir int_code_partial_completion=255
+        declare -gir int_code_skipped_operation=254
+        declare -gir int_code_var_is_null=253
+        declare -gir int_code_var_is_empty=252
+        declare -gir int_code_var_is_not_bool=251
+        declare -gir int_code_var_is_NAN=250
+        declare -gir int_code_dir_is_null=249
+        declare -gir int_code_file_is_null=248
+        declare -gir int_code_file_is_not_executable=247
+        declare -gir int_code_file_is_not_writable=246
+        declare -gir int_code_file_is_not_readable=245
+        declare -gir int_code_cmd_is_null=244
+        declare -gi int_exit_code="${?}"
 
-    # <summary> Output statement </summary>
-    declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
-    declare -gr str_output_var_is_not_valid="${var_prefix_error} Invalid input."
+        # <summary>
+        # Color coding
+        # Reference URL: 'https://www.shellhacks.com/bash-colors'
+        # </summary>
+        declare -gr var_blinking_red='\033[0;31;5m'
+        declare -gr var_green='\033[0;32m'
+        declare -gr var_red='\033[0;31m'
+        declare -gr var_yellow='\033[0;33m'
+        declare -gr var_reset_color='\033[0m'
+
+        # <summary> Append output </summary>
+        declare -gr var_prefix_error="${var_yellow}Error:${var_reset_color}"
+        declare -gr var_prefix_fail="${var_red}Failure:${var_reset_color}"
+        declare -gr var_prefix_pass="${var_green}Success:${var_reset_color}"
+        declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
+        declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
+        declare -gr var_suffix_maybe="${var_yellow}Successfully Incomplete${var_reset_color}"
+        declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
+        declare -gr var_suffix_skip="${var_yellow}Skipped${var_reset_color}"
+
+        # <summary> Output statement </summary>
+        declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
+        declare -gr str_output_var_is_not_valid="${var_prefix_error} Invalid input."
 # </params>
 
 # <summary> Program business logic </summary>
@@ -1114,13 +1121,30 @@
     # <returns> exit code </returns>
     function AppendCron
     {
+        # <summary> Match given cron file, append only if package exists in system. </summary>
+        # <param name="${str_dir}"> str: the directory </param>
+        # <param name="${str_file}"> str: the cron file </param>
+        # <param name="${bool_nonzero_amount_of_failed_operations}"> bool: flag for failed operation </param>
+        # <returns> flag for failed operation </returns>
+        function AppendCron_MatchCronFile
+        {
+            for str_actual_package in ${arr_actual_packages[@]}; do
+                if [[ "${str_file}" == *"${str_actual_package}"* ]]; then
+                    if CheckIfCommandIsInstalled "${str_actual_package}"; then
+                        cp "${str_file}" "${str_dir}${str_file}" || bool_nonzero_amount_of_failed_operations=true
+                    else
+                        bool_nonzero_amount_of_failed_operations=true
+                    fi
+                fi
+            done
+        }
+
         function AppendCron_Main
         {
             # <params>
             local bool_nonzero_amount_of_failed_operations=false
             declare -a arr_actual_packages=()
-            local readonly str_dir1="/etc/cron.d/"
-            local readonly var_command='ls *-cron'
+            local readonly str_dir="/etc/cron.d/"
             # </params>
 
             for str_expected_package in ${arr_expected_packages[@]}; do
@@ -1136,7 +1160,8 @@
             CheckIfVarIsValid "${str_package_manager}" && (
                 case "${str_package_manager}" in
                     "apt" )
-                        CheckIfCommandIsInstalled "unattended-upgrades" &> /dev/null || arr_actual_packages+=( "${str_package_manager}" )
+                        local str_alternate_package="unattended-upgrades"
+                        CheckIfCommandIsInstalled "${str_alternate_package}" &> /dev/null || arr_actual_packages+=( "${str_package_manager}" )
                         ;;
 
                     * )
@@ -1146,34 +1171,18 @@
             )
 
             cd $( dirname "${0}" )
-            CheckIfDirExists $str_files_dir || return "${?}"
-
-            # <summary> Match given cron file, append only if package exists in system. </summary>
-            # <param name="${str_file}"> str: the cron file </param>
-            # <param name="${bool_nonzero_amount_of_failed_operations}"> bool: flag for failed operation </param>
-            # <returns> flag for failed operation </returns>
-            function AppendCron_MatchCronFile
-            {
-                for str_actual_package in ${arr_actual_packages[@]}; do
-                    if [[ "${str_file}" == *"${str_actual_package}"* ]]; then
-                        if CheckIfCommandIsInstalled "${str_actual_package}"; then
-                            cp "${str_file}" "${str_dir1}${str_file}" || bool_nonzero_amount_of_failed_operations=true
-                        else
-                            bool_nonzero_amount_of_failed_operations=true
-                        fi
-                    fi
-                done
-            }
-
-            CheckIfDirExists $str_files_dir | return "${?}"
-            cd $str_files_dir || return 1
+            CheckIfDirExists "${str_files_dir}" || return "${?}"
+            cd "${str_files_dir}" || return 1
+            local readonly var_command='ls *-cron'
 
             for str_file in eval "${var_command}"; do
-                ReadInput "Append '${str_file}'?" && AppendCron_MatchCronFile
+                local str_output="Append '${str_file}'?"
+                ReadInput "${str_output}" && AppendCron_MatchCronFile
             done
 
-            systemctl enable cron || return 1
-            systemctl restart cron || return 1
+            local readonly var_service="cron"
+            systemctl enable "${var_service}" || return 1
+            systemctl restart "${var_service}" || return 1
 
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -1200,53 +1209,57 @@
     # <returns> exit code </returns>
     function AppendServices
     {
+        # <summary> Copy files and set permissions. </summary>
+        # <param name="${1}"> string: the new file </param>
+        # <param name="${2}"> string: the system file </param>
+        # <returns> exit code </returns>
+        function AppendServices_AppendFile
+        {
+            if CheckIfFileExists "${2}" &> /dev/null; then
+                cp "${1}" "${2}" || return 1
+                chown root "${2}" || return 1
+                chmod +x "${2}" || return 1
+                CheckIfDirExists "${str_files_dir}" || return "${?}"
+                cd "${str_files_dir}"
+            fi
+
+            return 0
+        }
+
         function AppendServices_Main
         {
             # <params>
             local readonly str_pattern=".service"
             declare -ar arr_dir1=( $( ls | uniq | grep -Ev ${str_pattern} ) )
             declare -ar arr_dir2=( $( ls | uniq | grep ${str_pattern} ))
+            local readonly var_command_update_services='systemctl daemon-reload'
             # </params>
 
-            # <summary> Copy files and set permissions. </summary>
-            # <param name="${2}"> string: the file </param>
-            # <returns> exit code </returns>
-            function AppendServices_AppendFile
-            {
-                if CheckIfFileExists "${2}" &> /dev/null; then
-                    cp "${1}" "${2}" || return 1
-                    chown root "${2}" || return 1
-                    chmod +x "${2}" || return 1
-                    CheckIfDirExists $str_files_dir || return "${?}"
-                    cd $str_files_dir
-                fi
-
-                return 0
-            }
-
             # <summary> Copy binaries to system. </summary>
-            for var_element1 in ${arr_dir1[@]}; do
-                local str_file1="/usr/sbin/${var_element1}"
-                AppendServices_AppendFile $var_element1 $str_file1
+            for str_binary in ${arr_dir1[@]}; do
+                local str_file="/usr/sbin/${str_binary}"
+                AppendServices_AppendFile "${str_binary}" "${str_file}"
             done
 
             # <summary> Copy services to system. </summary>
-            for var_element1 in ${arr_dir2[@]}; do
-                local str_file1="/etc/systemd/system/${var_element1}"
-                AppendServices_AppendFile $var_element1 $str_file1
+            for str_service in ${arr_dir2[@]}; do
+                local str_file="/etc/systemd/system/${str_service}"
+                AppendServices_AppendFile "${str_service}" "${str_file}"
 
-                if AppendServices_AppendFile $var_element1 $str_file1; then
-                    systemctl daemon-reload
+                if AppendServices_AppendFile "${str_service}" "${str_file}"; then
+                    eval "${var_command_update_services}"
 
-                    if ReadInput "Enable/disable '${var_element1}'?"; then
-                        systemctl enable ${var_element1}
+                    local str_output="Enable/disable '${str_service}'?"
+
+                    if ReadInput "${str_output}"; then
+                        systemctl enable "${str_service}"
                     else
-                        systemctl disable ${var_element1}
+                        systemctl disable "${str_service}"
                     fi
                 fi
             done
 
-            systemctl daemon-reload || return 1
+            eval "${var_command_update_services}" || return 1
         }
 
         # <params>
@@ -1268,14 +1281,13 @@
     # <returns> exit code </returns>
     function CloneOrUpdateGitRepositories
     {
-        function CloneOrUpdateGitRepositories_Main
+        # <summary> Get params. </summary>
+        # <returns> params </returns>
+        function CloneOrUpdateGitRepositories_GetParams
         {
-            # <params>
-            local bool_nonzero_amount_of_failed_repos=false
-
             # <summary> Example: "username/reponame" </summary>
             if $bool_is_user_root; then
-                local readonly str_dir1="/root/source/"
+                local readonly str_dir="/root/source/"
 
                 declare -ar arr_repo=(
                     "corna/me_cleaner"
@@ -1287,7 +1299,7 @@
                     "StevenBlack/hosts"
                 )
             else
-                local readonly str_dir1=$( echo ~/ )"source/"
+                local readonly str_dir=$( echo ~/ )"source/"
 
                 declare -ar arr_repo=(
                     "awilliam/rom-parser"
@@ -1297,20 +1309,29 @@
                     "spheenik/vfio-isolate"
                 )
             fi
+        }
+
+        function CloneOrUpdateGitRepositories_Main
+        {
+            # <params>
+            local bool_nonzero_amount_of_failed_repos=false
+            local str_dir=""
+            declare -a arr_repos=()
+            CloneOrUpdateGitRepositories_GetParams
             # </params>
 
-            CreateDir $str_dir1 || return "${?}"
-            chmod -R +w $str_dir1 || return 1
+            CreateDir "${str_dir}" || return "${?}"
+            chmod -R +w "${str_dir}" || return 1
 
             # <summary> Should code execution fail at any point, skip to next repo. </summary>
-            for str_repo in ${arr_repo[@]}; do
-                if cd $str_dir1; then
-                    local str_userName=$( echo $str_repo | cut -d "/" -f1 )
-                    if ! CheckIfDirExists "${str_dir1}${str_userName}"; then
-                        CreateDir "${str_dir1}${str_userName}"
+            for str_repo in ${arr_repos[@]}; do
+                if cd "${str_dir}"; then
+                    local str_user_name=$( echo "${str_repo}" | cut -d "/" -f1 )
+                    if ! CheckIfDirExists "${str_dir}${str_user_name}"; then
+                        CreateDir "${str_dir}${str_user_name}"
                     fi
 
-                    if CheckIfDirExists "${str_dir1}${str_userName}" && ! UpdateOrCloneGitRepo $str_dir1 $str_repo $str_userName; then
+                    if CheckIfDirExists "${str_dir}${str_user_name}" && ! UpdateOrCloneGitRepo "${str_dir}" "${str_repo}" "${str_user_name}"; then
                         bool_nonzero_amount_of_failed_repos=true
                         echo
                     fi
@@ -1341,10 +1362,10 @@
     # <returns> exit code </returns>
     function InstallFromLinuxRepos
     {
-        # NOTE: update here!
-        # <summary> APT packages sorted by type. </summary>
-        # <returns> lists of packages by type </returns>
-        function InstallFromLinuxRepos_GetAPTPackages
+        # NOTE: Update Here!
+        # <summary> Get params. </summary>
+        # <returns> params </returns>
+        function InstallFromLinuxRepos_GetParamsForAPT
         {
             # <params>
             declare -a arr_packages_to_install=()
@@ -1476,18 +1497,18 @@
         {
             if CheckIfVarIsValid "${1}"; then
                 declare -i int_i=1
-                local str_list_of_packages_to_install=${1}
-                local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
+                local str_list_of_packages_to_install="${1}"
+                local str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
 
                 while CheckIfVarIsValid $str_package; do
                     echo -e "\t${str_package}"
                     (( int_i++ ))
-                    str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
+                    str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
                 done
 
                 echo
                 ReadInput "${2}" || return "${?}"
-                arr_packages_to_install+=( $str_list_of_packages_to_install )
+                arr_packages_to_install+=( "${str_list_of_packages_to_install}" )
                 return 0
             fi
 
@@ -1501,7 +1522,7 @@
             # <params>
             case "${str_package_manager}" in
                 "apt" )
-                    InstallFromLinuxRepos_GetAPTPackages
+                    InstallFromLinuxRepos_GetParamsForAPT
                     ;;
 
                 * )
@@ -1544,67 +1565,14 @@
     # <returns> exit code </returns>
     function InstallFromFlathubRepos
     {
-        # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_flatpak_to_install[@]}"> total list of packages to install </parameter>
-        # <parameter name="${1}"> this list packages to install </parameter>
-        # <parameter name="${2}"> output statement </parameter>
-        # <returns> ${arr_flatpak_to_install[@]} </returns>
-        function InstallFromFlathubRepos_InstallByType
-        {
-            if CheckIfVarIsValid "${1}"; then
-                declare -i int_i=1
-                local str_list_of_packages_to_install=${1}
-                local str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
-
-                while CheckIfVarIsValid $str_package; do
-                    echo -e "\t${str_package}"
-                    (( int_i++ ))
-                    str_package=$( echo $str_list_of_packages_to_install | cut -d ' ' -f $int_i )
-                done
-
-                echo
-                ReadInput "${2}" || return "${?}"
-                arr_flatpak_to_install+=( $str_list_of_packages_to_install )
-                return 0
-            fi
-
-            return 1
-        }
-
-        function InstallFromFlathubRepos_Main
+        # NOTE: Update Here!
+        # <summary> Get params. </summary>
+        # <returns> params </returns>
+        function InstallFromFlathubRepos_GetParams
         {
             # <params>
-            local str_command="flatpak"
-            # </params>
-
-            CheckIfCommandIsInstalled "${str_command}" || (
-                InstallPackage $str_command
-                CheckIfCommandIsInstalled "${str_command}" || return "${?}"
-            )
-
-            # <summary> Pre-requisites. </summary>
-            CheckIfCommandIsInstalled "plasma-desktop lxqt" || InstallPackage "plasma-discover-backend-flatpak"
-            CheckIfCommandIsInstalled "gnome xfwm4" || InstallPackage "gnome-software-plugin-flatpak"
-
-            sudo flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-            sudo flatpak update -y || return 1
-            echo
-
-            # <summary> Select and Install software sorted by type. </summary>
-            InstallFromFlathubRepos_InstallByType ${arr_flatpak_Unsorted[@]} "Select given Flatpak software?"
-            InstallFromFlathubRepos_InstallByType ${str_flatpak_PrismBreak[@]} "Select recommended Prism Break Flatpak software?"
-            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "${?}"
-            ReadInput "Install selected Flatpak apps?" && flatpak install --user ${arr_flatpak_to_install[@]}
-        }
-
-        # NOTE: update here!
-        # <summary> Flatpak packages sorted by type. </summary>
-        # <params>
-            local readonly str_output="Installing from Flathub repositories..."
-
             declare -a arr_flatpak_to_install=()
 
-            # NOTE: update here!
             declare -ar arr_flatpak_Compatibility=(
                 "org.freedesktop.Platform"
                 "org.freedesktop.Platform.Compat.i386"
@@ -1671,6 +1639,73 @@
                 "org.kde.KStyle.Adwaita"
                 "org.kde.Platform"
             )
+            # </params>
+        }
+
+        # <summary> Select and Install software sorted by type. </summary>
+        # <parameter name="${arr_flatpak_to_install[@]}"> total list of packages to install </parameter>
+        # <parameter name="${1}"> this list packages to install </parameter>
+        # <parameter name="${2}"> output statement </parameter>
+        # <returns> ${arr_flatpak_to_install[@]} </returns>
+        function InstallFromFlathubRepos_InstallByType
+        {
+            if CheckIfVarIsValid "${1}"; then
+                declare -i int_i=1
+                local str_list_of_packages_to_install="${1}"
+                local str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
+
+                while CheckIfVarIsValid $str_package; do
+                    echo -e "\t${str_package}"
+                    (( int_i++ ))
+                    str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
+                done
+
+                echo
+                ReadInput "${2}" || return "${?}"
+                arr_flatpak_to_install+=( "${str_list_of_packages_to_install}" )
+                return 0
+            fi
+
+            return 1
+        }
+
+        function InstallFromFlathubRepos_Main
+        {
+            # <params>
+            local str_command="flatpak"
+            InstallFromFlathubRepos_GetParams
+            # </params>
+
+            CheckIfCommandIsInstalled "${str_command}" || (
+                InstallPackage "${str_command}"
+                CheckIfCommandIsInstalled "${str_command}" || return "${?}"
+            )
+
+            # <summary> Pre-requisites. </summary>
+            local str_packages="plasma-desktop lxqt"
+            local str_packages_dependencies="plasma-discover-backend-flatpak"
+            CheckIfCommandIsInstalled "${str_packages}" || InstallPackage "${str_packages_dependencies}"
+
+            local str_packages="gnome xfwm4"
+            local str_packages_dependencies="gnome-software-plugin-flatpak"
+            CheckIfCommandIsInstalled "${str_packages}" || InstallPackage "${str_packages_dependencies}"
+
+            local readonly str_flatpak_repo="https://flathub.org/repo/flathub.flatpakrepo"
+
+            sudo flatpak remote-add --if-not-exists flathub "${str_flatpak_repo}"
+            sudo flatpak update -y || return 1
+            echo
+
+            # <summary> Select and Install software sorted by type. </summary>
+            InstallFromFlathubRepos_InstallByType "${arr_flatpak_Unsorted[@]}" "Select given Flatpak software?"
+            InstallFromFlathubRepos_InstallByType "${str_flatpak_PrismBreak[@]}" "Select recommended Prism Break Flatpak software?"
+            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "${?}"
+            local readonly str_output="Install selected Flatpak apps?"
+            ReadInput "${str_output}" && flatpak install --user "${arr_flatpak_to_install[@]}"
+        }
+
+        # <params>
+        local readonly str_output="Installing from Flathub repositories..."
         # </params>
 
         echo -e "${str_output}"
@@ -1689,7 +1724,7 @@
             local str_file1="installer.bash"
             local str_repo="portellam/auto-xorg"
             local str_scriptDir="${str_dir1}${str_repo}/"
-            InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
 
             # <summary> StevenBlack/hosts </summary>
             local str_repo="stevenblack/hosts"
@@ -1700,7 +1735,7 @@
                 cd $str_scriptDir
                 local str_file1="/etc/hosts"
 
-                CreateBackupFile $str_file1 && ( cp hosts $str_file1 &> /dev/null || bool_nonzero_amount_of_failed_operations=false )
+                CreateBackupFile "${str_file}" && ( cp hosts "${str_file}" &> /dev/null || bool_nonzero_amount_of_failed_operations=false )
             fi
 
             # <summary> pyllyukko/user.js </summary>
@@ -1713,7 +1748,7 @@
                 local str_file1="/etc/firefox-esr/firefox-esr.js"
 
                 make debian_locked.js &> /dev/null && (
-                    CreateBackupFile $str_file1 && ( cp debian_locked.js $str_file1 || bool_nonzero_amount_of_failed_operations=false )
+                    CreateBackupFile "${str_file}" && ( cp debian_locked.js "${str_file}" || bool_nonzero_amount_of_failed_operations=false )
                 )
             fi
 
@@ -1721,7 +1756,7 @@
             local str_file1="installer.sh"
             local str_repo="foundObjects/zram-swap"
             local str_scriptDir="${str_dir1}${str_repo}/"
-            InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
         }
 
         function InstallFromGitRepos_GetUserScripts
@@ -1730,21 +1765,21 @@
             # local str_file1="installer.sh"
             local str_repo="awilliam/rom-parser"
             local str_scriptDir="${str_dir1}${str_repo}/"
-            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
             # CheckIfDirExists $str_scriptDir
 
             # <summary> spaceinvaderone/Dump_GPU_vBIOS </summary>
             # local str_file1="installer.sh"
             local str_repo="spaceinvaderone/dump_gpu_vbios"
             local str_scriptDir="${str_dir1}${str_repo}/"
-            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
             # CheckIfDirExists $str_scriptDir
 
             # <summary> spheenik/vfio-isolate </summary>
             # local str_file1="installer.sh"
             local str_repo="spheenik/vfio-isolate"
             local str_scriptDir="${str_dir1}${str_repo}/"
-            # InstallFromGitRepos_ExecuteScript $str_scriptDir $str_file1
+            # InstallFromGitRepos_ExecuteScript $str_scriptDir "${str_file}"
             # CheckIfDirExists $str_scriptDir
         }
 
@@ -1762,7 +1797,7 @@
             local str_dir2=$( basename "${1}" )"/"
             # </params>
 
-            cd $str_dir1 || return 1
+            cd "${str_dir}"1 || return 1
             ( CheckIfDirExists "${1}" && ( cd "${1}" || false ) ) || return "${?}"
             CheckIfFileExists ${2}|| return "${?}"
 
@@ -1778,7 +1813,7 @@
             fi
 
             AppendPassOrFail "${str_output}"
-            cd $str_dir1 || return 1
+            cd "${str_dir}"1 || return 1
         }
 
         function InstallFromGitRepos_Main
@@ -1793,7 +1828,7 @@
             fi
             # </params>
 
-            if CheckIfDirExists $str_dir1; then
+            if CheckIfDirExists "${str_dir}"1; then
                 if [[ $bool_is_user_root == true ]]; then
                     InstallFromGitRepos_GetSudoScripts
                 else
@@ -1830,94 +1865,96 @@
             IFS=$'\n'
             local bool_nonzero_amount_of_failed_operations=false
             local readonly str_file1="/etc/apt/sources.list"
-            local readonly str_release_Name=$( lsb_release -sc )
+            local readonly str_release_name=$( lsb_release -sc )
             local readonly str_release_Ver=$( lsb_release -sr )
             local str_sources=""
             # </params>
 
-            CreateBackupFile $str_file1 || return "${?}"
-            ReadInput "Include 'contrib' sources?" && str_sources+="contrib"
+            CreateBackupFile "${str_file}" || return "${?}"
+            local str_sources="contrib"
+            ReadInput "Include '${str_sources}' sources?" && str_sources+="${str_sources}"
             CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
-            ReadInput "Include 'non-free' sources?" && str_sources+="non-free"
+            local str_sources="non-free"
+            ReadInput "Include '${str_sources}' sources?" && str_sources+="${str_sources}"
 
             # <summary> Setup mandatory sources. </summary>
             # <summary> User prompt </summary>
             echo
-            echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_release_Name})."
-            echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_Name} release branch."
+            echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_release_name})."
+            echo -e "${str_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_name} release branch."
             echo -e "Release branches:"
-            echo -e "\t'stable'\t== '${str_release_Name}'"
+            echo -e "\t'stable'\t== '${str_release_name}'"
             echo -e "\t'testing'\t*more recent updates; slightly less stability"
             echo -e "\t'unstable'\t*most recent updates; least stability. NOT recommended."
-            echo -e "\t'backports'\t== '${str_release_Name}-backports'\t*optionally receive more recent updates."
+            echo -e "\t'backports'\t== '${str_release_name}-backports'\t*optionally receive more recent updates."
 
             # <summary Apt sources </summary>
             ReadMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
-            local readonly str_branch_Name=$var_return
+            local readonly str_branch_name=${var_return}
 
             declare -a arr_sources=(
-                "# debian $str_branch_Name"
+                "# debian ${str_branch_name}"
                 "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ $str_branch_Name main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branch_Name main $str_sources"
+                "deb http://deb.debian.org/debian/ ${str_branch_name} main $str_sources"
+                "deb-src http://deb.debian.org/debian/ ${str_branch_name} main $str_sources"
                 $'\n'
-                "deb http://deb.debian.org/debian/ $str_branch_Name-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ $str_branch_Name-updates main $str_sources"
+                "deb http://deb.debian.org/debian/ ${str_branch_name}-updates main $str_sources"
+                "deb-src http://deb.debian.org/debian/ ${str_branch_name}-updates main $str_sources"
                 $'\n'
-                "deb http://security.debian.org/debian-security/ $str_branch_Name-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ $str_branch_Name-security main $str_sources"
+                "deb http://security.debian.org/debian-security/ ${str_branch_name}-security main $str_sources"
+                "deb-src http://security.debian.org/debian-security/ ${str_branch_name}-security main $str_sources"
                 "#"
             )
 
-            CheckIfFileExists $str_file1 || bool_nonzero_amount_of_failed_operations=true
+            CheckIfFileExists "${str_file1}" || bool_nonzero_amount_of_failed_operations=true
 
             # <summary> Comment out lines in system file. </summary>
-            declare -a var_file=()
+            declare -a arr_file=()
 
-            while read var_element1; do
-                if [[ $var_element1 != "#"* ]]; then
-                    var_element1="#$var_element1"
+            while read var_line; do
+                if [[ "${var_line}" != "#"* ]]; then
+                    var_line="#${var_line}"
                 fi
 
-                var_file+=( $var_element1 )
-            done < $str_file1 || return 1
+                arr_file+=( "${var_line}" )
+            done < "${str_file1}" || return 1
 
-            WriteToFile ${var_file[@]}
+            WriteToFile "${str_file1}" "${arr_file[@]}"
 
             # <summary> Append to output. </summary>
-            case $str_branch_Name in
+            case "${str_branch_name}" in
                 # <summary> Current branch with backports. </summary>
                 "backports")
                     declare -a arr_sources=(
-                        "# debian $str_release_Ver/$str_release_Name"
+                        "# debian $str_release_Ver/$str_release_name"
                         "# See https://wiki.debian.org/SourcesList for more information."
-                        "deb http://deb.debian.org/debian/ $str_release_Name main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_release_Name main $str_sources"
+                        "deb http://deb.debian.org/debian/ $str_release_name main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_release_name main $str_sources"
                         ""
-                        "deb http://deb.debian.org/debian/ $str_release_Name-updates main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_release_Name-updates main $str_sources"
+                        "deb http://deb.debian.org/debian/ $str_release_name-updates main $str_sources"
+                        "deb-src http://deb.debian.org/debian/ $str_release_name-updates main $str_sources"
                         ""
-                        "deb http://security.debian.org/debian-security/ $str_release_Name-security main $str_sources"
-                        "deb-src http://security.debian.org/debian-security/ $str_release_Name-security main $str_sources"
+                        "deb http://security.debian.org/debian-security/ $str_release_name-security main $str_sources"
+                        "deb-src http://security.debian.org/debian-security/ $str_release_name-security main $str_sources"
                         "#"
                         ""
-                        "# debian $str_release_Ver/$str_release_Name $str_branch_Name"
-                        "deb http://deb.debian.org/debian $str_release_Name-$str_branch_Name main contrib non-free"
-                        "deb-src http://deb.debian.org/debian $str_release_Name-$str_branch_Name main contrib non-free"
+                        "# debian $str_release_Ver/$str_release_name ${str_branch_name}"
+                        "deb http://deb.debian.org/debian $str_release_name-${str_branch_name} main contrib non-free"
+                        "deb-src http://deb.debian.org/debian $str_release_name-${str_branch_name} main contrib non-free"
                         "#"
                     )
                     ;;
             esac
 
             # <summary> Output to sources file. </summary>
-            local readonly str_file2="/etc/apt/sources.list.d/$str_branch_Name.list"
+            local readonly str_file2="/etc/apt/sources.list.d/${str_branch_name}.list"
             # DeleteFile $str_file2 &> /dev/null
-            # CreateFile $str_file2 &> /dev/null
+            # CreateFile $str_file2 &> /dev/nullca
 
-            case $str_branch_Name in
-                "backports"|"testing"|"unstable")
-                    declare -a var_file=( ${arr_sources[@]} )
-                    WriteToFile $str_file2
+            case "${str_branch_name}" in
+                "backports"|"testing"|"unstable" )
+                    declare -a arr_file=( "${arr_sources[@]}" )
+                    WriteToFile "${str_file1}" "${arr_file[@]}"
                     ;;
             esac
 
@@ -1931,7 +1968,9 @@
         }
 
         # <params>
-        local str_output="Modifying $( lsb_release -is ) $( uname -o ) repositories..."
+        local readonly str_distro="$( lsb_release -is ) "
+        local readonly str_kernel="$( uname -o ) "
+        local readonly str_output="Modifying ${str_distro}${str_kernel}repositories..."
         # </params>
 
         echo -e "${str_output}"
@@ -1958,6 +1997,7 @@
             declare -ir int_min_count=1
             declare -ir int_max_count=3
             declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+            declare -a arr_file=()
             # </params>
 
             if ! ReadInput "Modify SSH?"; then
@@ -1980,7 +2020,7 @@
                 bool=false
             fi
 
-            var_file=(
+            arr_file+=(
                 "#"
                 "LoginGraceTime 1m"
                 "PermitRootLogin prohibit-password"
@@ -1989,7 +2029,7 @@
             )
 
             if $bool; then
-                var_file+=(
+                arr_file+=(
                     "Port ${str_alt_SSH}"
                 )
             fi
@@ -1997,7 +2037,8 @@
             if CheckIfCommandIsInstalled "${str_command}"; then
                 local readonly str_file1="/etc/ssh/ssh_config"
                 CreateBackupFile "${str_file1}" || return "${?}"
-                $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )                # TODO: refactor, do this action once for all related files for given related commands
+                # TODO: refactor, do this action once for all related files for given related commands.  $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
+                $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
 
                 # <summary> Reinstall package to regenerate system configuration file. </summary>
                 case "${str_package_manager}" in
@@ -2015,7 +2056,7 @@
                     return "${?}"
                 fi
 
-                WriteToFile "${str_file1}" || return "${?}"
+                WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
                 systemctl restart "${str_command}" || return 1
             fi
 
@@ -2043,7 +2084,7 @@
             #         return "${?}"
             #     fi
 
-            #     WriteToFile "${str_file1}" || return "${?}"
+            #     WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
             #     systemctl restart "${str_command}" || return 1
             # fi
 
@@ -2052,7 +2093,7 @@
         }
 
         # <params>
-        local str_output="Configuring SSH..."
+        local readonly str_output="Configuring SSH..."
         # </params>
 
         echo -e "${str_output}"
@@ -2187,16 +2228,16 @@
             # local readonly str_services="acpupsd cockpit fail2ban ssh ufw"
             # </params>
 
-            CheckIfDirExists $str_files_dir || return "${?}"
+            CheckIfDirExists "${str_files_dir}" || return "${?}"
             declare -a arr_file1=( )
 
             ModifySecurity_SetupServices
             ModifySecurity_AppendFiles
 
-            CheckIfFileExists $str_file1 && (
+            CheckIfFileExists "${str_file}" && (
                 ReadInput "Setup '${str_file2}' with defaults?" && (
-                    ( cp $str_file1 $str_file2 &> /dev/null ) || return "${?}"
-                    ( cat $str_file2 >> $str_file1 &> /dev/null ) || return "${?}"
+                    ( cp "${str_file}" $str_file2 &> /dev/null ) || return "${?}"
+                    ( cat $str_file2 >> "${str_file}" &> /dev/null ) || return "${?}"
                 )
             )
 
@@ -2378,7 +2419,7 @@
         if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
             bool=true
         else
-            ( InstallPackage $str_command && bool=true ) || return "${?}"
+            ( InstallPackage "${str_command}" && bool=true ) || return "${?}"
         fi
 
         if $bool; then
@@ -2392,10 +2433,10 @@
 # <code>
     # <params>
     GoToScriptDir; declare -gr str_files_dir=$( find . -name files | uniq | head -n1 )
-    CheckIfUserIsRoot &> /dev/null; declare -g bool_is_user_root=$( ParseExitCodeAsBool )
-    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null; declare -g bool_is_connected_to_Internet=$( ParseExitCodeAsBool )
+    declare -g bool_is_connected_to_Internet=false
+    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true
 
-    # <summary> Update Here! </summary>
+    # NOTE: Update Here!
     declare -gr str_functions_to_execute='ExecuteSystemSetup|ExecuteGitSetup|ExecuteSoftwareSetup'
     declare -gr str_functions_to_execute_output='Execute System setup?|Execute Git setup and installation?|Execute software setup and installation?'
     # </params>
