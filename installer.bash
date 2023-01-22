@@ -7,6 +7,7 @@
 # <summary>
 #
 # TODO
+# - create UninstallPackage
 # - use rsync over copy
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
 # - debug all functions
@@ -381,8 +382,8 @@
             declare -ir int_max_count=4
             local readonly str_dir1=$( dirname "${1}" )
             local readonly str_suffix=".old"
-            var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -V'
-            declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
+            local readonly var_command='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -V'
+            declare -a arr_dir1=( $( eval "${var_command}" ) )
             # </params>
 
             # <summary> Create backup file if none exist. </summary>
@@ -403,7 +404,7 @@
             # <summary> Delete older backup files, if total matches/exceeds maximum. </summary>
             while [[ "${#arr_dir1[@]}" -gt "$int_max_count" ]]; do
                 DeleteFile "${arr_dir1[0]}" || return "${?}"
-                arr_dir1=( $( eval "$var_get_dir1" ) )
+                arr_dir1=( $( eval "${var_command}" ) )
             done
 
             # <summary> Increment number of last backup file index. </summary>
@@ -517,8 +518,8 @@
             # <params>
             local readonly str_dir1=$( dirname "${1}" )
             local readonly str_suffix=".old"
-            var_get_dir1='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -rV'
-            declare -a arr_dir1=( $( eval "$var_get_dir1" ) )
+            var_command='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -rV'
+            declare -a arr_dir1=( $( eval "${var_command}" ) )
             # </params>
 
             CheckIfVarIsValid ${arr_dir1[@]} || return "${?}"
@@ -980,8 +981,8 @@
         # <summary> Auto-update and auto-install selected packages </summary>
         case "${str_package_manager}" in
             "apt" )
-                str_option1="--reinstall -o Dpkg::Options::=--force-confmiss"
-                str_commands_to_execute="apt update && apt full-upgrade -y && apt install ${str_option1} -y ${1}"
+                local readonly str_option="--reinstall -o Dpkg::Options::=--force-confmiss"
+                str_commands_to_execute="apt update && apt full-upgrade -y && apt install ${str_option} -y ${1}"
                 ;;
 
             "dnf" )
@@ -1029,13 +1030,16 @@
     {
         # <summary> Update existing GitHub repository. </summary>
         if CheckIfDirExists "${1}${2}"; then
-            cd "${1}${2}" && TryThisXTimesBeforeFail "git pull"
+            local var_command="git pull"
+            cd "${1}${2}" && TryThisXTimesBeforeFail $( eval "${var_command}" )
             return "${?}"
 
         # <summary> Clone new GitHub repository. </summary>
         else
             if ReadInput "Clone repo '${2}'?"; then
-                cd "${1}${3}" && TryThisXTimesBeforeFail "git clone https://github.com/${2}"
+                local var_command="git clone https://github.com/${2}"
+
+                cd "${1}${3}" && TryThisXTimesBeforeFail $( eval "${var_command}" )
                 return "${?}"
             fi
         fi
