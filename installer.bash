@@ -55,26 +55,27 @@
     }
 
     # <summary> Parse and execute from a list of command(s) </summary>
-    # <param name="${1}"> array: the list of command(s) </param>
-    # <param name="${2}"> array: the list of output statements for each command call </param>
+    # <param name="${1}"> string of array: the list of command(s) </param>
+    # <param name="${2}"> string of array: the list of output statements for each command call </param>
+    # <param name="${3}"> var: the delimiter </param>
     # <returns> exit code </returns>
     function ParseAndExecuteListOfCommands
     {
         CheckIfVarIsValid "${1}" || return "${?}"
 
         # <params>
-        local readonly var_delimiter='|'
         declare -a arr_commands=()
         declare -a arr_commands_output=()
         local readonly str_output_fail="${var_prefix_error} Execution of command failed."
+        local var_delimiter=' '
         # </params>
 
-        readarray -t -d ${var_delimiter} <<< ${1} &> /dev/null
-        readonly arr_commands=( "${MAPFILE[@]}" )
+        CheckIfVarIsValid "${3}" &> /dev/null && var_delimiter="${3}"
+        readarray -d "${var_delimiter}" -t arr_commands <<< ${1} &> /dev/null
         CheckIfVarIsValid "${arr_commands[@]}" || return "${?}"
 
-        if CheckIfVarIsValid "${2}" &> /dev/null && readarray -t -d ${var_delimiter} <<< ${2} &> /dev/null; then
-            readonly arr_commands_output=( "${MAPFILE[@]}" )
+        if CheckIfVarIsValid "${2}" &> /dev/null; then
+            readarray -d "${var_delimiter}" -t arr_commands_output <<< ${2} &> /dev/null
         fi
 
         for int_key in ${!arr_commands[@]}; do
@@ -491,7 +492,7 @@
 
     # <summary> Read input from a file. Call '$var_file' after calling this function. </summary>
     # <param name="${1}"> string: the file </param>
-    # <param name="${2}"> array: the file contents </param>
+    # <param name="${2}"> string of array: the file contents </param>
     # <returns> exit code </returns>
     function ReadFromFile
     {
@@ -543,36 +544,34 @@
 
     # <summary> Write output to a file. Call '$var_file' after calling this function. </summary>
     # <param name="${1}"> string: the file </param>
-    # <param name="${2}"> array: the file contents </param>
+    # <param name="${arr_file[@]}"> array: the file contents </param>
     # <returns> exit code </returns>
     function WriteToFile
     {
         CheckIfFileExists "${1}" || return "${?}"
 
         # <params>
-        IFS=$'\n'
-        declare -a arr_file=()
+        # IFS=$'\n'
+        declare -Ia arr_file
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
-        local readonly var_delimiter='|'
+        local var_delimiter=' '
         # </params>
 
-        if readarray -t -d ${var_delimiter} <<< ${1} &> /dev/null; then
-            readonly arr_file=( "${MAPFILE[@]}" )
-        fi
-
+        # CheckIfVarIsValid "${3}" &> /dev/null && var_delimiter="${3}"
+        # readarray -d "${var_delimiter}" -t arr_file <<< ${2}
         CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
 
-        # ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
-        #     echo -e "${str_output_fail}"
-        #     return 1
-        # )
+        ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
+            echo -e "${str_output_fail}"
+            return 1
+        )
 
-        for var_element in ${arr_file[@]}; do
-            echo -e "${var_element}" >> "${1}" || (
-                echo -e "${str_output_fail}"
-                return 1
-            )
-        done
+        # for var_element in ${arr_file[@]}; do
+        #     echo -e "${var_element}" >> "${1}" || (
+        #         echo -e "${str_output_fail}"
+        #         return 1
+        #     )
+        # done
 
         return 0
     }
@@ -965,41 +964,55 @@
         eval "${str_commands_to_execute}" || return 1
     }
 
-    # <summary> Check if system file is original or not. Reinstall package for system file, and/or create backups as necessary </summary>
+    # <summary> Check if system file is original or not. </summary>
     # <parameter name="${1}"> string: the system file </parameter>
+    # <parameter name="${2}"> string: the software package(s) to install </parameter>
     # <parameter name="${bool_is_connected_to_Internet}"> boolean: TestNetwork </parameter>
     # <returns> exit code </returns>
     function CheckIfSystemFileIsOriginal
     {
+        CheckIfVarIsValid "${1}" || return "${?}"
+        CheckIfVarIsValid "${2}" || return "${?}"
+
         # <params>
         local bool_backup_file_exists=false
-        local bool_package_is_reinstalled=false
         local bool_system_file_is_original=false
+        local readonly str_backup_file="${1}.bak"
         # </params>
 
         # <summary> Original system file does not exist. </summary>
         if $bool_is_connected_to_Internet && ! CheckIfFileExists "${1}"; then
-            InstallPackage "${str_package_to_install}" true && bool_system_file_is_original=true
+            InstallPackage "${2}" true && bool_system_file_is_original=true
         fi
 
-        if CreateBackupFile "${1}"; then
+        # if CreateBackupFile "${1}"; then                                      # CreateBackupFile is broken?
+        #     bool_backup_file_exists=true
+        # fi
+
+        if cp "${1}" "${str_backup_file}" && CheckIfFileExists "${1}"; then
             bool_backup_file_exists=true
+        else
+            return 1
         fi
 
         # <summary> It is unknown if system file *is* original. </summary>
-        if $bool_backup_file_exists && $bool_is_connected_to_Internet && ! $bool_system_file_is_original; then
+        if $bool_is_connected_to_Internet && $bool_backup_file_exists && ! $bool_system_file_is_original; then
             DeleteFile "${1}"
-            InstallPackage "${str_package_to_install}" true && bool_system_file_is_original=true
+            InstallPackage "${2}" true && bool_system_file_is_original=true
         fi
 
-        # <summary> Do no harm, system file *is not* original. Attempt to restore and exit. </summary>
-        if $bool_backup_file_exists && ! $bool_package_is_reinstalled; then
-            RestoreBackupFile "${1}"
-            return "${?}"
+        # <summary> System file *is not* original. Attempt to restore backup. </summary>
+        if $bool_backup_file_exists && ! $bool_system_file_is_original; then
+            # RestoreBackupFile "${1}"                                          # RestoreBackupFile is broken?
+            cp "${str_backup_file}" "${1}" || return 1
         fi
 
-        # <summary> Do no work, system file *is not* original. File failed to backup, and file failed to reinstall. </summary>
-        if ! $bool_backup_file_exists && ! $bool_package_is_reinstalled; then
+        # <summary> Do no work. </summary>
+        # if ! $bool_backup_file_exists || ! $bool_system_file_is_original; then
+        #     return 1
+        # fi
+
+        if ! $bool_system_file_is_original; then
             return 1
         fi
 
@@ -1009,17 +1022,21 @@
     # <summary> Distro-agnostic, Install a software package. </summary>
     # <param name="${1}"> string: the software package(s) </param>
     # <param name="${2}"> boolean: true/false do/don't reinstall software package and configuration files (if possible) </param>
+    # <param name="${str_package_manager}"> string: the package manager </param>
     # <returns> exit code </returns>
     function InstallPackage
     {
-        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid "${str_package_manager}" )|| return "${?}"
+        CheckIfVarIsValid "${1}" || return "${?}"
+        CheckIfVarIsValid "${str_package_manager}" || return "${?}"
 
         # <params>
-        ( CheckIfVarIsBool "${2}" &> /dev/null && local bool_option_reinstall=${2} )
+        local bool_option_reinstall=false
         local str_commands_to_execute=""
         local readonly str_output="Installing software packages..."
         local readonly str_output_fail="${var_prefix_fail}: Command '${str_package_manager}' is not supported."
         # </params>
+
+        CheckIfVarIsBool "${2}" &> /dev/null && bool_option_reinstall=true
 
         # <summary> Auto-update and auto-install selected packages </summary>
         case "${str_package_manager}" in
@@ -1059,17 +1076,19 @@
         esac
 
         echo "${str_output}"
-        eval "${str_commands_to_execute}" &> /dev/null || ( return 1 )
+        eval "${str_commands_to_execute}" || ( return 1 )
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
     }
 
     # <summary> Distro-agnostic, Uninstall a software package. </summary>
     # <param name="${1}"> string: the software package(s) </param>
+    # <param name="${str_package_manager}"> string: the package manager </param>
     # <returns> exit code </returns>
     function UninstallPackage
     {
-        ( CheckIfVarIsValid "${1}" && CheckIfVarIsValid "${str_package_manager}" )|| return "${?}"
+        CheckIfVarIsValid "${1}" || return "${?}"
+        CheckIfVarIsValid "${str_package_manager}" || return "${?}"
 
         # <params>
         local str_commands_to_execute=""
@@ -1188,7 +1207,7 @@
         declare -gr var_prefix_pass="${var_green}Success:${var_reset_color}"
         declare -gr var_prefix_warn="${var_blinking_red}Warning:${var_reset_color}"
         declare -gr var_suffix_fail="${var_red}Failure${var_reset_color}"
-        declare -gr var_suffix_maybe="${var_yellow}Successfully Incomplete${var_reset_color}"
+        declare -gr var_suffix_maybe="${var_yellow}Incomplete${var_reset_color}"
         declare -gr var_suffix_pass="${var_green}Success${var_reset_color}"
         declare -gr var_suffix_skip="${var_yellow}Skipped${var_reset_color}"
 
@@ -1975,7 +1994,7 @@
             # <summary> User prompt </summary>
             echo
             echo -e "Repositories: Enter one valid option or none for default (Current branch: ${str_release_name})."
-            echo -e "${var_prefix_warn}It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_name} release branch."
+            echo -e "${var_prefix_warn} It is NOT possible to revert from a non-stable branch back to a stable or ${str_release_name} release branch."
             echo -e "Release branches:"
             echo -e "\t'stable'\t== '${str_release_name}'"
             echo -e "\t'testing'\t*more recent updates; slightly less stability"
@@ -2013,7 +2032,7 @@
                 arr_file+=( "${var_line}" )
             done < "${str_file1}" || return 1
 
-            WriteToFile "${str_file1}" "${arr_file[@]}"
+            WriteToFile "${str_file1}"
 
             # <summary> Append to output. </summary>
             case "${str_branch_name}" in
@@ -2048,7 +2067,7 @@
             case "${str_branch_name}" in
                 "backports"|"testing"|"unstable" )
                     declare -a arr_file=( "${arr_sources[@]}" )
-                    WriteToFile "${str_file1}" "${arr_file[@]}"
+                    WriteToFile "${str_file1}"
                     ;;
             esac
 
@@ -2095,7 +2114,7 @@
                 )
 
                 DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
 
                 local str_file="/etc/modprobe.d/disable-firewire.conf"
                 declare -a arr_file=(
@@ -2103,7 +2122,7 @@
                 )
 
                 DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
 
                 local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
                 declare -a arr_file=(
@@ -2111,7 +2130,7 @@
                 )
 
                 DeleteFile "${str_file}" &> /dev/null || return "${?}"
-                WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
+                WriteToFile "${str_file}" || return "${?}"
 
                 update-initramfs -u -k all || return "${?}"
             fi
@@ -2222,10 +2241,7 @@
             local readonly var_delimiter=' '
             # </params>
 
-            if readarray -t -d ${var_delimiter} <<< ${str_packages} &> /dev/null; then
-                readonly arr_packages=( "${MAPFILE[@]}" )
-            fi
-
+            readarray -d "${var_delimiter}" -t arr_packages <<< ${str_packages} &> /dev/null
             CheckIfVarIsValid "${arr_packages[@]}" || return "${?}"
 
             for str_package in ${arr_packages}; do
@@ -2254,10 +2270,7 @@
             local readonly var_delimiter=' '
             # </params>
 
-            if readarray -t -d ${var_delimiter} <<< ${str_services} &> /dev/null; then
-                readonly arr_services=( "${MAPFILE[@]}" )
-            fi
-
+            readarray -d "${var_delimiter}" -t arr_services <<< ${str_services} &> /dev/null
             CheckIfVarIsValid "${arr_services[@]}" || return "${?}"
 
             for str_service in ${arr_services}; do
@@ -2331,7 +2344,10 @@
             # <params>
             local bool=true
             local bool_nonzero_amount_of_failed_operations=false
-            local str_command="ssh"
+            local str_command1="ssh"
+            local str_command2="sshd"
+            local readonly str_file1="/etc/ssh/ssh_config"
+            local readonly str_file2="/etc/ssh/sshd_config"
             declare -ir int_min_count=1
             declare -ir int_max_count=3
             declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
@@ -2358,7 +2374,7 @@
                         break
                     fi
 
-                    echo -e "${var_prefix_warn}Available port range: 10000-65535"
+                    echo -e "${var_prefix_warn} Available port range: 10000-65535"
                 done
             fi
 
@@ -2366,6 +2382,7 @@
                 bool=false
             fi
 
+            # <summary> Update Here! </summary>
             arr_file+=(
                 "#"
                 "LoginGraceTime 1m"
@@ -2374,6 +2391,7 @@
                 "MaxSessions 2"
             )
 
+            # <summary> Update Here! </summary>
             if $bool; then
                 arr_file+=(
                     "Port ${str_alt_SSH}"
@@ -2381,13 +2399,13 @@
             fi
 
             # <summary> Write to original file. Make backups as necessary. </summary>
-            if CheckIfCommandIsInstalled "${str_command}"; then
-                local str_file="/etc/ssh/ssh_config"
+            if CheckIfCommandIsInstalled "${str_command1}"; then
+                local str_package_to_install=""
 
                 # <summary> Reinstall package to regenerate system configuration file. </summary>
                 case "${str_package_manager}" in
                     "apt" )
-                        local str_package_to_install="openssh-client"
+                        str_package_to_install="openssh-client"
                         ;;
 
                     * )
@@ -2395,42 +2413,16 @@
                         ;;
                 esac
 
-                
+                if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
+                    WriteToFile "${str_file1}" || return "${?}"
+                    systemctl restart "${str_command1}" || return 1
 
-                if CheckIfSystemFileIsOriginal "${str_file}"; then
-                    WriteToFile "${str_file}" "${arr_file[@]}" || return "${?}"
-                    systemctl restart "${str_command}" || return 1
+                    WriteToFile "${str_file2}" || return "${?}"
+                    systemctl restart "${str_command2}" || return 1
                 else
                     bool_nonzero_amount_of_failed_operations=true
                 fi
             fi
-
-            str_command="sshd"
-
-            # if CheckIfCommandIsInstalled "${str_command}"; then
-            #     local readonly str_file1="/etc/ssh/sshd_config"
-            #     CreateBackupFile "${str_file1}" || return "${?}"
-            #     $bool_is_connected_to_Internet && ( DeleteFile "${str_file1}" || return "${?}" )
-
-            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
-            #     case "${str_package_manager}" in
-            #         "apt" )
-            #             local str_package_to_install="openssh-client"
-            #             ;;
-
-            #         * )
-            #             return 1
-            #             ;;
-            #     esac
-
-            #     if $bool_is_connected_to_Internet && ! InstallPackage "${str_package_to_install}" true; then
-            #         RestoreBackupFile "${str_file1}"
-            #         return "${?}"
-            #     fi
-
-            #     WriteToFile "${str_file1}" "${arr_file[@]}" || return "${?}"
-            #     systemctl restart "${str_command}" || return 1
-            # fi
 
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -2567,7 +2559,6 @@
         fi
 
         ModifySSH
-        echo $str_alt_SSH
         return 0
         ModifySecurity || return "${?}"
         ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
@@ -2638,8 +2629,9 @@
     # NOTE: Update Here!
     declare -gr str_functions_to_execute='ExecuteSystemSetup|ExecuteGitSetup|ExecuteSoftwareSetup'
     declare -gr str_functions_to_execute_output='Execute System setup?|Execute Git setup and installation?|Execute software setup and installation?'
+    declare -gr var_functions_to_execute_delimiter="|"
     # </params>
 
-    ParseAndExecuteListOfCommands "${str_functions_to_execute}" "${str_functions_to_execute_output}"
+    ParseAndExecuteListOfCommands "${str_functions_to_execute}" "${str_functions_to_execute_output}" "${var_functions_to_execute_delimiter}"
     exit "${int_exit_code}"
 # </code>
