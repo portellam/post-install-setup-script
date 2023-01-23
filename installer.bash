@@ -55,28 +55,18 @@
     }
 
     # <summary> Parse and execute from a list of command(s) </summary>
-    # <param name="${1}"> string of array: the list of command(s) </param>
-    # <param name="${2}"> string of array: the list of output statements for each command call </param>
-    # <param name="${3}"> var: the delimiter </param>
+    # <param name="${arr_commands}"> string of array: the list of command(s) </param>
+    # <param name="${arr_commands_output}"> string of array: the list of output statements for each command call </param>
     # <returns> exit code </returns>
     function ParseAndExecuteListOfCommands
     {
-        CheckIfVarIsValid "${1}" || return "${?}"
-
         # <params>
-        declare -a arr_commands=()
-        declare -a arr_commands_output=()
+        declare -aI arr_commands=()
+        declare -aI arr_commands_output=()
         local readonly str_output_fail="${var_prefix_error} Execution of command failed."
-        local var_delimiter=' '
         # </params>
 
-        CheckIfVarIsValid "${3}" &> /dev/null && var_delimiter="${3}"
-        readarray -d "${var_delimiter}" -t arr_commands <<< ${1} &> /dev/null
         CheckIfVarIsValid "${arr_commands[@]}" || return "${?}"
-
-        if CheckIfVarIsValid "${2}" &> /dev/null; then
-            readarray -d "${var_delimiter}" -t arr_commands_output <<< ${2} &> /dev/null
-        fi
 
         for int_key in ${!arr_commands[@]}; do
             local var_command="${arr_commands[$int_key]}"
@@ -557,8 +547,6 @@
         local var_delimiter=' '
         # </params>
 
-        # CheckIfVarIsValid "${3}" &> /dev/null && var_delimiter="${3}"
-        # readarray -d "${var_delimiter}" -t arr_file <<< ${2}
         CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
 
         ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
@@ -2235,13 +2223,11 @@
         function ModifySecurity_SetupPackages
         {
             # <params>
-            declare -a arr_packages=()
+            ModifySecurity_GetPackages
+            declare -aI arr_packages=()
             declare -a arr_packages_to_uninstall=()
-            local readonly str_packages=$( ModifySecurity_GetPackages )
-            local readonly var_delimiter=' '
             # </params>
 
-            readarray -d "${var_delimiter}" -t arr_packages <<< ${str_packages} &> /dev/null
             CheckIfVarIsValid "${arr_packages[@]}" || return "${?}"
 
             for str_package in ${arr_packages}; do
@@ -2263,14 +2249,12 @@
         function ModifySecurity_SetupServices
         {
             # <params>
-            declare -a arr_services=()
+            ModifySecurity_GetServices
+            declare -aI arr_services=()
             declare -a arr_services_to_disable=()
             declare -a arr_services_to_enable=()
-            local readonly str_services=$( ModifySecurity_GetServices )
-            local readonly var_delimiter=' '
             # </params>
 
-            readarray -d "${var_delimiter}" -t arr_services <<< ${str_services} &> /dev/null
             CheckIfVarIsValid "${arr_services[@]}" || return "${?}"
 
             for str_service in ${arr_services}; do
@@ -2627,11 +2611,19 @@
     TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true
 
     # NOTE: Update Here!
-    declare -gr str_functions_to_execute='ExecuteSystemSetup|ExecuteGitSetup|ExecuteSoftwareSetup'
-    declare -gr str_functions_to_execute_output='Execute System setup?|Execute Git setup and installation?|Execute software setup and installation?'
-    declare -gr var_functions_to_execute_delimiter="|"
+    declare -gr arr_commands=(
+        "ExecuteSystemSetup"
+        "ExecuteGitSetup"
+        "ExecuteSoftwareSetup"
+    )
+
+    declare -gr arr_commands_output=(
+        "Execute System setup?"
+        "Execute Git setup and installation?"
+        "Execute software setup and installation?"
+    )
     # </params>
 
-    ParseAndExecuteListOfCommands "${str_functions_to_execute}" "${str_functions_to_execute_output}" "${var_functions_to_execute_delimiter}"
+    ParseAndExecuteListOfCommands
     exit "${int_exit_code}"
 # </code>
