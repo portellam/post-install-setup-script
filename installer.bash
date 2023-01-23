@@ -142,6 +142,50 @@
         return 0
     }
 
+    # <summary> Check if the daemon is installed. </summary>
+    # <param name="${1}"> string: the command </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfDaemonIsInstalled
+    {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} Daemon '${1}' is not installed."
+        local readonly var_command='systemctl status ${1} | grep -Eiv "not"'
+        local readonly var_command_output=$( eval "${var_command}" )
+        # </params>
+
+        if ! CheckIfVarIsValid "${var_command_output}"; then
+            echo -e "${str_output_fail}"
+            return "${int_code_cmd_is_null}"
+        fi
+
+        return 0
+    }
+
+    # <summary> Check if the process is active. </summary>
+    # <param name="${1}"> string: the command </param>
+    # <returns> exit code </returns>
+    #
+    function CheckIfProcessIsActive
+    {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
+        # <params>
+        local readonly str_output_fail="${var_prefix_error} Process '${1}' is not active."
+        local readonly var_command='ps -e | grep ${1}'
+        local readonly var_command_output=$( eval "${var_command}" )
+        # </params>
+
+        if ! CheckIfVarIsValid "${var_command_output}"; then
+            echo -e "${str_output_fail}"
+            return "${int_code_cmd_is_null}"
+        fi
+
+        return 0
+    }
+
     # <summary> Check if the value is a valid bool. </summary>
     # <param name="${1}"> var: the boolean </param>
     # <returns> exit code </returns>
@@ -2124,47 +2168,6 @@
             fi
         }
 
-        # NOTE: Update Here!
-        # <summary> Get params. </summary>
-        # <returns> params </returns>
-        function ModifySecurity_GetPackages
-        {
-            # <params>
-            local readonly arr_params=(
-                "atftpd"
-                "nis"
-                "rsh-redone-server"
-                "rsh-server"
-                "telnetd"
-                "tftpd"
-                "tftpd-hpa"
-                "xinetd"
-                "yp-tools"
-            )
-            # </params>
-
-            echo -e "${arr_params[@]}"
-        }
-
-        # NOTE: Update Here!
-        # <summary> Get params. </summary>
-        # <returns> params </returns>
-        function ModifySecurity_GetServices
-        {
-            # <params>
-            local readonly arr_params=(
-                "apcupsd"
-                "cockpit"
-                "fail2ban"
-                "ssh"
-                "ufw"
-            )
-            # </params>
-
-            echo -e "${arr_params[@]}"
-        }
-
-        # NOTE: Update Here!
         # <summary> Services to Enable or Disable (security-benefits or risks). </summary>
         # <returns> exit code </returns>
         function ModifySecurity_SetupFirewall
@@ -2223,14 +2226,26 @@
         function ModifySecurity_SetupPackages
         {
             # <params>
-            ModifySecurity_GetPackages
-            declare -aI arr_packages
+
+            # NOTE: Update Here!
+            declare -ar arr_packages=(
+                "atftpd"
+                "nis"
+                "rsh-redone-server"
+                "rsh-server"
+                "telnetd"
+                "tftpd"
+                "tftpd-hpa"
+                "xinetd"
+                "yp-tools"
+            )
+
             declare -a arr_packages_to_uninstall=()
             # </params>
 
             CheckIfVarIsValid "${arr_packages[@]}" || return "${?}"
 
-            for str_package in ${arr_packages}; do
+            for str_package in ${arr_packages[@]}; do
                 if CheckIfCommandIsInstalled "${str_package}" &> /dev/null; then
                     local str_output="Uninstall '${str_package}'?"
 
@@ -2240,7 +2255,10 @@
                 fi
             done
 
-            UninstallPackage "${arr_packages_to_uninstall[@]}" || return "${?}"
+            if CheckIfVarIsValid "${arr_packages_to_uninstall[@]}" &> /dev/null; then
+                UninstallPackage "${arr_packages_to_uninstall[@]}" || return "${?}"
+            fi
+
             return 0
         }
 
@@ -2249,16 +2267,30 @@
         function ModifySecurity_SetupServices
         {
             # <params>
-            ModifySecurity_GetServices
-            declare -aI arr_services
+
+            # NOTE: Update Here!
+            declare -ar arr_services=(
+                "apcupsd"
+                "cockpit"
+                "fail2ban"
+                "ssh"
+                "ufw"
+            )
+
             declare -a arr_services_to_disable=()
             declare -a arr_services_to_enable=()
             # </params>
 
             CheckIfVarIsValid "${arr_services[@]}" || return "${?}"
 
-            for str_service in ${arr_services}; do
-                if CheckIfCommandIsInstalled "${str_service}" &> /dev/null; then
+            for str_service in ${arr_services[@]}; do
+                echo "${str_service}"
+                local bool=false
+                CheckIfProcessIsActive "${str_service}" &> /dev/null && bool=true
+                CheckIfDaemonIsInstalled "${str_service}" &> /dev/null && bool=true
+                CheckIfCommandIsInstalled "${str_service}" &> /dev/null && bool=true
+
+                if $bool; then
                     local str_output="Enable or Disable '${str_service}'?"
 
                     if ReadInput "${str_output}"; then
@@ -2269,8 +2301,14 @@
                 fi
             done
 
-            systemctl stop "${arr_services_to_disable[@]}" && systemctl disable "${arr_services_to_disable[@]}" || return 1
-            systemctl start "${arr_services_to_enable[@]}" && systemctl disable "${arr_services_to_enable[@]}" || return 1
+            if CheckIfVarIsValid "${arr_services_to_disable[@]}" &> /dev/null; then
+                systemctl stop "${arr_services_to_disable[@]}" && systemctl disable "${arr_services_to_disable[@]}" || return 1
+            fi
+
+            if CheckIfVarIsValid "${arr_services_to_enable[@]}" &> /dev/null; then
+                systemctl start "${arr_services_to_enable[@]}" && systemctl enable "${arr_services_to_enable[@]}" || return 1
+            fi
+
             return 0
         }
 
@@ -2279,21 +2317,22 @@
             # <params>
             local bool_nonzero_amount_of_failed_operations=false
             local readonly str_file1="${str_files_dir}sysctl.conf"
-            local readonly str_file2="/etc/${str_file1}"
+            local readonly str_file2="/etc/sysctl.conf"
             # </params>
 
-            CheckIfDirExists "${str_file1}" || return "${?}"
+            CheckIfFileExists "${str_file1}" || return "${?}"
             ModifySecurity_SetupPackages || bool_nonzero_amount_of_failed_operations=true
-            ( $bool_is_installed_systemd && ModifySecurity_SetupServices ) || bool_nonzero_amount_of_failed_operations=true
+
+            if $bool_is_installed_systemd; then
+                ModifySecurity_SetupServices || bool_nonzero_amount_of_failed_operations=true
+            fi
+
             ModifySecurity_AppendFiles || bool_nonzero_amount_of_failed_operations=true
+            local str_output="Setup '${str_file2}' with defaults?"
 
-            if CheckIfFileExists "${str_file1}"; then
-                local str_output="Setup '${str_file2}' with defaults?"
-
-                if ReadInput "${str_output}"; then
-                    ( cp "${str_file1}" "${str_file2}" &> /dev/null ) || return "${?}"
-                    ( cat "${str_file2}" >> "${str_file1}" &> /dev/null ) || return "${?}"
-                fi
+            if ReadInput "${str_output}"; then
+                ( cp "${str_file1}" "${str_file2}" &> /dev/null ) || return "${?}"
+                ( cat "${str_file2}" >> "${str_file1}" &> /dev/null ) || return "${?}"
             fi
 
             local str_output="Setup firewall with UFW?"
@@ -2321,8 +2360,8 @@
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
-    function ModifySSH
-    {
+    functi
+
         function ModifySSH_Main
         {
             # <params>
@@ -2383,30 +2422,30 @@
             fi
 
             # <summary> Write to original file. Make backups as necessary. </summary>
-            if CheckIfCommandIsInstalled "${str_command1}"; then
-                local str_package_to_install=""
+            # if CheckIfCommandIsInstalled "${str_command1}"; then
+            #     local str_package_to_install=""
 
-                # <summary> Reinstall package to regenerate system configuration file. </summary>
-                case "${str_package_manager}" in
-                    "apt" )
-                        str_package_to_install="openssh-client"
-                        ;;
+            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
+            #     case "${str_package_manager}" in
+            #         "apt" )
+            #             str_package_to_install="openssh-client"
+            #             ;;
 
-                    * )
-                        return 1
-                        ;;
-                esac
+            #         * )
+            #             return 1
+            #             ;;
+            #     esac
 
-                if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
-                    WriteToFile "${str_file1}" || return "${?}"
-                    systemctl restart "${str_command1}" || return 1
+            #     if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
+            #         WriteToFile "${str_file1}" || return "${?}"
+            #         systemctl restart "${str_command1}" || return 1
 
-                    WriteToFile "${str_file2}" || return "${?}"
-                    systemctl restart "${str_command2}" || return 1
-                else
-                    bool_nonzero_amount_of_failed_operations=true
-                fi
-            fi
+            #         WriteToFile "${str_file2}" || return "${?}"
+            #         systemctl restart "${str_command2}" || return 1
+            #     else
+            #         bool_nonzero_amount_of_failed_operations=true
+            #     fi
+            # fi
 
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -2610,13 +2649,13 @@
     TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true
 
     # NOTE: Update Here!
-    declare -gr arr_commands=(
+    declare -g arr_commands=(
         "ExecuteSystemSetup"
         "ExecuteGitSetup"
         "ExecuteSoftwareSetup"
     )
 
-    declare -gr arr_commands_output=(
+    declare -g arr_commands_output=(
         "Execute System setup?"
         "Execute Git setup and installation?"
         "Execute software setup and installation?"
