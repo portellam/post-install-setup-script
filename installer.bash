@@ -7,10 +7,11 @@
 # <summary>
 #
 # TODO
+# - check if SystemSetup ran successfully
+# - debug other middleman functions
 # - print disclaimer to user whenever a file is changed. Mention file name, and log output to a txt file. Goal: inform user if any issues occur.
 # - use rsync over copy
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
-# - debug all functions
 # - make functions distro-agnostic, OR disclose functions that do not support given distros
 # </summary>
 
@@ -121,7 +122,6 @@
     # <summary> Check if the command is installed. </summary>
     # <param name="${1}"> string: the command </param>
     # <returns> exit code </returns>
-    #
     function CheckIfCommandIsInstalled
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -143,10 +143,32 @@
         return 0
     }
 
+    # <summary> Check if the daemon is active or not. </summary>
+    # <param name="${1}"> string: the command </param>
+    # <returns> exit code </returns>
+    function CheckIfDaemonIsActiveOrNot
+    {
+        CheckIfVarIsValid "${1}" || return "${?}"
+
+        # <params>
+        local readonly var_keyword_true='active'
+        local readonly var_keyword_false='inactive'
+        local readonly var_command='systemctl status ${1} | grep "${var_keyword_true}"'
+        local readonly var_command_output=$( eval "${var_command}" )
+        # </params>
+
+        CheckIfVarIsValid "${var_command_output}" || return "${?}"
+
+        if [[ "${var_command_output}" == *"${var_keyword_false}"* ]]; then
+            return 1
+        fi
+
+        return 0
+    }
+
     # <summary> Check if the daemon is installed. </summary>
     # <param name="${1}"> string: the command </param>
     # <returns> exit code </returns>
-    #
     function CheckIfDaemonIsInstalled
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -168,7 +190,6 @@
     # <summary> Check if the process is active. </summary>
     # <param name="${1}"> string: the command </param>
     # <returns> exit code </returns>
-    #
     function CheckIfProcessIsActive
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -190,7 +211,6 @@
     # <summary> Check if the value is a valid bool. </summary>
     # <param name="${1}"> var: the boolean </param>
     # <returns> exit code </returns>
-    #
     function CheckIfVarIsBool
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -214,7 +234,6 @@
     # <summary> Check if the value is a valid number. </summary>
     # <param name="${1}"> var: the number </param>
     # <returns> exit code </returns>
-    #
     function CheckIfVarIsNum
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -235,7 +254,6 @@
     # <summary> Check if the value is valid. </summary>
     # <param name="${1}"> string: the variable </param>
     # <returns> exit code </returns>
-    #
     function CheckIfVarIsValid
     {
         # <params>
@@ -259,7 +277,6 @@
     # <summary> Check if the directory exists. </summary>
     # <param name="${1}"> string: the directory </param>
     # <returns> exit code </returns>
-    #
     function CheckIfDirExists
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -279,7 +296,6 @@
     # <summary> Check if the file exists. </summary>
     # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
-    #
     function CheckIfFileExists
     {
         CheckIfVarIsValid "${1}" || return "${?}"
@@ -299,7 +315,6 @@
     # <summary> Check if the file is executable. </summary>
     # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
-    #
     function CheckIfFileIsExecutable
     {
         CheckIfFileExists "${1}" || return "${?}"
@@ -319,7 +334,6 @@
     # <summary> Check if the file is readable. </summary>
     # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
-    #
     function CheckIfFileIsReadable
     {
         CheckIfFileExists "${1}" || return "${?}"
@@ -339,7 +353,6 @@
     # <summary> Check if the file is writable. </summary>
     # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
-    #
     function CheckIfFileIsWritable
     {
         CheckIfFileExists "${1}" || return "${?}"
@@ -379,12 +392,11 @@
     {
         # <params>
         local readonly str_file=$( basename "${0}" )
-        # local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}' ${var_reset_color}"
-        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not sudo/root."
+        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}'${var_reset_color}."
         # </params>
 
         if [[ $( whoami ) != "root" ]]; then
-            echo -e "${str_output}"_user_is_not_root
+            echo -e "${str_output_user_is_not_root}"
             return 1
         fi
 
@@ -525,7 +537,23 @@
         return 0
     }
 
-    # <summary> Read input from a file. Call '$var_file' after calling this function. </summary>
+    # <summary> Output a file. </summary>
+    # <param name="${1}"> string: the file </param>
+    # <returns> exit code </returns>
+    function DescribeAFile
+    {
+        CheckIfFileExists "${1}" || return "${?}"
+        echo
+        local str_output="Contents for file ${var_yellow}'${1}'${var_reset_color}:"
+        echo -e "${str_output}"
+        echo -e "${var_yellow}"
+        ReadFromFile "${str_file1}"
+        echo -e "${var_reset_color}"
+        echo
+        return 0
+    }
+
+    # <summary> Read input from a file. Declare '${arr_file[@]}' before calling this function. </summary>
     # <param name="${1}"> string: the file </param>
     # <param name="${2}"> string of array: the file contents </param>
     # <returns> exit code </returns>
@@ -577,7 +605,7 @@
         return "${int_exit_code}"
     }
 
-    # <summary> Write output to a file. Call '$var_file' after calling this function. </summary>
+    # <summary> Write output to a file. Declare '${arr_file[@]}' before calling this function. </summary>
     # <param name="${1}"> string: the file </param>
     # <param name="${arr_file[@]}"> array: the file contents </param>
     # <returns> exit code </returns>
@@ -589,7 +617,6 @@
         # IFS=$'\n'
         declare -aI arr_file
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
-        local var_delimiter=' '
         # </params>
 
         CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
@@ -719,6 +746,14 @@
 
         return "${int_exit_code}"
     }
+
+    # <summary> Update TestNetwork </summary>
+    # <param name="${bool_is_connected_to_Internet}"> boolean: network status </param>
+    # <returns> exit code </returns>
+    function UpdateNetworkStatus
+    {
+        ( TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true ) || bool_is_connected_to_Internet=false
+    }
 # </code>
 
 # <summary> #6 - User input </summary>
@@ -726,7 +761,6 @@
     # <summary> Ask user Yes/No, read input and return exit code given answer. </summary>
     # <param name="${1}"> string: the output statement </param>
     # <returns> exit code </returns>
-    #
     function ReadInput
     {
         # <params>
@@ -826,7 +860,6 @@
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
-    #
     function ReadMultipleChoiceIgnoreCase
     {
         # <params>
@@ -891,7 +924,6 @@
     # <param name="${2}" name="${3}" name="${4}" name="${5}" name="${6}" name="${7}" name="${8}"> multiple choice </param>
     # <param name="$var_input"> the answer </param>
     # <returns> the answer </returns>
-    #
     function ReadMultipleChoiceMatchCase
     {
         # <params>
@@ -1247,7 +1279,7 @@
 
         # <summary> Output statement </summary>
         declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
-        declare -gr str_output_please_wait="Following command may take a moment. ${var_blinking_yellow}Please wait.${var_reset_color}"
+        declare -gr str_output_please_wait="The following operation may take a moment. ${var_blinking_yellow}Please wait.${var_reset_color}"
         declare -gr str_output_var_is_not_valid="${var_prefix_error} Invalid input."
 # </params>
 
@@ -1311,9 +1343,11 @@
             cd "${str_files_dir}" || return 1
             local readonly var_command='ls *-cron'
 
-            for str_file in eval "${var_command}"; do
-                local str_output="Append '${str_file}'?"
-                ReadInput "${str_output}" && AppendCron_MatchCronFile
+            for str_file in $( ls *-cron ); do
+                local str_command=$( echo "${str_file}" | cut -d '-' -f 1 )
+
+                local str_output="Add file '${str_file}' to crontab?"
+                CheckIfCommandIsInstalled "${str_command}" &> /dev/null && ReadInput "${str_output}" && AppendCron_MatchCronFile
             done
 
             local readonly var_service="cron"
@@ -1400,6 +1434,7 @@
         local readonly str_output="Appending files to Systemd..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         AppendServices_Main
         AppendPassOrFail "${str_output}"
@@ -1484,6 +1519,7 @@
         local readonly str_output_partial_completion="${var_prefix_warn} One or more Git repositories were not cloned."
         # </params>
 
+        echo
         echo -e "${str_output}"
         CloneOrUpdateGitRepositories_Main
         AppendPassOrFail "${str_output}"
@@ -1692,6 +1728,7 @@
         local readonly str_output="Installing from $( lsb_release -is ) $( uname -o ) repositories..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         InstallFromLinuxRepos_Main
         AppendPassOrFail "${str_output}"
@@ -1850,6 +1887,7 @@
         local readonly str_output="Installing from Flathub repositories..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         InstallFromFlathubRepos_Main
         AppendPassOrFail "${str_output}"
@@ -1992,6 +2030,7 @@
         local readonly str_output="Executing Git scripts..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         InstallFromGitRepos_Main
         AppendPassOrFail "${str_output}"
@@ -2121,6 +2160,7 @@
         local readonly str_output="Modifying ${str_distro}${str_kernel}repositories..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         ModifyDebianRepos_Main
         AppendPassOrFail "${str_output}"
@@ -2140,38 +2180,44 @@
         # <returns> exit code </returns>
         function ModifySecurity_AppendFiles
         {
+            # <params>
             local readonly str_output="Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
+            declare -a arr_files=(
+                "/etc/modprobe.d/disable-usb-storage.conf"
+                "/etc/modprobe.d/disable-firewire.conf"
+                "/etc/modprobe.d/disable-thunderbolt.conf"
+            )
+
+            echo
+
+            for str_file in "${arr_files[@]}"; do
+                DeleteFile "${str_file}" &> /dev/null
+            done
 
             if ReadInput "${str_output}"; then
-                local str_file="/etc/modprobe.d/disable-usb-storage.conf"
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null
-                CreateFile "${str_file}" &> /dev/null
-                WriteToFile "${str_file}" || return "${?}"
+                CreateFile "${arr_files[0]}" &> /dev/null
+                WriteToFile "${arr_files[0]}" || return "${?}"
 
-                local str_file="/etc/modprobe.d/disable-firewire.conf"
                 declare -a arr_file=(
                     'blacklist firewire-core'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null
-                CreateFile "${str_file}" &> /dev/null
-                WriteToFile "${str_file}" || return "${?}"
+                CreateFile "${arr_files[1]}" &> /dev/null
+                WriteToFile "${arr_files[1]}" || return "${?}"
 
-                local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
                 declare -a arr_file=(
                     'blacklist thunderbolt'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null
-                CreateFile "${str_file}" &> /dev/null
-                WriteToFile "${str_file}" || return "${?}"
+                CreateFile "${arr_files[2]}" &> /dev/null
+                WriteToFile "${arr_files[2]}" || return "${?}"
 
                 echo -e "${str_output_please_wait}"
-                # update-initramfs -u -k all || return "${?}"
+                update-initramfs -u -k all || return "${?}"
             fi
         }
 
@@ -2180,6 +2226,7 @@
         function ModifySecurity_SetupFirewall
         {
             # <params>
+            IFS=$'\n'
             local bool_nonzero_amount_of_failed_operations=false
             local str_command="ufw"
             # </params>
@@ -2201,7 +2248,7 @@
                 "( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' )"
             )
 
-            local str_output="Add firewall rules for common server network traffic?"
+            local str_output="Add firewall rules for a generic Desktop PC?"
 
             if ReadInput "${str_output}"; then
                 for var_command in ${arr_firewall_rules_for_desktop[@]}; do
@@ -2219,7 +2266,7 @@
                 "( ufw allow 1194/udp comment 'SMTPD, local VPN server' )"
             )
 
-            local str_output="Add firewall rules for common server network traffic?"
+            local str_output="Add firewall rules for a generic Server?"
 
             if ReadInput "${str_output}"; then
                 for var_command in ${arr_firewall_rules_for_servers[@]}; do
@@ -2229,19 +2276,20 @@
 
             # <summary> SSH on LAN </summary>
             str_command="ssh"
+            local str_daemon="sshd"
 
-            if CheckIfCommandIsInstalled "${str_command}"; then
-                if CheckIfVarIsValidNum "$str_alt_SSH"; then
-                    ( ufw deny ssh comment 'deny default ssh' ) || bool_nonzero_amount_of_failed_operations=true
-                    ( ufw limit from 192.168.0.0/16 to any port "${str_alt_SSH}" proto tcp comment 'ssh' ) || bool_nonzero_amount_of_failed_operations=true
+            if CheckIfDaemonIsActiveOrNot "${str_daemon}" && CheckIfVarIsValid "${str_SSH_alt}" &> /dev/null; then
+                if [[ "${str_SSH_alt}" -ne "${str_SSH_default}" ]]; then
+                    ( ufw deny ssh comment "deny default ${str_command}" ) || bool_nonzero_amount_of_failed_operations=true
+                    ( ufw limit from 192.168.0.0/16 to any port "${str_SSH_alt}" proto tcp comment "${str_command}" ) || bool_nonzero_amount_of_failed_operations=true
                 else
-                    ( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' ) || bool_nonzero_amount_of_failed_operations=true
+                    ( ufw limit from 192.168.0.0/16 to any port "${str_SSH_default}" proto tcp comment "${str_command}" ) || bool_nonzero_amount_of_failed_operations=true
                 fi
-
-                # ( ufw deny ssh comment 'deny default ssh' ) || bool_nonzero_amount_of_failed_operations=true
+            else
+                ( ufw deny ssh comment "deny default ${str_command}" ) || bool_nonzero_amount_of_failed_operations=true
             fi
 
-            ufw enable|| return 1
+            ufw enable || return 1
             ufw reload || return 1
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -2346,35 +2394,40 @@
             local readonly str_file2_backup="${str_file2}.bak"
             # </params>
 
-            CheckIfFileExists "${str_file1}" || return "${?}"
-            ( ModifySecurity_SetupPackages && echo ) || bool_nonzero_amount_of_failed_operations=true
+            ModifySecurity_SetupPackages || bool_nonzero_amount_of_failed_operations=true
 
             if $bool_is_installed_systemd; then
-                ( ModifySecurity_SetupServices && echo ) || bool_nonzero_amount_of_failed_operations=true
+                ModifySecurity_SetupServices || bool_nonzero_amount_of_failed_operations=true
             fi
 
-            ( ModifySecurity_AppendFiles && echo ) || bool_nonzero_amount_of_failed_operations=true
-            local str_output="Setup '${str_file2}' with defaults?"
+            ModifySecurity_AppendFiles || bool_nonzero_amount_of_failed_operations=true
 
-            if ReadInput "${str_output}"; then
-                if cp "${str_file2}" "${str_file2_backup}" &> /dev/null; then
-                    ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
-                else
-                    bool_nonzero_amount_of_failed_operations=true
+            if CheckIfFileExists "${str_file1}"; then
+                local str_output="Add the above incoming changes to '${str_file2}'?"
+
+                if DescribeAFile "${str_file1}" && ReadInput "${str_output}"; then
+                    if cp "${str_file2}" "${str_file2_backup}" &> /dev/null; then
+                        ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
+                    else
+                        bool_nonzero_amount_of_failed_operations=true
+                    fi
+
+                    # TODO: implement commented changes below
+
+                    # if CreateBackupFile "${str_file2}"; then
+                    #     ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
+                    # else
+                    #     bool_nonzero_amount_of_failed_operations=true
+                    # fi
                 fi
-
-                # if CreateBackupFile "${str_file2}"; then
-                #     ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
-                # else
-                #     bool_nonzero_amount_of_failed_operations=true
-                # fi
             fi
 
-            local str_output="Setup firewall with UFW?"
+            local str_output="Setup firewall with UFW? (Press 'ENTER' twice after 'Y')"     # TODO: fix. This is shit.
 
             if ReadInput "${str_output}"; then
-                ( ModifySecurity_SetupFirewall && echo ) || bool_nonzero_amount_of_failed_operations=true
+                ModifySecurity_SetupFirewall || bool_nonzero_amount_of_failed_operations=true
             fi
+
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
@@ -2383,6 +2436,7 @@
         local str_output="Configuring system security..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         ModifySecurity_Main
         AppendPassOrFail "${str_output}"
@@ -2396,7 +2450,7 @@
     }
 
     # <summary> Configuration of SSH. </summary>
-    # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
+    # <parameter name="$str_SSH_alt"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
     function ModifySSH
     {
@@ -2427,11 +2481,10 @@
 
                 for int_count in ${arr_count[@]}; do
                     ReadInputFromRangeOfTwoNums "${str_output}" "${int_port_default}" "${int_port_max}"
-                    echo "${var_input}"
-                    declare -i int_alt_SSH="${var_input}"
+                    declare -i int_SSH_alt="${var_input}"
 
-                    if [[ "${int_alt_SSH}" -eq "${int_port_default}" || ( "${int_alt_SSH}" -ge "${int_port_min}" && "${int_alt_SSH}" -le "${int_port_max}" ) ]]; then
-                        str_alt_SSH="${int_alt_SSH}"
+                    if [[ "${int_SSH_alt}" -eq "${int_port_default}" || ( "${int_SSH_alt}" -ge "${int_port_min}" && "${int_SSH_alt}" -le "${int_port_max}" ) ]]; then
+                        str_SSH_alt="${int_SSH_alt}"
                         break
                     fi
 
@@ -2439,7 +2492,9 @@
                 done
             fi
 
-            if [[ "${str_alt_SSH}" -eq "${int_port_min}" ]]; then
+            echo
+
+            if [[ "${str_SSH_alt}" -eq "${int_port_min}" ]]; then
                 bool=false
             fi
 
@@ -2455,35 +2510,35 @@
             # <summary> Update Here! </summary>
             if $bool; then
                 arr_file+=(
-                    "Port ${str_alt_SSH}"
+                    "Port ${str_SSH_alt}"
                 )
             fi
 
             # <summary> Write to original file. Make backups as necessary. </summary>
-            # if CheckIfCommandIsInstalled "${str_command1}"; then
-            #     local str_package_to_install=""
+            if CheckIfCommandIsInstalled "${str_command1}"; then
+                local str_package_to_install=""
 
-            #     # <summary> Reinstall package to regenerate system configuration file. </summary>
-            #     case "${str_package_manager}" in
-            #         "apt" )
-            #             str_package_to_install="openssh-client"
-            #             ;;
+                # <summary> Reinstall package to regenerate system configuration file. </summary>
+                case "${str_package_manager}" in
+                    "apt" )
+                        str_package_to_install="openssh-client"
+                        ;;
 
-            #         * )
-            #             return 1
-            #             ;;
-            #     esac
+                    * )
+                        return 1
+                        ;;
+                esac
 
-            #     if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
-            #         WriteToFile "${str_file1}" || return "${?}"
-            #         systemctl restart "${str_command1}" || return 1
+                if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
+                    WriteToFile "${str_file1}" || return "${?}"
+                    systemctl restart "${str_command1}" || return 1
 
-            #         WriteToFile "${str_file2}" || return "${?}"
-            #         systemctl restart "${str_command2}" || return 1
-            #     else
-            #         bool_nonzero_amount_of_failed_operations=true
-            #     fi
-            # fi
+                    WriteToFile "${str_file2}" || return "${?}"
+                    systemctl restart "${str_command2}" || return 1
+                else
+                    bool_nonzero_amount_of_failed_operations=true
+                fi
+            fi
 
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -2493,6 +2548,7 @@
         local readonly str_output="Configuring SSH..."
         # </params>
 
+        echo
         echo -e "${str_output}"
         ModifySSH_Main
         AppendPassOrFail "${str_output}"
@@ -2607,18 +2663,16 @@
     #
 
     # <summary> Execute setup of recommended and optional system changes. </summary>
+    # <param name="${str_SSH_alt}"> string: the IPv4 port for SSH </param>
     # <returns> exit code </returns>
     function ExecuteSystemSetup
     {
-        # <params>
-        declare -g str_alt_SSH=""
-        # </params>
-
         if ! $bool_is_user_root; then
             echo -e "${var_prefix_warn} User is not root."
             return 1
         fi
 
+        UpdateNetworkStatus
         ModifySSH
         ModifySecurity || return "${?}"
         ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
@@ -2640,8 +2694,7 @@
             esac
         fi
 
-        local var_command="TestNetwork true"
-        TryThisXTimesBeforeFail "${var_command}" || return "${?}"
+        UpdateNetworkStatus; $bool_is_connected_to_Internet || return "${?}"
 
         if $bool_is_user_root; then
             InstallFromLinuxRepos || return "${?}"
@@ -2662,7 +2715,7 @@
         local readonly str_command="git"
         # </params>
 
-        TryThisXTimesBeforeFail "TestNetwork true"|| return "${?}"
+        UpdateNetworkStatus; $bool_is_connected_to_Internet || return "${?}"
 
         if CheckIfCommandIsInstalled "${str_command}" &> /dev/null; then
             bool=true
@@ -2682,9 +2735,10 @@
 # <summary> Program Main logic </summary>
 # <code>
     # <params>
+    declare -g str_SSH_alt=""
+    declare -g str_SSH_default="22"
     GoToScriptDir; declare -gr str_files_dir="$( find . -name files | uniq | head -n1 )/"
     declare -g bool_is_connected_to_Internet=false
-    TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true
 
     # NOTE: Update Here!
     declare -g arr_commands=(
