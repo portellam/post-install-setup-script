@@ -61,8 +61,8 @@
     function ParseAndExecuteListOfCommands
     {
         # <params>
-        declare -aI arr_commands=()
-        declare -aI arr_commands_output=()
+        declare -aI arr_commands
+        declare -aI arr_commands_output
         local readonly str_output_fail="${var_prefix_error} Execution of command failed."
         # </params>
 
@@ -542,7 +542,7 @@
 
         # <params>
         # IFS=$'\n'
-        declare -Ia arr_file
+        declare -aI arr_file
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
         local var_delimiter=' '
         # </params>
@@ -2224,7 +2224,7 @@
         {
             # <params>
             ModifySecurity_GetPackages
-            declare -aI arr_packages=()
+            declare -aI arr_packages
             declare -a arr_packages_to_uninstall=()
             # </params>
 
@@ -2250,7 +2250,7 @@
         {
             # <params>
             ModifySecurity_GetServices
-            declare -aI arr_services=()
+            declare -aI arr_services
             declare -a arr_services_to_disable=()
             declare -a arr_services_to_enable=()
             # </params>
@@ -2543,7 +2543,6 @@
         fi
 
         ModifySSH
-        return 0
         ModifySecurity || return "${?}"
         ( $bool_is_installed_systemd && AppendServices ) || return "${?}"
         AppendCron || return "${?}"
