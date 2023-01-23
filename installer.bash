@@ -7,6 +7,7 @@
 # <summary>
 #
 # TODO
+# - print disclaimer to user whenever a file is changed. Mention file name, and log output to a txt file. Goal: inform user if any issues occur.
 # - use rsync over copy
 # - use TestNetwork as a requirement very specifically. Example: if a process can proceed without Internet, allow it to do so.
 # - debug all functions
@@ -1228,6 +1229,7 @@
         # Reference URL: 'https://www.shellhacks.com/bash-colors'
         # </summary>
         declare -gr var_blinking_red='\033[0;31;5m'
+        declare -gr var_blinking_yellow='\033[0;33;5m'
         declare -gr var_green='\033[0;32m'
         declare -gr var_red='\033[0;31m'
         declare -gr var_yellow='\033[0;33m'
@@ -1245,6 +1247,7 @@
 
         # <summary> Output statement </summary>
         declare -gr str_output_partial_completion="${var_prefix_warn} One or more operations failed."
+        declare -gr str_output_please_wait="Following command may take a moment. ${var_blinking_yellow}Please wait.${var_reset_color}"
         declare -gr str_output_var_is_not_valid="${var_prefix_error} Invalid input."
 # </params>
 
@@ -2145,7 +2148,8 @@
                     'install usb-storage /bin/true'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                DeleteFile "${str_file}" &> /dev/null
+                CreateFile "${str_file}" &> /dev/null
                 WriteToFile "${str_file}" || return "${?}"
 
                 local str_file="/etc/modprobe.d/disable-firewire.conf"
@@ -2153,7 +2157,8 @@
                     'blacklist firewire-core'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                DeleteFile "${str_file}" &> /dev/null
+                CreateFile "${str_file}" &> /dev/null
                 WriteToFile "${str_file}" || return "${?}"
 
                 local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
@@ -2161,10 +2166,12 @@
                     'blacklist thunderbolt'
                 )
 
-                DeleteFile "${str_file}" &> /dev/null || return "${?}"
+                DeleteFile "${str_file}" &> /dev/null
+                CreateFile "${str_file}" &> /dev/null
                 WriteToFile "${str_file}" || return "${?}"
 
-                update-initramfs -u -k all || return "${?}"
+                echo -e "${str_output_please_wait}"
+                # update-initramfs -u -k all || return "${?}"
             fi
         }
 
@@ -2173,51 +2180,70 @@
         function ModifySecurity_SetupFirewall
         {
             # <params>
+            local bool_nonzero_amount_of_failed_operations=false
             local str_command="ufw"
             # </params>
 
-            CheckIfCommandExists "${str_command}" || return "${?}"
-            ufw reset || return 1
-            ufw default allow outgoing || return 1
-            ufw default deny incoming || return 1
+            CheckIfDaemonIsInstalled "${str_command}" || return "${?}"
+            ufw reset &> /dev/null || return 1
+            ufw default allow outgoing &> /dev/null || return 1
+            ufw default deny incoming &> /dev/null || return 1
 
             # <summary> Default LAN subnets may be 192.168.1.0/24 </summary>
             # <summary> Services a desktop may use. Attempt to make changes. Exit early at failure. </summary>
-            ( ufw allow DNS comment 'dns' &> /dev/null ) || return 1
-            ( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
-            ( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' &> /dev/null ) || return 1
-            ( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' &> /dev/null ) || return 1
-            ( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' &> /dev/null ) || return 1
-            ( ufw allow VNC comment 'VNC, local remote desktop server' &> /dev/null ) || return 1
-            ( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' &> /dev/null ) || return 1
+            declare -ar arr_firewall_rules_for_desktop=(
+                "( ufw allow DNS comment 'dns' )"
+                "( ufw allow from 192.168.0.0/16 to any port 137:138 proto udp comment 'CIFS/Samba, local file server' )"
+                "( ufw allow from 192.168.0.0/16 to any port 139,445 proto tcp comment 'CIFS/Samba, local file server' )"
+                "( ufw allow from 192.168.0.0/16 to any port 2049 comment 'NFS, local file server' )"
+                "( ufw allow from 192.168.0.0/16 to any port 3389 comment 'RDP, local remote desktop server' )"
+                "( ufw allow VNC comment 'VNC, local remote desktop server' )"
+                "( ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Cockpit, local Web server' )"
+            )
+
+            local str_output="Add firewall rules for common server network traffic?"
+
+            if ReadInput "${str_output}"; then
+                for var_command in ${arr_firewall_rules_for_desktop[@]}; do
+                    eval "${var_command}" || bool_nonzero_amount_of_failed_operations=true
+                done
+            fi
 
             # <summary> Services a server may use. Attempt to make changes. Exit early at failure. </summary>
-            ( ufw allow http comment 'HTTP, local Web server' &> /dev/null ) || return 1
-            ( ufw allow https comment 'HTTPS, local Web server' &> /dev/null ) || return 1
-            ( ufw allow 25 comment 'SMTPD, local mail server' &> /dev/null ) || return 1
-            ( ufw allow 110 comment 'POP3, local mail server' &> /dev/null ) || return 1
-            ( ufw allow 995 comment 'POP3S, local mail server' &> /dev/null ) || return 1
-            ( ufw allow 1194/udp 'SMTPD, local VPN server' &> /dev/null ) || return 1
+            declare -ar arr_firewall_rules_for_servers=(
+                "( ufw allow http comment 'HTTP, local Web server' )"
+                "( ufw allow https comment 'HTTPS, local Web server' )"
+                "( ufw allow 25 comment 'SMTPD, local mail server' )"
+                "( ufw allow 110 comment 'POP3, local mail server' )"
+                "( ufw allow 995 comment 'POP3S, local mail server' )"
+                "( ufw allow 1194/udp comment 'SMTPD, local VPN server' )"
+            )
+
+            local str_output="Add firewall rules for common server network traffic?"
+
+            if ReadInput "${str_output}"; then
+                for var_command in ${arr_firewall_rules_for_servers[@]}; do
+                    eval "${var_command}" || bool_nonzero_amount_of_failed_operations=true
+                done
+            fi
 
             # <summary> SSH on LAN </summary>
             str_command="ssh"
 
             if CheckIfCommandIsInstalled "${str_command}"; then
-                # ModifySSH
-
-                if CheckIfVarIsValidNum $str_alt_SSH; then
-                    ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
-                    ( ufw limit from 192.168.0.0/16 to any port ${str_alt_SSH} proto tcp comment 'ssh' &> /dev/null ) || return 1
+                if CheckIfVarIsValidNum "$str_alt_SSH"; then
+                    ( ufw deny ssh comment 'deny default ssh' ) || bool_nonzero_amount_of_failed_operations=true
+                    ( ufw limit from 192.168.0.0/16 to any port "${str_alt_SSH}" proto tcp comment 'ssh' ) || bool_nonzero_amount_of_failed_operations=true
                 else
-                    ( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' &> /dev/null ) || return 1
+                    ( ufw limit from 192.168.0.0/16 to any port 22 proto tcp comment 'ssh' ) || bool_nonzero_amount_of_failed_operations=true
                 fi
 
-                ( ufw deny ssh comment 'deny default ssh' &> /dev/null ) || return 1
+                # ( ufw deny ssh comment 'deny default ssh' ) || bool_nonzero_amount_of_failed_operations=true
             fi
 
-            ( ufw enable &> /dev/null ) || return 1
-            ( ufw reload &> /dev/null ) || return 1
-
+            ufw enable|| return 1
+            ufw reload || return 1
+            $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
 
@@ -2284,7 +2310,6 @@
             CheckIfVarIsValid "${arr_services[@]}" || return "${?}"
 
             for str_service in ${arr_services[@]}; do
-                echo "${str_service}"
                 local bool=false
                 CheckIfProcessIsActive "${str_service}" &> /dev/null && bool=true
                 CheckIfDaemonIsInstalled "${str_service}" &> /dev/null && bool=true
@@ -2318,25 +2343,38 @@
             local bool_nonzero_amount_of_failed_operations=false
             local readonly str_file1="${str_files_dir}sysctl.conf"
             local readonly str_file2="/etc/sysctl.conf"
+            local readonly str_file2_backup="${str_file2}.bak"
             # </params>
 
             CheckIfFileExists "${str_file1}" || return "${?}"
-            ModifySecurity_SetupPackages || bool_nonzero_amount_of_failed_operations=true
+            ( ModifySecurity_SetupPackages && echo ) || bool_nonzero_amount_of_failed_operations=true
 
             if $bool_is_installed_systemd; then
-                ModifySecurity_SetupServices || bool_nonzero_amount_of_failed_operations=true
+                ( ModifySecurity_SetupServices && echo ) || bool_nonzero_amount_of_failed_operations=true
             fi
 
-            ModifySecurity_AppendFiles || bool_nonzero_amount_of_failed_operations=true
+            ( ModifySecurity_AppendFiles && echo ) || bool_nonzero_amount_of_failed_operations=true
             local str_output="Setup '${str_file2}' with defaults?"
 
             if ReadInput "${str_output}"; then
-                ( cp "${str_file1}" "${str_file2}" &> /dev/null ) || return "${?}"
-                ( cat "${str_file2}" >> "${str_file1}" &> /dev/null ) || return "${?}"
+                if cp "${str_file2}" "${str_file2_backup}" &> /dev/null; then
+                    ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
+                else
+                    bool_nonzero_amount_of_failed_operations=true
+                fi
+
+                # if CreateBackupFile "${str_file2}"; then
+                #     ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
+                # else
+                #     bool_nonzero_amount_of_failed_operations=true
+                # fi
             fi
 
             local str_output="Setup firewall with UFW?"
-            ReadInput "${str_output}" && ModifySecurity_SetupFirewall || return "${?}"
+
+            if ReadInput "${str_output}"; then
+                ( ModifySecurity_SetupFirewall && echo ) || bool_nonzero_amount_of_failed_operations=true
+            fi
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
         }
