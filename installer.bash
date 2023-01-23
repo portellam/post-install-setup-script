@@ -6,7 +6,14 @@
 
 # <summary>
 #
+# ISSUES
+# - sysctl.conf has no new changes?
+# - not sure if appendcron made copies to system dir
+# - ???
+
+#
 # TODO
+# - CreateBackupFile and RestoreBackupFile need to be used
 # - check if SystemSetup ran successfully
 # - debug other middleman functions
 # - print disclaimer to user whenever a file is changed. Mention file name, and log output to a txt file. Goal: inform user if any issues occur.
