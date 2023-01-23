@@ -2360,8 +2360,8 @@
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_alt_SSH"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
-    functi
-
+    function ModifySSH
+    {
         function ModifySSH_Main
         {
             # <params>
