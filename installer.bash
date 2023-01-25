@@ -13,6 +13,21 @@
 
 #
 # TODO
+# - rewrite bash-libraries, on its repo and on a new branch.
+# - garbage collection?
+# - create vars for commands of command actions, with declared/inherited params
+#   - example:
+#   #
+#   # str_file_name="thefile.txt"                                   # a file named "thefile.txt"
+#   # declare -g var_read_file=$( cat "${str_file_name} ) "         # create command to read a file named 'thefile.txt'
+#   # eval "${var_read_file}"                                       # execute command, output file to terminal
+#   # declare -a arr_file_contents=( $( eval "${var_read_file}" ) ) # save output to a new variable
+# ^^^ I would like to do this, and do it consistently, but I will save for later
+#
+# - consistent with how functions call or do not call params
+#
+#
+#
 # - CreateBackupFile and RestoreBackupFile need to be used
 # - check if SystemSetup ran successfully
 # - debug other middleman functions
@@ -550,30 +565,50 @@
     function DescribeAFile
     {
         CheckIfFileExists "${1}" || return "${?}"
-        echo
+
+        # <params>
         local str_output="Contents for file ${var_yellow}'${1}'${var_reset_color}:"
+        local readonly var_command='cat "${1}"'
+        # </params>
+
         echo -e "${str_output}"
-        echo -e "${var_yellow}"
-        ReadFromFile "${str_file1}"
-        echo -e "${var_reset_color}"
-        echo
+        ReadFromFile "${1}" || return "${?}"
+        echo "${var_yellow}"
+        eval "${var_command}"
+        echo -e "${var_reset_color}\n"
+
         return 0
     }
 
-    # <summary> Read input from a file. Declare '${arr_file[@]}' before calling this function. </summary>
+    # <summary> Read input from a file. Declare inherited params before calling this function. </summary>
     # <param name="${1}"> string: the file </param>
-    # <param name="${2}"> string of array: the file contents </param>
+    # <param name="${2}"> boolean: toggle garbage collection of params </param>
+    # <param name="${arr_file[@]}"> string of array: the file contents </param>
     # <returns> exit code </returns>
     function ReadFromFile
     {
         CheckIfFileExists "${1}" || return "${?}"
 
         # <params>
+        declare -aI arr_file
+        local bool=false
         local readonly str_output_fail="${var_prefix_fail} Could not read from file '${1}'."
         local readonly var_command='cat "${1}"'
         # </params>
 
-        eval "${var_command}" || return 1
+        CheckIfVarIsBool "${2}" &> /dev/null && bool=true
+        arr_file=( $( eval "${var_command}" ) )
+
+        if ! CheckIfVarIsValid "${arr_file[@]}" &> /dev/null; then
+            echo -e "${str_output_fail}"
+            return 1
+        fi
+
+        # <summary> Free memory </summary>
+        if $bool; then
+            arr_file=()
+        fi
+
         return 0
     }
 
@@ -587,6 +622,7 @@
             CheckIfFileExists "${1}" || return "${?}"
 
             # <params>
+            local bool=false
             local readonly str_dir1=$( dirname "${1}" )
             local readonly str_suffix=".old"
             var_command='ls "${str_dir1}" | grep "${1}" | grep $str_suffix | uniq | sort -rV'
@@ -609,11 +645,13 @@
         echo -e "${str_output}"
         RestoreBackupFile_Main "${1}"
         AppendPassOrFail "${str_output}"
+
         return "${int_exit_code}"
     }
 
-    # <summary> Write output to a file. Declare '${arr_file[@]}' before calling this function. </summary>
+    # <summary> Write output to a file. Declare inherited params before calling this function. </summary>
     # <param name="${1}"> string: the file </param>
+    # <param name="${2}"> boolean: toggle garbage collection of params </param>
     # <param name="${arr_file[@]}"> array: the file contents </param>
     # <returns> exit code </returns>
     function WriteToFile
@@ -623,22 +661,31 @@
         # <params>
         # IFS=$'\n'
         declare -aI arr_file
+        local bool=false
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
         # </params>
 
         CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
+        CheckIfVarIsBool "${2}" &> /dev/null && bool=true
 
+        # new
         ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
             echo -e "${str_output_fail}"
             return 1
         )
 
+        # old
         # for var_element in ${arr_file[@]}; do
         #     echo -e "${var_element}" >> "${1}" || (
         #         echo -e "${str_output_fail}"
         #         return 1
         #     )
         # done
+
+        # <summary> Free memory </summary>
+        if $bool; then
+            arr_file=()
+        fi
 
         return 0
     }
@@ -2179,6 +2226,8 @@
         return "${int_exit_code}"
     }
 
+    # NOTE: recent changes, not tested!
+
     # <summary> Recommended host security changes. </summary>
     # <returns> exit code </returns>
     function ModifySecurity
@@ -2187,41 +2236,51 @@
         # <returns> exit code </returns>
         function ModifySecurity_AppendFiles
         {
+
+            # NOTE: recent changes, not tested!
+
+            function OverwriteToFile
+            {
+                declare -aI arr_file
+                declare -I str_file
+                DeleteFile "${str_file}" &> /dev/null
+                CreateFile "${str_file}" &> /dev/null
+                WriteToFile "${str_file}"
+                arr_file=()
+                str_file=""
+                return "${?}"
+            }
+
             # <params>
             local readonly str_output="Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
-            declare -a arr_files=(
-                "/etc/modprobe.d/disable-usb-storage.conf"
-                "/etc/modprobe.d/disable-firewire.conf"
-                "/etc/modprobe.d/disable-thunderbolt.conf"
-            )
-
             echo
 
-            for str_file in "${arr_files[@]}"; do
-                DeleteFile "${str_file}" &> /dev/null
-            done
-
             if ReadInput "${str_output}"; then
+                local str_file="/etc/modprobe.d/disable-usb-storage.conf"
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-
-                CreateFile "${arr_files[0]}" &> /dev/null
-                WriteToFile "${arr_files[0]}" || return "${?}"
+                OverwriteToFile
 
                 declare -a arr_file=(
                     'blacklist firewire-core'
                 )
 
-                CreateFile "${arr_files[1]}" &> /dev/null
-                WriteToFile "${arr_files[1]}" || return "${?}"
+                local str_file="/etc/modprobe.d/disable-firewire.conf"
+                declare -a arr_file=(
+                    'install usb-storage /bin/true'
+                )
+                OverwriteToFile
 
                 declare -a arr_file=(
                     'blacklist thunderbolt'
                 )
 
-                CreateFile "${arr_files[2]}" &> /dev/null
-                WriteToFile "${arr_files[2]}" || return "${?}"
+                local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
+                declare -a arr_file=(
+                    'install usb-storage /bin/true'
+                )
+                OverwriteToFile
 
                 echo -e "${str_output_please_wait}"
                 update-initramfs -u -k all || return "${?}"
@@ -2456,6 +2515,7 @@
         return "${int_exit_code}"
     }
 
+    # TODO: make the changes here into a separate function, such that only the service name (ssh/d), and files associated (/etc/ssh/ssh_config) need to be declared.
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_SSH_alt"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
