@@ -1887,119 +1887,11 @@
     function InstallFromFlathubRepos
     {
         # NOTE: Update Here!
-        # <summary> Get params. </summary>
-        # <returns> params </returns>
-        function InstallFromFlathubRepos_GetParams
-        {
-            # <params>
-            declare -a arr_flatpak_to_install=()
-
-            declare -ar arr_flatpak_Compatibility=(
-                "org.freedesktop.Platform"
-                "org.freedesktop.Platform.Compat.i386"
-                "org.freedesktop.Platform.GL.default"
-                "org.freedesktop.Platform.GL32.default"
-                "org.freedesktop.Platform.GL32.nvidia-460-91-03"
-                "org.freedesktop.Platform.VAAPI.Intel.i386"
-            )
-
-            declare -ar arr_flatpak_Developer=(
-                "com.visualstudio.code"
-                "com.vscodium.codium"
-            )
-
-            declare -ar arr_flatpak_Games=(
-                "org.libretro.RetroArch"
-                "com.valvesoftware.Steam"
-                "com.valvesoftware.SteamLink"
-            )
-
-            declare -ar arr_flatpak_Internet=(
-                "org.filezillaproject.Filezilla"
-                "io.gitlab.librewolf-community"
-                "nz.mega.MEGAsync"
-                "com.obsproject.Studio"
-            )
-
-            declare -ar arr_flatpak_Media=(
-                "org.freedesktop.LinuxAudio.Plugins.TAP"
-                "org.freedesktop.LinuxAudio.Plugins.swh"
-                "com.stremio.Stremio"
-                "org.videolan.VLC"
-                "org.videolan.VLC.Plugin.makemkv"
-            )
-
-            declare -ar arr_flatpak_Office=(
-                "org.libreoffice.LibreOffice"
-                "org.mozilla.Thunderbird"
-            )
-
-            declare -ar arr_flatpak_PrismBreak=(
-                "org.getmonero.Monero"
-            )
-
-            declare -ar arr_flatpak_Tools=(
-                "org.openshot.OpenShot"
-                "org.kde.digikam"
-                "org.kde.kdenlive"
-                "org.keepassxc.KeePassXC"
-                "org.freedesktop.Platform.openh264"
-                "org.freedesktop.Platform.ffmpeg-full"
-                "org.bunkus.mkvtoolnix-gui"
-                "com.adobe.Flash-Player-Projector"
-                "com.calibre_ebook.calibre"
-                "com.makemkv.MakeMKV"
-                "com.poweriso.PowerISO"
-                "fr.handbrake.ghb io.github.Hexchat"
-            )
-
-            declare -ar arr_flatpak_Unsorted=(
-                "org.freedesktop.Sdk"
-                "org.gnome.Platform"
-                "org.gtk.Gtk3theme.Breeze"
-                "org.kde.KStyle.Adwaita"
-                "org.kde.Platform"
-            )
-            # </params>
-        }
-
-        # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_flatpak_to_install[@]}"> total list of packages to install </parameter>
-        # <parameter name="${1}"> this list packages to install </parameter>
-        # <parameter name="${2}"> output statement </parameter>
-        # <returns> ${arr_flatpak_to_install[@]} </returns>
-        function InstallFromFlathubRepos_InstallByType
-        {
-            # <params>
-            local str_package=""
-            local var_command='echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}"'
-            # </params>
-
-            if CheckIfVarIsValid "${1}"; then
-                declare -i int_i=1
-                local str_list_of_packages_to_install="${1}"
-                str_package=$( eval "${var_command}" )
-
-                while CheckIfVarIsValid $str_package; do
-                    echo -e "\t${str_package}"
-                    (( int_i++ ))
-                    str_package=$( eval "${var_command}" )
-                done
-
-                echo
-                ReadInput "${2}" || return "${?}"
-                arr_flatpak_to_install+=( "${str_list_of_packages_to_install}" )
-                return 0
-            fi
-
-            return 1
-        }
-
         function InstallFromFlathubRepos_Main
         {
             # <params>
             local str_command="flatpak"
-            InstallFromFlathubRepos_GetParams
+            local str_packages_to_install=""
             # </params>
 
             CheckIfCommandIsInstalled "${str_command}" || (
@@ -2023,15 +1915,135 @@
             echo
 
             # <summary> Select and Install software sorted by type. </summary>
-            InstallFromFlathubRepos_InstallByType "${arr_flatpak_Unsorted[@]}" "Select given Flatpak software?"
-            InstallFromFlathubRepos_InstallByType "${str_flatpak_PrismBreak[@]}" "Select recommended Prism Break Flatpak software?"
-            CheckIfVarIsValid ${arr_flatpak_to_install[@]} || return "${?}"
-            local readonly str_output="Install selected Flatpak apps?"
-            ReadInput "${str_output}" && flatpak install --user "${arr_flatpak_to_install[@]}"
+            declare -a arr=( "${arr_flatpak_Unsorted[@]}" )
+            if PrintArray; then
+                local str_output="Select given Flatpak software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Compatibility[@]}" )
+            if PrintArray; then
+                local str_output="Select dependencies?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Developer[@]}" )
+            if PrintArray; then
+                local str_output="Select Development software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Games[@]}" )
+            if PrintArray; then
+                local str_output="Select games?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Internet[@]}" )
+            if PrintArray; then
+                local str_output="Select Internet software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Media[@]}" )
+            if PrintArray; then
+                local str_output="Select multi-media software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Office[@]}" )
+            if PrintArray; then
+                local str_output="Select office software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_PrismBreak[@]}" )
+            if PrintArray; then
+                local str_output="Select recommended \"Prism break\" software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_flatpak_Tools[@]}" )
+            if PrintArray; then
+                local str_output="Select software tools?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            local str_output="\n${var_yellow}${str_packages_to_install}${var_reset_color}"
+            echo -e "${str_output}"
+            local str_output="Install selected Flatpak apps?"
+            ReadInput "${str_output}" && flatpak install --user "${str_packages_to_install[@]}"
+            return "${?}"
         }
 
         # <params>
         local readonly str_output="Installing from Flathub repositories..."
+        declare -ar arr_flatpak_Compatibility=(
+            "org.freedesktop.Platform"
+            "org.freedesktop.Platform.Compat.i386"
+            "org.freedesktop.Platform.GL.default"
+            "org.freedesktop.Platform.GL32.default"
+            "org.freedesktop.Platform.GL32.nvidia-460-91-03"
+            "org.freedesktop.Platform.VAAPI.Intel.i386"
+        )
+
+        declare -ar arr_flatpak_Developer=(
+            "com.visualstudio.code"
+            "com.vscodium.codium"
+        )
+
+        declare -ar arr_flatpak_Games=(
+            "org.libretro.RetroArch"
+            "com.valvesoftware.Steam"
+            "com.valvesoftware.SteamLink"
+        )
+
+        declare -ar arr_flatpak_Internet=(
+            "org.filezillaproject.Filezilla"
+            "io.gitlab.librewolf-community"
+            "nz.mega.MEGAsync"
+            "com.obsproject.Studio"
+        )
+
+        declare -ar arr_flatpak_Media=(
+            "org.freedesktop.LinuxAudio.Plugins.TAP"
+            "org.freedesktop.LinuxAudio.Plugins.swh"
+            "com.stremio.Stremio"
+            "org.videolan.VLC"
+            "org.videolan.VLC.Plugin.makemkv"
+        )
+
+        declare -ar arr_flatpak_Office=(
+            "org.libreoffice.LibreOffice"
+            "org.mozilla.Thunderbird"
+        )
+
+        declare -ar arr_flatpak_PrismBreak=(
+            "org.getmonero.Monero"
+        )
+
+        declare -ar arr_flatpak_Tools=(
+            "org.openshot.OpenShot"
+            "org.kde.digikam"
+            "org.kde.kdenlive"
+            "org.keepassxc.KeePassXC"
+            "org.freedesktop.Platform.openh264"
+            "org.freedesktop.Platform.ffmpeg-full"
+            "org.bunkus.mkvtoolnix-gui"
+            "com.adobe.Flash-Player-Projector"
+            "com.calibre_ebook.calibre"
+            "com.makemkv.MakeMKV"
+            "com.poweriso.PowerISO"
+            "fr.handbrake.ghb io.github.Hexchat"
+        )
+
+        declare -ar arr_flatpak_Unsorted=(
+            "org.freedesktop.Sdk"
+            "org.gnome.Platform"
+            "org.gtk.Gtk3theme.Breeze"
+            "org.kde.KStyle.Adwaita"
+            "org.kde.Platform"
+        )
         # </params>
 
         echo
