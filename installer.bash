@@ -532,10 +532,10 @@
         local readonly str_output_fail="${var_prefix_fail} Could not create file '${1}'."
         # </params>
 
-        touch "${1}" || (
+        if ! touch "${1}" &> /dev/null; then
             echo -e "${str_output_fail}"
             return 1
-        )
+        fi
 
         return 0
     }
@@ -697,16 +697,13 @@
     # <returns> exit code </returns>
     function OverwriteFile
     {
-        CheckIfFileExists "${1}" || return "${?}"
-
         # <params>
         declare -aI arr_file
-        declare -I str_file
         # </params>
 
-        DeleteFile "${str_file}" &> /dev/null || return "${?}"
-        CreateFile "${str_file}" &> /dev/null || return "${?}"
-        WriteFile "${str_file}"
+        DeleteFile "${1}"
+        CreateFile "${1}" || return "${?}"
+        WriteFile "${1}"
         return "${?}"
     }
 # </code>
@@ -826,7 +823,11 @@
     # <returns> exit code </returns>
     function UpdateNetworkStatus
     {
-        ( TryThisXTimesBeforeFail "TestNetwork true" &> /dev/null && bool_is_connected_to_Internet=true ) || bool_is_connected_to_Internet=false
+        # <params>
+        declare -I bool_is_connected_to_Internet
+        # </params>
+
+        ( TryThisXTimesBeforeFail "TestNetwork true" && bool_is_connected_to_Internet=true ) || bool_is_connected_to_Internet=false
     }
 # </code>
 
@@ -840,14 +841,12 @@
         # <params>
         local readonly str_no="N"
         local readonly str_yes="Y"
-        declare -ir int_min_count=1
-        declare -ir int_max_count=3
-        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+        declare -ar arr_count=( "1" "2" "3" )
         local str_output=""
         # </params>
 
         CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
-        declare -r str_output+="${var_green}[Y/n]:${var_reset_color}"
+        str_output+="${var_green}[Y/n]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
 
@@ -871,7 +870,8 @@
         done
 
         # <summary> After given number of attempts, input is set to default. </summary>
-        echo -e "${var_prefix_warn} Exceeded max attempts. Choice is set to default: ${str_no}"
+        str_output="Exceeded max attempts. Choice is set to default: ${var_yellow}${str_no}${var_reset_color}"
+        echo -e "${str_output}"
         return 1
     }
 
@@ -887,11 +887,9 @@
     function ReadInputFromRangeOfTwoNums
     {
         # <params>
-        declare -ir int_min_count=1
-        declare -ir int_max_count=3
-        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
-        local readonly var_min=${2}
-        local readonly var_max=${3}
+        declare -ar arr_count=( "1" "2" "3" )
+        local readonly var_min="${2}"
+        local readonly var_max="${3}"
         local str_output=""
         local readonly str_output_extrema_are_not_valid="${var_prefix_error} Extrema are not valid."
         var_input=""
@@ -904,7 +902,7 @@
 
         CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
 
-        readonly str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
+        str_output+="${var_green}[${var_min}-${var_max}]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
 
@@ -922,7 +920,8 @@
         done
 
         var_input=$var_min
-        echo -e "Exceeded max attempts. Choice is set to default: ${var_input}"
+        str_output="Exceeded max attempts. Choice is set to default: ${var_yellow}${var_input}${var_reset_color}"
+        echo -e "${str_output}"
         return 1
     }
 
@@ -937,9 +936,7 @@
     function ReadMultipleChoiceIgnoreCase
     {
         # <params>
-        declare -ir int_min_count=1
-        declare -ir int_max_count=3
-        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+        declare -ar arr_count=( "1" "2" "3" )
         declare -a arr_input=()
         local str_output=""
         local readonly str_output_multiple_choice_not_valid="${var_prefix_error} Insufficient multiple choice answers."
@@ -964,7 +961,7 @@
         if CheckIfVarIsValid "${9}" &> /dev/null; then arr_input+=( "${9}" ); fi
 
         CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
-        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
+        str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
             echo -en "${str_output} "
@@ -985,7 +982,8 @@
         done
 
         var_input=${arr_input[0]}
-        echo -e "Exceeded max attempts. Choice is set to default: ${var_input}"
+        str_output="Exceeded max attempts. Choice is set to default: ${var_yellow}${var_input}${var_reset_color}"
+        echo -e "${str_output}"
         return 1
     }
 
@@ -1001,9 +999,7 @@
     function ReadMultipleChoiceMatchCase
     {
         # <params>
-        declare -ir int_min_count=1
-        declare -ir int_max_count=3
-        declare -ar arr_count=$( eval echo {$int_min_count..$int_max_count} )
+        declare -ar arr_count=( "1" "2" "3" )
         declare -a arr_input=()
         local str_output=""
         local readonly str_output_multiple_choice_not_valid="${var_prefix_error} Insufficient multiple choice answers."
@@ -1027,13 +1023,11 @@
         if CheckIfVarIsValid "${9}" &> /dev/null; then arr_input+=( "${9}" ); fi
 
         CheckIfVarIsValid "${1}" &> /dev/null && str_output="${1} "
-        readonly str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
+        str_output+="${var_green}[${arr_input[@]}]:${var_reset_color}"
 
         for int_count in ${arr_count[@]}; do
             echo -en "${str_output} "
             read var_input
-
-            echo $int_count
 
             if CheckIfVarIsValid $var_input &> /dev/null; then
                 for var_element in ${arr_input[@]}; do
@@ -1044,13 +1038,12 @@
                 done
             fi
 
-            echo $int_count
-
             echo -e "${str_output_var_is_not_valid}"
         done
 
         var_input=${arr_input[0]}
-        echo -e "Exceeded max attempts. Choice is set to default: ${var_input}"
+        str_output="Exceeded max attempts. Choice is set to default: ${var_yellow}${var_input}${var_reset_color}"
+        echo -e "${str_output}"
         return 1
     }
 # </code>
@@ -2128,18 +2121,24 @@
             # <params>
             IFS=$'\n'
             local bool_nonzero_amount_of_failed_operations=false
-            local readonly str_file="/etc/apt/sources.list"
+            declare -a arr_choices=(
+                "stable"
+                "testing"
+                "unstable"
+                "backports"
+            )
+            local readonly str_file1="/etc/apt/sources.list"
             local readonly str_release_name=$( lsb_release -sc )
             local readonly str_release_Ver=$( lsb_release -sr )
             local str_sources=""
             # </params>
 
-            CreateBackupFile "${str_file}" || return "${?}"
-            local str_sources="contrib"
-            ReadInput "Include '${str_sources}' sources?" && str_sources+="${str_sources}"
-            CheckIfVarIsValid $str_sources &> /dev/null || str_sources+=" "
-            local str_sources="non-free"
-            ReadInput "Include '${str_sources}' sources?" && str_sources+="${str_sources}"
+            CreateBackupFile "${str_file1}" || CreateFile "${str_file1}" || return "${?}"
+            local str_source="contrib"
+            ReadInput "Include '${str_source}' sources?" && str_sources+="${str_source} "
+
+            local str_source="non-free"
+            ReadInput "Include '${str_source}' sources?" && str_sources+="${str_source} "
 
             # <summary> Setup mandatory sources. </summary>
             # <summary> User prompt </summary>
@@ -2153,79 +2152,97 @@
             echo -e "\t'backports'\t== '${str_release_name}-backports'\t*optionally receive more recent updates."
 
             # <summary Apt sources </summary>
-            ReadMultipleChoiceMatchCase "Select a Debian release branch?" "stable" "testing" "unstable" "backports"
-            local readonly str_branch_name=${var_return}
+            ReadMultipleChoiceMatchCase "Select a Debian release branch?" "${arr_choices[0]}" "${arr_choices[1]}" "${arr_choices[2]}" "${arr_choices[3]}"
+            local readonly str_choice="${var_input}"
 
-            declare -a arr_sources=(
+            case "${str_choice}" in
+                "backports" )
+                    local readonly str_branch_name="stable"
+                    ;;
+                * )
+                    local readonly str_branch_name="${str_choice}"
+                    ;;
+            esac
+
+            declare -a arr_file=(
                 "# debian ${str_branch_name}"
                 "# See https://wiki.debian.org/SourcesList for more information."
-                "deb http://deb.debian.org/debian/ ${str_branch_name} main $str_sources"
-                "deb-src http://deb.debian.org/debian/ ${str_branch_name} main $str_sources"
-                $'\n'
-                "deb http://deb.debian.org/debian/ ${str_branch_name}-updates main $str_sources"
-                "deb-src http://deb.debian.org/debian/ ${str_branch_name}-updates main $str_sources"
-                $'\n'
-                "deb http://security.debian.org/debian-security/ ${str_branch_name}-security main $str_sources"
-                "deb-src http://security.debian.org/debian-security/ ${str_branch_name}-security main $str_sources"
+                "deb http://deb.debian.org/debian/ ${str_branch_name} main ${str_sources}"
+                "deb-src http://deb.debian.org/debian/ ${str_branch_name} main ${str_sources}"
+                "#"
+                "deb http://deb.debian.org/debian/ ${str_branch_name}-updates main ${str_sources}"
+                "deb-src http://deb.debian.org/debian/ ${str_branch_name}-updates main ${str_sources}"
+                "#"
+                "deb http://security.debian.org/debian-security/ ${str_branch_name}-security main ${str_sources}"
+                "deb-src http://security.debian.org/debian-security/ ${str_branch_name}-security main ${str_sources}"
                 "#"
             )
 
-            CheckIfFileExists "${str_file1}" || bool_nonzero_amount_of_failed_operations=true
-
             # <summary> Comment out lines in system file. </summary>
-            declare -a arr_file=()
+            case "${str_choice}" in
+                "stable" )
+                    bool_nonzero_amount_of_failed_operations=true
 
-            while read var_line; do
-                if [[ "${var_line}" != "#"* ]]; then
-                    var_line="#${var_line}"
-                fi
+                    for var_choice in ${arr_choices[@]}; do
+                        if [[ "${var_choice}" != "${str_choice}" ]]; then
+                            local str_file3="/etc/apt/sources.list.d/${var_choice}.list"
+                            DeleteFile "${str_file3}" &> /dev/null
+                        fi
+                    done
 
-                arr_file+=( "${var_line}" )
-            done < "${str_file1}" || return 1
+                    OverwriteFile "${str_file1}" &> /dev/null || return "${?}"
+                    ;;
 
-            WriteFile "${str_file1}"
+                * )
+                    declare -a arr_file_backup=()
+
+                    for var_line in ${arr_file[@]}; do
+                        if [[ "${var_line}" != "#"* ]]; then
+                            var_line="#${var_line}"
+                        fi
+
+                        arr_file_backup+=( "${var_line}" )
+                    done
+
+                    arr_file=( ${arr_file_backup[@]} )
+                    OverwriteFile "${str_file1}" &> /dev/null
+                    return "${?}"
+                    ;;
+            esac
 
             # <summary> Append to output. </summary>
-            case "${str_branch_name}" in
+            case "${str_choice}" in
                 # <summary> Current branch with backports. </summary>
                 "backports")
-                    declare -a arr_sources=(
-                        "# debian $str_release_Ver/$str_release_name"
+                    arr_file=(
+                        "# debian ${str_release_Ver}/${str_release_name}"
                         "# See https://wiki.debian.org/SourcesList for more information."
-                        "deb http://deb.debian.org/debian/ $str_release_name main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_release_name main $str_sources"
+                        "deb http://deb.debian.org/debian/ ${str_release_name} main ${str_sources}"
+                        "deb-src http://deb.debian.org/debian/ ${str_release_name} main ${str_sources}"
                         ""
-                        "deb http://deb.debian.org/debian/ $str_release_name-updates main $str_sources"
-                        "deb-src http://deb.debian.org/debian/ $str_release_name-updates main $str_sources"
+                        "deb http://deb.debian.org/debian/ ${str_release_name}-updates main ${str_sources}"
+                        "deb-src http://deb.debian.org/debian/ ${str_release_name}-updates main ${str_sources}"
                         ""
-                        "deb http://security.debian.org/debian-security/ $str_release_name-security main $str_sources"
-                        "deb-src http://security.debian.org/debian-security/ $str_release_name-security main $str_sources"
+                        "deb http://security.debian.org/debian-security/ ${str_release_name}-security main ${str_sources}"
+                        "deb-src http://security.debian.org/debian-security/ ${str_release_name}-security main ${str_sources}"
                         "#"
                         ""
-                        "# debian $str_release_Ver/$str_release_name ${str_branch_name}"
-                        "deb http://deb.debian.org/debian $str_release_name-${str_branch_name} main contrib non-free"
-                        "deb-src http://deb.debian.org/debian $str_release_name-${str_branch_name} main contrib non-free"
+                        "# debian ${str_release_Ver}/${str_release_name} ${str_choice}"
+                        "deb http://deb.debian.org/debian ${str_release_name}-${str_choice} main ${str_sources}"
+                        "deb-src http://deb.debian.org/debian ${str_release_name}-${str_choice} main ${str_sources}"
                         "#"
                     )
                     ;;
             esac
 
             # <summary> Output to sources file. </summary>
-            local readonly str_file2="/etc/apt/sources.list.d/${str_branch_name}.list"
-            # DeleteFile $str_file2 &> /dev/null
-            # CreateFile $str_file2 &> /dev/null
+            local readonly str_file2="/etc/apt/sources.list.d/${str_choice}.list"
 
-            case "${str_branch_name}" in
+            case "${str_choice}" in
                 "backports"|"testing"|"unstable" )
-                    declare -a arr_file=( "${arr_sources[@]}" )
-                    WriteFile "${str_file1}"
+                    OverwriteFile "${str_file2}"
                     ;;
             esac
-
-            # <summary> Update packages on system. </summary>
-            apt clean || bool_nonzero_amount_of_failed_operations=true
-            apt update || return 1
-            apt full-upgrade || return 1
 
             $bool_nonzero_amount_of_failed_operations &> /dev/null && return "${int_code_partial_completion}"
             return 0
@@ -2239,7 +2256,14 @@
 
         echo
         echo -e "${str_output}"
-        ModifyDebianRepos_Main
+
+        if ModifyDebianRepos_Main; then
+            # <summary> Update packages on system. </summary>
+            apt clean || bool_nonzero_amount_of_failed_operations=true
+            apt update || ( return 1 )
+            apt full-upgrade || ( return 1 )
+        fi
+
         AppendPassOrFail "${str_output}"
 
         if [[ "${int_exit_code}" -eq "${int_code_partial_completion}" ]]; then
@@ -2268,7 +2292,7 @@
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile "${str_file}"
+                OverwriteFile "${str_file}"
 
                 declare -a arr_file=(
                     'blacklist firewire-core'
@@ -2277,7 +2301,7 @@
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile "${str_file}"
+                OverwriteFile "${str_file}"
 
                 declare -a arr_file=(
                     'blacklist thunderbolt'
@@ -2286,7 +2310,7 @@
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile "${str_file}"
+                OverwriteFile "${str_file}"
 
                 echo -e "${str_output_please_wait}"
                 update-initramfs -u -k all || return "${?}"
@@ -2776,7 +2800,7 @@
             esac
         fi
 
-        UpdateNetworkStatus; $bool_is_connected_to_Internet || return "${?}"
+        UpdateNetworkStatus || return "${?}"
 
         if $bool_is_user_root; then
             InstallFromLinuxRepos || return "${?}"
