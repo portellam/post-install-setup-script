@@ -562,7 +562,7 @@
     # <summary> Output a file. </summary>
     # <param name="${1}"> string: the file </param>
     # <returns> exit code </returns>
-    function DescribeAFile
+    function PrintFile
     {
         CheckIfFileExists "${1}" || return "${?}"
 
@@ -572,7 +572,7 @@
         # </params>
 
         echo -e "${str_output}"
-        ReadFromFile "${1}" || return "${?}"
+        ReadFile "${1}" || return "${?}"
         echo "${var_yellow}"
         eval "${var_command}"
         echo -e "${var_reset_color}\n"
@@ -580,33 +580,43 @@
         return 0
     }
 
-    # <summary> Read input from a file. Declare inherited params before calling this function. </summary>
-    # <param name="${1}"> string: the file </param>
-    # <param name="${2}"> boolean: toggle garbage collection of params </param>
+    # <summary> Output an array. Declare inherited params before calling this function. </summary>
     # <param name="${arr_file[@]}"> string of array: the file contents </param>
     # <returns> exit code </returns>
-    function ReadFromFile
+    function PrintArray
+    {
+        # <params>
+        declare -aI arr_file
+        local readonly var_command='cat "${arr_file[@]}"'
+        # </params>
+
+        if ! CheckIfVarIsValid "${arr_file[@]}" &> /dev/null; then
+            return 1
+        fi
+
+        eval "${var_command}" || return 1
+        return 0
+    }
+
+    # <summary> Read input from a file. Declare inherited params before calling this function. </summary>
+    # <param name="${1}"> string: the file </param>
+    # <param name="${arr_file[@]}"> string of array: the file contents </param>
+    # <returns> exit code </returns>
+    function ReadFile
     {
         CheckIfFileExists "${1}" || return "${?}"
 
         # <params>
         declare -aI arr_file
-        local bool=false
         local readonly str_output_fail="${var_prefix_fail} Could not read from file '${1}'."
         local readonly var_command='cat "${1}"'
         # </params>
 
-        CheckIfVarIsBool "${2}" &> /dev/null && bool=true
         arr_file=( $( eval "${var_command}" ) )
 
         if ! CheckIfVarIsValid "${arr_file[@]}" &> /dev/null; then
             echo -e "${str_output_fail}"
             return 1
-        fi
-
-        # <summary> Free memory </summary>
-        if $bool; then
-            arr_file=()
         fi
 
         return 0
@@ -651,22 +661,18 @@
 
     # <summary> Write output to a file. Declare inherited params before calling this function. </summary>
     # <param name="${1}"> string: the file </param>
-    # <param name="${2}"> boolean: toggle garbage collection of params </param>
     # <param name="${arr_file[@]}"> array: the file contents </param>
     # <returns> exit code </returns>
-    function WriteToFile
+    function WriteFile
     {
         CheckIfFileExists "${1}" || return "${?}"
 
         # <params>
-        # IFS=$'\n'
         declare -aI arr_file
-        local bool=false
         local readonly str_output_fail="${var_prefix_fail} Could not write to file '${1}'."
         # </params>
 
         CheckIfVarIsValid "${arr_file[@]}" || return "${?}"
-        CheckIfVarIsBool "${2}" &> /dev/null && bool=true
 
         # new
         ( printf "%s\n" "${arr_file[@]}" >> "${1}" ) || (
@@ -682,12 +688,26 @@
         #     )
         # done
 
-        # <summary> Free memory </summary>
-        if $bool; then
-            arr_file=()
-        fi
-
         return 0
+    }
+
+    # <summary> Write output to a file. Declare inherited params before calling this function. </summary>
+    # <param name="${1}"> string: the file </param>
+    # <param name="${arr_file[@]}"> array: the file contents </param>
+    # <returns> exit code </returns>
+    function OverwriteFile
+    {
+        CheckIfFileExists "${1}" || return "${?}"
+
+        # <params>
+        declare -aI arr_file
+        declare -I str_file
+        # </params>
+
+        DeleteFile "${str_file}" &> /dev/null || return "${?}"
+        CreateFile "${str_file}" &> /dev/null || return "${?}"
+        WriteFile "${str_file}"
+        return "${?}"
     }
 # </code>
 
@@ -1013,6 +1033,8 @@
             echo -en "${str_output} "
             read var_input
 
+            echo $int_count
+
             if CheckIfVarIsValid $var_input &> /dev/null; then
                 for var_element in ${arr_input[@]}; do
                     if [[ "${var_input}" == "${var_element}" ]]; then
@@ -1021,6 +1043,8 @@
                     fi
                 done
             fi
+
+            echo $int_count
 
             echo -e "${str_output_var_is_not_valid}"
         done
@@ -1470,7 +1494,6 @@
 
                 if AppendServices_AppendFile "${str_service}" "${str_file}"; then
                     eval "${var_command_update_services}"
-
                     local str_output="Enable/disable '${str_service}'?"
 
                     if ReadInput "${str_output}"; then
@@ -2130,7 +2153,7 @@
             echo -e "\t'backports'\t== '${str_release_name}-backports'\t*optionally receive more recent updates."
 
             # <summary Apt sources </summary>
-            ReadMultipleChoiceMatchCase "Enter option: " "stable" "testing" "unstable" "backports"
+            ReadMultipleChoiceMatchCase "Select a Debian release branch?" "stable" "testing" "unstable" "backports"
             local readonly str_branch_name=${var_return}
 
             declare -a arr_sources=(
@@ -2160,7 +2183,7 @@
                 arr_file+=( "${var_line}" )
             done < "${str_file1}" || return 1
 
-            WriteToFile "${str_file1}"
+            WriteFile "${str_file1}"
 
             # <summary> Append to output. </summary>
             case "${str_branch_name}" in
@@ -2195,7 +2218,7 @@
             case "${str_branch_name}" in
                 "backports"|"testing"|"unstable" )
                     declare -a arr_file=( "${arr_sources[@]}" )
-                    WriteToFile "${str_file1}"
+                    WriteFile "${str_file1}"
                     ;;
             esac
 
@@ -2236,21 +2259,6 @@
         # <returns> exit code </returns>
         function ModifySecurity_AppendFiles
         {
-
-            # NOTE: recent changes, not tested!
-
-            function OverwriteToFile
-            {
-                declare -aI arr_file
-                declare -I str_file
-                DeleteFile "${str_file}" &> /dev/null
-                CreateFile "${str_file}" &> /dev/null
-                WriteToFile "${str_file}"
-                arr_file=()
-                str_file=""
-                return "${?}"
-            }
-
             # <params>
             local readonly str_output="Disable given device interfaces (for storage devices only): USB, Firewire, Thunderbolt?"
             echo
@@ -2260,27 +2268,25 @@
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile
+                OverwriteToFile "${str_file}"
 
                 declare -a arr_file=(
                     'blacklist firewire-core'
                 )
-
                 local str_file="/etc/modprobe.d/disable-firewire.conf"
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile
+                OverwriteToFile "${str_file}"
 
                 declare -a arr_file=(
                     'blacklist thunderbolt'
                 )
-
                 local str_file="/etc/modprobe.d/disable-thunderbolt.conf"
                 declare -a arr_file=(
                     'install usb-storage /bin/true'
                 )
-                OverwriteToFile
+                OverwriteToFile "${str_file}"
 
                 echo -e "${str_output_please_wait}"
                 update-initramfs -u -k all || return "${?}"
@@ -2471,7 +2477,7 @@
             if CheckIfFileExists "${str_file1}"; then
                 local str_output="Add the above incoming changes to '${str_file2}'?"
 
-                if DescribeAFile "${str_file1}" && ReadInput "${str_output}"; then
+                if PrintFile "${str_file1}" && ReadInput "${str_output}"; then
                     if cp "${str_file2}" "${str_file2_backup}" &> /dev/null; then
                         ( cat "${str_file1}" >> "${str_file2}" &> /dev/null ) || return "${?}"
                     else
@@ -2515,7 +2521,6 @@
         return "${int_exit_code}"
     }
 
-    # TODO: make the changes here into a separate function, such that only the service name (ssh/d), and files associated (/etc/ssh/ssh_config) need to be declared.
     # <summary> Configuration of SSH. </summary>
     # <parameter name="$str_SSH_alt"> string: chosen alternate SSH port value </parameter>
     # <returns> exit code </returns>
@@ -2596,12 +2601,22 @@
                         ;;
                 esac
 
-                if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
-                    WriteToFile "${str_file1}" || return "${?}"
-                    systemctl restart "${str_command1}" || return 1
+                PrintArray
 
-                    WriteToFile "${str_file2}" || return "${?}"
-                    systemctl restart "${str_command2}" || return 1
+                if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
+                    local str_output="Write to file '${str_file1}'?"
+
+                    if ReadInput "${str_output}"; then
+                        WriteFile "${str_file1}" || return "${?}"
+                        systemctl restart "${str_command1}" || return 1
+                    fi
+
+                    local str_output="Write to file '${str_file2}'?"
+
+                    if ReadInput "${str_output}"; then
+                        WriteFile "${str_file2}" || return "${?}"
+                        systemctl restart "${str_command2}" || return 1
+                    fi
                 else
                     bool_nonzero_amount_of_failed_operations=true
                 fi
@@ -2810,14 +2825,14 @@
     # NOTE: Update Here!
     declare -g arr_commands=(
         "ExecuteSystemSetup"
-        "ExecuteGitSetup"
         "ExecuteSoftwareSetup"
+        "ExecuteGitSetup"
     )
 
     declare -g arr_commands_output=(
         "Execute System setup?"
-        "Execute Git setup and installation?"
         "Execute software setup and installation?"
+        "Execute Git setup and installation?"
     )
     # </params>
 
