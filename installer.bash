@@ -581,19 +581,20 @@
     }
 
     # <summary> Output an array. Declare inherited params before calling this function. </summary>
-    # <param name="${arr_file[@]}"> string of array: the file contents </param>
+    # <param name="${arr[@]}"> string of array: the array </param>
     # <returns> exit code </returns>
     function PrintArray
     {
         # <params>
-        declare -aI arr_file
-        local readonly var_command='cat "${arr_file[@]}"'
+        declare -aI arr
+        local readonly var_command='echo -e "${var_yellow}${arr[@]}${var_reset_color}"'
         # </params>
 
-        if ! CheckIfVarIsValid "${arr_file[@]}" &> /dev/null; then
+        if ! CheckIfVarIsValid "${arr[@]}" &> /dev/null; then
             return 1
         fi
 
+        echo
         eval "${var_command}" || return 1
         return 0
     }
@@ -1611,13 +1612,11 @@
         function InstallFromLinuxRepos_GetParamsForAPT
         {
             # <params>
-            declare -a arr_packages_to_install=()
-
-            declare -ar arr_packages_Required=(
+            declare -a arr_packages_Required=(
                 "systemd-timesyncd"
             )
 
-            declare -ar arr_packages_Commands=(
+            declare -a arr_packages_Commands=(
                 "curl"
                 "flashrom"
                 "lm-sensors"
@@ -1627,7 +1626,7 @@
                 "youtube-dl"
             )
 
-            declare -ar arr_packages_Compatibilty=(
+            declare -a arr_packages_Compatibilty=(
                 "java-common"
                 "python3"
                 "qemu"
@@ -1635,44 +1634,44 @@
                 "wine"
             )
 
-            declare -ar arr_packages_Developer=(
+            declare -a arr_packages_Developer=(
                 ""
             )
 
-            declare -ar arr_packages_Drivers=(
+            declare -a arr_packages_Drivers=(
                 "apcupsd"
                 "rtl-sdr"
                 "steam-devices"
             )
 
-            declare -ar arr_packages_Games=(
+            declare -a arr_packages_Games=(
                 ""
             )
 
-            declare -ar arr_packages_Internet=(
+            declare -a arr_packages_Internet=(
                 "firefox-esr"
                 "filezilla"
             )
 
-            declare -ar arr_packages_Media=(
+            declare -aI arr_packages_Media=(
                 "vlc"
             )
 
-            declare -ar arr_packages_Office=(
+            declare -a arr_packages_Office=(
                 "libreoffice"
             )
 
-            declare -ar arr_packages_PrismBreak=(
+            declare -a arr_packages_PrismBreak=(
                 ""
             )
 
-            declare -ar arr_packages_Repos=(
+            declare -a arr_packages_Repos=(
                 "git"
                 "flatpak"
                 "snap"
             )
 
-            declare -ar arr_packages_Security=(
+            declare -a arr_packages_Security=(
                 "apt-listchanges"
                 "bsd-mailx"
                 "fail2ban"
@@ -1682,12 +1681,12 @@
                 "unattended-upgrades"
             )
 
-            declare -ar arr_packages_Suites=(
+            declare -a arr_packages_Suites=(
                 "debian-edu-install"
                 "science-all"
             )
 
-            declare -ar arr_packages_Tools=(
+            declare -a arr_packages_Tools=(
                 "bleachbit"
                 "cockpit"
                 "grub-customizer"
@@ -1695,7 +1694,7 @@
                 "zram-tools"
             )
 
-            declare -ar arr_packages_VGA_drivers=(
+            declare -a arr_packages_VGA_drivers=(
                 "nvidia-detect"
                 "xserver-xorg-video-all"
                 "xserver-xorg-video-amdgpu"
@@ -1723,75 +1722,143 @@
                 "xserver-xorg-video-vmware"
             )
 
-            declare -ar arr_packages_Unsorted=(
+            declare -a arr_packages_Unsorted=(
                 ""
             )
-
-            arr_packages_to_install+="${str_packages_Required} "
             # </params>
+
+            InstallFromLinuxRepos_Main
+            return "${?}"
         }
 
-        # <summary> Select and Install software sorted by type. </summary>
-        # <parameter name="${arr_packages_to_install[@]}"> arr: total list of packages to install </parameter>
-        # <parameter name="${1}"> this list packages to install </parameter>
-        # <parameter name="${2}"> output statement </parameter>
-        # <returns> ${arr_packages_to_install[@]} </returns>
-        function InstallFromLinuxRepos_InstallByType
-        {
-            if CheckIfVarIsValid "${1}"; then
-                declare -i int_i=1
-                local str_list_of_packages_to_install="${1}"
-                local str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
-
-                while CheckIfVarIsValid $str_package; do
-                    echo -e "\t${str_package}"
-                    (( int_i++ ))
-                    str_package=$( echo "${str_list_of_packages_to_install}" | cut -d ' ' -f "${int_i}" )
-                done
-
-                echo
-                ReadInput "${2}" || return "${?}"
-                arr_packages_to_install+=( "${str_list_of_packages_to_install}" )
-                return 0
-            fi
-
-            return 1
-        }
-
+        # NOTE: Update Here!
         function InstallFromLinuxRepos_Main
         {
             CheckIfVarIsValid "${str_package_manager}" || return "${?}"
 
             # <params>
-            case "${str_package_manager}" in
-                "apt" )
-                    InstallFromLinuxRepos_GetParamsForAPT
-                    ;;
-
-                * )
-                    return 1
-                    ;;
-            esac
-            # </params>
+            local str_packages_to_install
+            declare -aI arr_packages_Required
+            declare -aI arr_packages_Unsorted
+            declare -aI arr_packages_Commands
+            declare -aI arr_packages_Compatibilty
+            declare -aI arr_packages_Developer
+            declare -aI arr_packages_Games
+            declare -aI arr_packages_Unsorted
+            declare -aI arr_packages_Internet
+            declare -aI arr_packages_Media
+            declare -aI arr_packages_Office
+            declare -aI arr_packages_PrismBreak
+            declare -aI arr_packages_Repos
+            declare -aI arr_packages_Security
+            declare -aI arr_packages_Suites
+            declare -aI arr_packages_Tools
+            declare -aI arr_packages_Drivers
+            declare -aI arr_packages_VGA_drivers
+            # </params
 
             # <summary> Select and Install software sorted by type. </summary>
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Unsorted[@]} "Select given software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Commands[@]}  "Select Terminal commands?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Compatibilty[@]}  "Select compatibility libraries?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Developer[@]}  "Select Development software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Games[@]}  "Select games?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Internet[@]}  "Select Internet software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Media[@]}  "Select multi-media software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Office[@]}  "Select office software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_PrismBreak[@]}  "Select recommended \"Prism break\" software?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Repos[@]}  "Select software repositories?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Security[@]}  "Select security tools?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Suites[@]}  "Select software suites?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_Tools[@]}  "Select software tools?"
-            InstallFromLinuxRepos_InstallByType ${arr_packages_VGA_drivers[@]}  "Select VGA drivers?"
+            declare -a arr=( "${arr_packages_Unsorted[@]}" )
+            if PrintArray; then
+                local str_output="Select recommended software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
 
-            CheckIfVarIsValid ${arr_packages_to_install[@]} || return "${?}"
-            ReadInput "Install selected packages?" && InstallPackage ${arr_packages_to_install[@]}
+            declare -a arr=( "${arr_packages_Unsorted[@]}" )
+            if PrintArray; then
+                local str_output="Select given software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Commands[@]}" )
+            if PrintArray; then
+                local str_output="Select Terminal commands?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Compatibilty[@]}" )
+            if PrintArray; then
+                local str_output="Select dependencies?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Developer[@]}" )
+            if PrintArray; then
+                local str_output="Select Development software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Games[@]}" )
+            if PrintArray; then
+                local str_output="Select games?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Internet[@]}" )
+            if PrintArray; then
+                local str_output="Select Internet software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Media[@]}" )
+            if PrintArray; then
+                local str_output="Select multi-media software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Office[@]}" )
+            if PrintArray; then
+                local str_output="Select office software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_PrismBreak[@]}" )
+            if PrintArray; then
+                local str_output="Select recommended \"Prism break\" software?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Repos[@]}" )
+            if PrintArray; then
+                local str_output="Select software repositories?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Security[@]}" )
+            if PrintArray; then
+                local str_output="Select security tools?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Suites[@]}" )
+            if PrintArray; then
+                local str_output="Select software suites?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Tools[@]}" )
+            if PrintArray; then
+                local str_output="Select software tools?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_Drivers[@]}" )
+            if PrintArray; then
+                local str_output="Select drivers?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            declare -a arr=( "${arr_packages_VGA_drivers[@]}" )
+            if PrintArray; then
+                local str_output="Select VGA drivers?"
+                ReadInput "${str_output}" && str_packages_to_install+="${arr[@]} "
+            fi
+
+            local str_output="\n${var_yellow}${str_packages_to_install}${var_reset_color}"
+            echo -e "${str_output}"
+            local str_output="Install selected packages?"
+            ReadInput "${str_output}" && InstallPackage "${str_packages_to_install[@]}"
+            return "${?}"
         }
 
         # <params>
@@ -1800,7 +1867,17 @@
 
         echo
         echo -e "${str_output}"
-        InstallFromLinuxRepos_Main
+
+        case "${str_package_manager}" in
+            "apt" )
+                InstallFromLinuxRepos_GetParamsForAPT
+                ;;
+
+            * )
+                return 1
+                ;;
+        esac
+
         AppendPassOrFail "${str_output}"
         return "${int_exit_code}"
     }
@@ -2625,6 +2702,9 @@
                         ;;
                 esac
 
+                # TODO: double check this!
+                declare -a arr=( ${arr_file[@]} )
+
                 PrintArray
 
                 if CheckIfSystemFileIsOriginal "${str_file1}" "${str_package_to_install}"; then
@@ -2669,105 +2749,6 @@
 
 # <summary> Program middleman logic </summary>
 # <code>
-    # <summary> Display Help to console. </summary>
-        # <returns> exit code </returns>
-        # function Help
-        # {
-        #     declare -r str_helpPrompt="Usage: "${0}" [ OPTIONS ]
-        #         \nwhere OPTIONS
-        #         \n\t-h  --help\t\t\tPrint this prompt.
-        #         \n\t-d  --delete\t\t\tDelete existing VFIO setup.
-        #         \n\t-w  --write <logfile>\t\tWrite output (IOMMU groups) to <logfile>
-        #         \n\t-m  --multiboot <ARGUMENT>\tExecute Multiboot VFIO setup.
-        #         \n\t-s  --static <ARGUMENT>\t\tExecute Static VFIO setup.
-        #         \n\nwhere ARGUMENTS
-        #         \n\t-f  --full\t\t\tExecute pre-setup and post-setup.
-        #         \n\t-r  --read <logfile>\t\tRead previous output (IOMMU groups) from <logfile>, and update VFIO setup.
-        #         \n"
-
-        #     echo -e $str_helpPrompt
-
-        #     ExitWithThisExitCode
-        # }
-
-        # <summary> Parse input parameters for given options. </summary>
-        # <returns> exit code </returns>
-        # function ParseInputParamForOptions
-        # {
-        #     if [[ "${1}" =~ ^- || "${1}" == "--" ]]; then           # parse input parameters
-        #         while [[ "${1}" =~ ^-  ]]; do
-        #             case "${1}" in
-        #                 "")                                     # no option
-        #                     SetExitCodeOnError
-        #                     SaveExitCode
-        #                     break;;
-
-        #                 -h | --help )                           # options
-        #                     declare -lir int_aFlag=1
-        #                     break;;
-        #                 -d | --delete )
-        #                     declare -lir int_aFlag=2
-        #                     break;;
-        #                 -m | --multiboot )
-        #                     declare -lir int_aFlag=3;;
-        #                 -s | --static )
-        #                     declare -lir int_aFlag=4;;
-        #                 -w | --write )
-        #                     declare -lir int_aFlag=5;;
-
-        #                 -f | --full )                           # arguments
-        #                     declare -lir int_bFlag=1;;
-        #                 -r | --read )
-        #                     declare -lir int_bFlag=2;;
-        #             esac
-
-        #             shift
-        #         done
-        #     else                                                # invalid option
-        #         SetExitCodeOnError
-        #         SaveExitCode
-        #         ParseThisExitCode
-        #         Help
-        #         ExitWithThisExitCode
-        #     fi
-
-        #     # if [[ "${1}" == '--' ]]; then
-        #     #     shift
-        #     # fi
-
-        #     case $int_aFlag in                                  # execute second options before first options
-        #         3|4)
-        #             case $int_bFlag in
-        #                 1)
-        #                     PreInstallSetup;;
-        #                 # 2)
-        #                 #     ReadIOMMU_FromFile;;
-        #             esac;;
-        #     esac
-
-        #     case $int_aFlag in                                  # execute first options
-        #         1)
-        #             Help;;
-        #         2)
-        #             DeleteSetup;;
-        #         3)
-        #             MultiBootSetup;;
-        #         4)
-        #             StaticSetup;;
-        #         # 5)
-        #         #     WriteIOMMU_ToFile;;
-        #     esac
-
-        #     case $int_aFlag in                                  # execute second options after first options
-        #         3|4)
-        #             case $int_bFlag in
-        #                 1)
-        #                     PostInstallSetup;;
-        #             esac;;
-        #     esac
-        # }
-    #
-
     # <summary> Execute setup of recommended and optional system changes. </summary>
     # <param name="${str_SSH_alt}"> string: the IPv4 port for SSH </param>
     # <returns> exit code </returns>
@@ -2792,13 +2773,13 @@
     {
         local readonly str_disclaimer="${var_prefix_warn} If system update is/was prematurely stopped, to restart progress, execute in terminal:\t${var_yellow}'sudo dpkg --configure -a'${var_reset_color}"
 
-        if $bool_is_user_root; then
-            case "${str_package_manager}" in
-                "apt" )
-                    ModifyDebianRepos || return "${?}"
-                    ;;
-            esac
-        fi
+        # if $bool_is_user_root; then
+        #     case "${str_package_manager}" in
+        #         "apt" )
+        #             ModifyDebianRepos || return "${?}"
+        #             ;;
+        #     esac
+        # fi
 
         UpdateNetworkStatus || return "${?}"
 
