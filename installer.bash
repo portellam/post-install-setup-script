@@ -2279,7 +2279,7 @@
                         fi
                     done
 
-                    OverwriteFile "${str_file1}" &> /dev/null || return "${?}"
+                    OverwriteFile "${str_file1}" &> /dev/null
                     ;;
 
                 * )
@@ -2294,7 +2294,7 @@
                     done
 
                     arr_file=( ${arr_file_backup[@]} )
-                    OverwriteFile "${str_file1}" &> /dev/null || return "${?}"
+                    OverwriteFile "${str_file1}" &> /dev/null
                     ;;
             esac
 
