@@ -5,14 +5,14 @@
 # Description:  Disable system suspend ACPI wakeup for USB interfaces.
 #
 
-# set IFS #
-SAVEIFS=$IFS   # Save current IFS (Internal Field Separator)
-IFS=$'\n'      # Change IFS to newline char
+# <code>
+SAVEIFS=$IFS
+IFS=$'\n'
 
-declare -a arr1=($(cat /proc/acpi/wakeup | grep enabled | grep -Ei '*EHC*|*XHC*' | cut -d ' ' -f1))
-for str_line1 in ${arr1[@]}; do
-        echo $str_line1 > /proc/acpi/wakeup
+for var_line in $( cat /proc/acpi/wakeup | grep enabled | grep -Ei '*EHC*|*XHC*' | cut -d ' ' -f1 ); do
+	echo $var_line > /proc/acpi/wakeup || exit 1
 done
 
-IFS=$SAVEIFS   # Restore original IFS
+IFS=$SAVEIFS
 exit 0
+# </code>
