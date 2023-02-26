@@ -139,9 +139,8 @@
     }
 # </code>
 
-# <summary> #2 - Data-type and variable validation </summary>
-# <code>
-    # <summary> Check if the command is installed. </summary>
+# <summary> #3 - Process/package validation </summary>
+# <summary> Check if the command is installed. </summary>
     # <param name="${1}"> string: the command </param>
     # <returns> exit code </returns>
     function CheckIfCommandIsInstalled
@@ -223,13 +222,15 @@
         # </params>
 
         if ! CheckIfVarIsValid "${var_command_output}"; then
-            echo -e "${str_output_fail}"
+            echo -e "${str_output_fail}",
             return "${int_code_cmd_is_null}"
         fi
 
         return 0
     }
 
+# <summary> #2 - Data-type and variable validation </summary>
+# <code>
     # <summary> Check if the value is a valid bool. </summary>
     # <param name="${1}"> var: the boolean </param>
     # <returns> exit code </returns>
@@ -296,6 +297,44 @@
         return 0
     }
 
+    # <summary> Parse exit code as boolean. If non-zero, return false. </summary>
+    # <param name="${?}"> int: the exit code </param>
+    # <returns> boolean </returns>
+    function ParseExitCodeAsBool
+    {
+        if [[ "${?}" -ne 0 ]]; then
+            echo false
+            return 1
+        fi
+
+        echo true
+        return 0
+    }
+# </code>
+
+# <summary> #3 - User validation </summary>
+# <code>
+    # <summary> Check if current user is sudo or root. If true, pass. </summary>
+    # <returns> exit code </returns>
+    function CheckIfUserIsRoot
+    {
+        # <params>
+        local readonly str_file=$( basename "${0}" )
+        local readonly str_fail="${var_prefix_warn} User is not sudo/root. Execute: ${var_yellow}'sudo bash ${str_file}'${var_reset_color}."
+        local readonly var_command='$( whoami ) == "root"'
+        # </params>
+
+        if ! eval "${var_command}"; then
+            echo -e "${str_fail}"
+            return 1
+        fi
+
+        return 0
+    }
+# </code>
+
+# <summary> #4 - File validation </summary>
+# <code>
     # <summary> Check if the directory exists. </summary>
     # <param name="${1}"> string: the directory </param>
     # <returns> exit code </returns>
@@ -391,43 +430,6 @@
         return 0
     }
 
-    # <summary> Parse exit code as boolean. If non-zero, return false. </summary>
-    # <param name="${?}"> int: the exit code </param>
-    # <returns> boolean </returns>
-    function ParseExitCodeAsBool
-    {
-        if [[ "${?}" -ne 0 ]]; then
-            echo false
-            return 1
-        fi
-
-        echo true
-        return 0
-    }
-# </code>
-
-# <summary> #3 - User validation </summary>
-# <code>
-    # <summary> Check if current user is sudo or root. </summary>
-    # <returns> exit code </returns>
-    function CheckIfUserIsRoot
-    {
-        # <params>
-        local readonly str_file=$( basename "${0}" )
-        local readonly str_output_user_is_not_root="${var_prefix_warn} User is not Sudo/Root. In terminal, enter: ${var_yellow}'sudo bash ${str_file}'${var_reset_color}."
-        # </params>
-
-        if [[ $( whoami ) != "root" ]]; then
-            echo -e "${str_output_user_is_not_root}"
-            return 1
-        fi
-
-        return 0
-    }
-# </code>
-
-# <summary> #4 - File operation and validation </summary>
-# <code>
     # <summary> Check if two given files are the same. </summary>
     # <parameter name="${1}"> string: the file </parameter>
     # <parameter name="${2}"> string: the file </parameter>
@@ -1710,7 +1712,7 @@
                 "xserver-xorg-video-neomagic"
                 "xserver-xorg-video-nouveau"
                 "xserver-xorg-video-openchrome"
-                "xserver-xorg-video-qxl/"
+                "xserver-xorg-video-qxl"
                 "xserver-xorg-video-r128"
                 "xserver-xorg-video-radeon"
                 "xserver-xorg-video-savage"
