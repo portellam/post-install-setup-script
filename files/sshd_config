@@ -1,7 +1,0 @@
-PermitRootLogin no
-ChallengeResponseAuthentication no
-PasswordAuthentication no
-UsePAM no
-AuthenticationMethods publickey
-PubkeyAuthentication yes
-PermitEmptyPasswords no

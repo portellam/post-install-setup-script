@@ -1,9 +1,0 @@
-# /etc/cron.d/ntpdate-cron: crontab entries update system time
-#
-# Author(s):    Alex Portell <github.com/portellam>
-#
-
-# ntpdate #
-#
-# update every 15 min
-0,15,30,45 * * * * ntpdate -s time.nist.gov

@@ -1,9 +1,0 @@
-# /etc/cron.d/flatpak-cron:    crontab entries to upgrade software packages
-#
-# Author(s):    Alex Portell <github.com/portellam>
-#
-
-# flatpak #
-#
-# update every 8 hours
-0 0,8,16 * * * flatpak update -y
