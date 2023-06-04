@@ -16,13 +16,14 @@ function GetPromptsFromAnswerList
     local -n WARNING_REFERENCE="${3}"
     PROMPT_REFERENCE=""
     WARNING_REFERENCE=""
+    local -i LIST_MAX_INDEX=$( head -n 1 <<< $( sort -r <<< "${!ANSWER_LIST_REFERENCE[*]}" ) )
 
     for KEY in "${!ANSWER_LIST_REFERENCE[@]}"; do
         local ANSWER="${ANSWER_LIST_REFERENCE[$KEY]}"
         local FORMATTED_ANSWER="("$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )")${ANSWER:1}"
         local FORMATTED_WARNING="'"$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )'"'
 
-        if [[ "${KEY}" -lt "${#ANSWER_LIST_REFERENCE[@]}" ]]; then
+        if [[ "${KEY}" -lt "${#LIST_MAX_INDEX[@]}" ]]; then
             ROMPT_REFERENCE+="${FORMATTED_ANSWER}/"
             WARNING_REFERENCE+="${FORMATTED_WARNING}, "
         else
@@ -66,10 +67,10 @@ function GetReleaseBranchFromPrompt
     return 1
 }
 
-function PromptToChangeSourcesFile
-{
-    case 
-}
+# function PromptToChangeSourcesFile
+# {
+#     case 
+# }
 
 function DoesSourcesFileExist
 {
