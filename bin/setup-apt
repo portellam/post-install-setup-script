@@ -1,0 +1,87 @@
+#!/bin/false
+
+declare -ga _COUNT_LIST=$( seq 0 2 )
+declare -g _OPERATING_SYSTEM_DISTRIBUTION_NAME=$( lsb_release -i | awk 'END {print $2}' )
+declare -gi _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )
+declare -g _OPERATING_SYSTEM_RELEASE_NUMBER=$( lsb_release -r | awk 'END {print $2}' )
+declare -g _SOURCES_FILE_NAME="/etc/apt/sources.list"
+
+declare -gi _DEBIAN_LATEST_RELEASE_NUMBER=12
+declare -g _DEBIAN_LATEST_RELEASE_NAME="bookworm"
+
+function GetPromptsFromAnswerList
+{
+    local -n ANSWER_LIST_REFERENCE="${1}"
+    local -n PROMPT_REFERENCE="${2}"
+    local -n WARNING_REFERENCE="${3}"
+    PROMPT_REFERENCE=""
+    WARNING_REFERENCE=""
+
+    for KEY in "${!ANSWER_LIST_REFERENCE[@]}"; do
+        local ANSWER="${ANSWER_LIST_REFERENCE[$KEY]}"
+        local FORMATTED_ANSWER="("$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )")${ANSWER:1}"
+        local FORMATTED_WARNING="'"$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )'"'
+
+        if [[ "${KEY}" -lt "${#ANSWER_LIST_REFERENCE[@]}" ]]; then
+            ROMPT_REFERENCE+="${FORMATTED_ANSWER}/"
+            WARNING_REFERENCE+="${FORMATTED_WARNING}, "
+        else
+            ROMPT_REFERENCE+="${FORMATTED_ANSWER}"
+            WARNING_REFERENCE+="or ${FORMATTED_WARNING}."
+        fi
+    done
+
+    PROMPT_REFERENCE="[${PROMPT_REFERENCE}]: "
+    WARNING_REFERENCE="Please answer ${WARNING_REFERENCE}."
+    return 0
+}
+
+function GetReleaseBranchFromPrompt
+{
+    local -n REFERENCE="${1}"
+    local PROMPT=""
+    local -al ANSWER_LIST=(
+        "stable"
+        "testing"
+        "unstable"
+    )
+
+    GetPromptFromAnswerList "ANSWER_LIST" "PROMPT"
+
+    for COUNT in "${_COUNT_LIST[@]}"; do
+        local -l ANSWER
+        echo -e "Select ${_OPERATING_SYSTEM_DISTRIBUTION_NAME} release branch."
+        read -r -p "${PROMPT}" ANSWER
+
+        for THE_ANSWER in "${ANSWER_LIST[@]}"; do
+            if [[ "${THE_ANSWER}" == "${ANSWER}" ]]; then
+                REFERENCE="${ANSWER}"
+                return 0
+            fi
+        done
+
+        echo "Please answer 'S', 'T', 'U'."
+    done
+
+    return 1
+}
+
+function PromptToChangeSourcesFile
+{
+    case 
+}
+
+function DoesSourcesFileExist
+{
+    if ! find "${_SOURCES_FILE_NAME}"; then
+        echo -e "Failed to find package sources file."
+        return 1
+    fi
+
+    return 0
+}
+
+function UpdateSourcesFile
+{
+    sed -i "s/cbullseye/bookworm/g" /etc/apt/sources.list
+}
