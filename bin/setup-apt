@@ -16,10 +16,18 @@
 
     # <summary> Debian </summary>
     _DEBIAN_LATEST_RELEASE_NAME="bookworm"
+    _DEBIAN_RELEASE_OPTION_BACKPORTS="${_OPERATING_SYSTEM_RELEASE_NAME}-backports"
     declare -al _DEBIAN_RELEASE_BRANCH_LIST=(
         "stable"
         "testing"
         "unstable"
+    )
+
+    declare -al _DEBIAN_RELEASE_OPTIONS_LIST=(
+        "main"
+        "contrib"
+        "non-free"
+        "non-free-firmware"
     )
 # </params>
 
@@ -88,10 +96,51 @@
         return 0
     }
 
+    function GetReleaseOptionsFromPrompt
+    {
+        local -n REFERENCE="${1}"
+        local ANSWER_LIST PROMPT WARNING
+        SetReleaseOptions "ANSWER_LIST" || return 1
+        GetPromptFromAnswerList "ANSWER_LIST" "PROMPT" "WARNING"
+
+        for COUNT in "${_COUNT_LIST[@]}"; do
+            local -l ANSWER
+            echo -e "Append release option(s)?"
+            read -r -p "${PROMPT}" ANSWER
+
+
+            # move this into a separate function?
+            local -i INDEX=1
+
+            while true; do
+                local CHOICE=$( echo "${ANSWER}" | cut -d ' ' -f ${INDEX} )
+                [ -z "${CHOICE}" ] || break
+                CHOSEN_LIST+=( "${CHOICE}" )
+                (( INDEX++ ))
+            done
+
+            for THE_CHOICE in "${CHOSEN_LIST[@]}"; do
+                grep -Eiq "${THE_CHOICE}" <<< "${!ANSWER_LIST[*]}" || break
+
+                if [[ "${THE_CHOICE}" == "${ANSWER}" ]]; then
+                    REFERENCE+="${THE_CHOICE} "
+                fi
+            done
+
+            if [[ "${?}" -eq 0 ]]; then
+                return 0
+            fi
+
+            echo -e "${WARNING}"
+        done
+
+        return 1
+    }
+
     function GetReleaseBranchFromPrompt
     {
         local -n REFERENCE="${1}"
-        local PROMPT WARNING
+        local ANSWER_LIST PROMPT WARNING
         SetReleaseBranch "ANSWER_LIST" || return 1
         GetPromptFromAnswerList "ANSWER_LIST" "PROMPT" "WARNING"
 
@@ -157,6 +206,18 @@
             * )
                 echo -e "Operating system is not supported."
                 return 1 ;;
+        esac
+
+        return 0
+    }
+
+    function SetReleaseOptions
+    {
+        local -n REFERENCE="${1}"
+
+        case true in
+            "${_SYSTEM_IS_DEBIAN}" )
+                REFERENCE="${_DEBIAN_RELEASE_OPTIONS_LIST[@]}" ;;
         esac
 
         return 0
