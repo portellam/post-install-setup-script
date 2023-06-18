@@ -14,11 +14,11 @@
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SYSTEM_MODPACMAN}"; then
+        if "${_ARE_PARAMS_SET_SETUP_PACMAN}"; then
             return 0
         fi
 
-        _ARE_PARAMS_SET_SYSTEM_MODPACMAN=true
+        _ARE_PARAMS_SET_SETUP_PACMAN=true
 
         _OPERATING_SYSTEM_PREFERRED_RELEASE_NAME=""
         _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )

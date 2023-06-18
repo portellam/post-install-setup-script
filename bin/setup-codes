@@ -10,11 +10,11 @@
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SYSTEM_PACMAN}"; then
+        if "${_ARE_PARAMS_SET_SETUP_CODES}"; then
             return 0
         fi
 
-        _ARE_PARAMS_SET_SYSTEM_PACMAN=true
+        _ARE_PARAMS_SET_SETUP_CODES=true
 
         declare -ig _LAST_EXIT_CODE=0
 

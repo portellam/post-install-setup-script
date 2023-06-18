@@ -10,11 +10,11 @@
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SYSTEM_SETUP}"; then
+        if "${_ARE_PARAMS_SET_SETUP_SYSTEM}"; then
             return 0
         fi
 
-        declare -g _ARE_PARAMS_SET_SYSTEM_SETUP=true
+        declare -g _ARE_PARAMS_SET_SETUP_SYSTEM=true
 
         declare -gr _OPERATING_SYSTEM_DISTRIBUTION_NAME=$( lsb_release -i | awk 'END {print $2}' )
         declare -g _SYSTEM_IS_ARCH=false

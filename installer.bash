@@ -722,12 +722,12 @@
         local readonly str_operating_system="$( lsb_release -is | tr '[:upper:]' '[:lower:]' )"
         local readonly str_output_distro_is_not_valid="${var_prefix_error} Distribution '$( lsb_release -is )' is not supported."
         local readonly str_output_kernel_is_not_valid="${var_prefix_error} Kernel '$( uname -o )' is not supported."
-        local readonly str_OS_with_apt="debian bodhi deepin knoppix mint peppermint pop ubuntu kubuntu lubuntu xubuntu "
-        local readonly str_OS_with_dnf_yum="redhat berry centos cern clearos elastix fedora fermi frameos mageia opensuse oracle scientific suse"
-        local readonly str_OS_with_pacman="arch manjaro"
-        local readonly str_OS_with_portage="gentoo"
-        local readonly str_OS_with_urpmi="opensuse"
-        local readonly str_OS_with_zypper="mandriva mageia"
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_APT_DELIM="debian bodhi deepin knoppix mint peppermint pop ubuntu kubuntu lubuntu xubuntu "
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_dnf_yum="redhat berry centos cern clearos elastix fedora fermi frameos mageia opensuse oracle scientific suse"
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_PACMAN_DELIM="arch manjaro"
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_PORTAGE_DELIM="gentoo"
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_URPMI_DELIM="opensuse"
+        local readonly str__LIST_OF_OPERATING_SYSTEMS_WITH_ZYPPER_DELIM="mandriva mageia"
         # </params>
 
         ( CheckIfVarIsValid "${str_kernel}" &> /dev/null && CheckIfVarIsValid "${str_operating_system}" &> /dev/null ) || return "${?}"
@@ -739,26 +739,26 @@
 
         # <summary> Check if current Operating System matches Package Manager, and Check if PM is installed. </summary>
         # <returns> exit code </returns>
-        function CheckLinuxDistro_GetPackageManagerByOS
+        function CheckLinuxDistro_GetPackageManager
         {
-            if [[ "${str_OS_with_apt}" =~ .*"${str_operating_system}".* ]]; then
+            if [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_APT_DELIM}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="apt"
 
-            elif [[ "${str_OS_with_dnf_yum}" =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_dnf_yum}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="dnf"
                 CheckIfCommandIsInstalled "${str_package_manager}" &> /dev/null && return 0
                 str_package_manager="yum"
 
-            elif [[ "${str_OS_with_pacman}" =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_PACMAN_DELIM}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="pacman"
 
-            elif [[ "${str_OS_with_portage}" =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_PORTAGE_DELIM}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="portage"
 
-            elif [[ "${str_OS_with_urpmi}" =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_URPMI_DELIM}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="urpmi"
 
-            elif [[ "${str_OS_with_zypper}" =~ .*"${str_operating_system}".* ]]; then
+            elif [[ "${str__LIST_OF_OPERATING_SYSTEMS_WITH_ZYPPER_DELIM}" =~ .*"${str_operating_system}".* ]]; then
                 str_package_manager="zypper"
 
             else
@@ -770,7 +770,7 @@
             return 1
         }
 
-        if ! CheckLinuxDistro_GetPackageManagerByOS; then
+        if ! CheckLinuxDistro_GetPackageManager; then
             echo -e "${str_output_distro_is_not_valid}"
             return 1
         fi
