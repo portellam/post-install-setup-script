@@ -12,6 +12,7 @@
     source setup-common
     source setup-datatypes
     source setup-pacman
+    source setup-software
     source setup-prompts
     source setup-system
 # </sources>

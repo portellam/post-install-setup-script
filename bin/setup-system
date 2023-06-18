@@ -1,5 +1,12 @@
 #!/bin/false
 
+#
+# Filename:         setup-system
+# Description:      Get information about the system.
+# Author(s):        Alex Portell <github.com/portellam>
+# Maintainer(s):    Alex Portell <github.com/portellam>
+#
+
 # <functions>
     function SetParameters
     {

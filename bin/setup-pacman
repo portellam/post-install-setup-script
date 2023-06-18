@@ -1,21 +1,24 @@
 #!/bin/false
 
-# <sources>
-    source setup-prompts
-# </sources>
+#
+# Filename:         setup-pacman
+# Description:      Modify package sources.
+# Author(s):        Alex Portell <github.com/portellam>
+# Maintainer(s):    Alex Portell <github.com/portellam>
+#
 
-# <params>
-    declare -a _COUNT_LIST=$( seq 0 2 )
-# </params>
+# <sources>
+    source setup-system
+# </sources>
 
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SYSTEM_PACMAN}"; then
+        if "${_ARE_PARAMS_SET_SYSTEM_MODPACMAN}"; then
             return 0
         fi
 
-        _ARE_PARAMS_SET_SYSTEM_PACMAN=true
+        _ARE_PARAMS_SET_SYSTEM_MODPACMAN=true
 
         _OPERATING_SYSTEM_PREFERRED_RELEASE_NAME=""
         _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )
