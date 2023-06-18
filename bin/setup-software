@@ -19,7 +19,7 @@
             return 0
         fi
 
-        declare -g _ARE_PARAMS_SET_SETUP_SOFTWARE=true
+        declare -gr _ARE_PARAMS_SET_SETUP_SOFTWARE=true
 
         declare -gr _LIST_OF_OPERATING_SYSTEMS_WITH_APT_DELIM="debian bodhi deepin knoppix mint peppermint pop ubuntu kubuntu lubuntu xubuntu"
         declare -gr _LIST_OF_OPERATING_SYSTEMS_WITH_DNF_OR_YUM_DELIM="redhat alma berry centos cern clearos elastix fedora fermi frameos mageia opensuse oracle scientific suse"
@@ -28,117 +28,113 @@
         declare -gr _LIST_OF_OPERATING_SYSTEMS_WITH_URPMI_DELIM="opensuse"
         declare -gr _LIST_OF_OPERATING_SYSTEMS_WITH_ZYPPER_DELIM="mandriva mageia"
 
-        # <remarks> System validation </remarks>
+        declare -gl _COMMAND_LIST_PACKAGE=""
+        declare -gl _COMMAND_INSTALL_PACKAGE=""
+        declare -gl _COMMAND_UNINSTALL_PACKAGE=""
         declare -gl _PACKAGE_MANAGER=""
+
+        # <remarks> Functions can go here. </remarks>
         GetPackageManager
+        GetCommandToInstallPackage
+        GetCommandToListPackage
+        GetCommandToUninstallPackage
+        # IsThisLinuxDistributionSupported
+
+        declare -r _COMMAND_LIST_PACKAGE _COMMAND_INSTALL_PACKAGE _COMMAND_UNINSTALL_PACKAGE _PACKAGE_MANAGER
     }
 
-    function SetCommandToInstallPackage
+    function GetCommandToInstallPackage
     {
-        case true in
-            "apt" )
-                apt list "${1}" ;;
-
-            "dnf" )
-                dnf search "${1}" ;;
-
-            "pacman" )
-                pacman -Ss "${1}" ;;
-
-            "gentoo" )
-                emerge --search "${1}" ;;
-
-            "urpmi" )
-                urpmq "${1}" ;;
-
-            "yum" )
-                yum search "${1}" ;;
-
-            "zypper" )
-                zypper se "${1}" ;;
-
-            * )
-                return 1 ;;
-        esac
-    }
-
-    function FindPackage
-    {
-        if [[ -z "${1}" ]] \
-            || [[ -z "${_PACKAGE_MANAGER}" ]]; then
-            echo -e "${_PREFIX_ERROR} Input values are empty."
-            return 1
-        fi
-
         case "${_PACKAGE_MANAGER}" in
             "apt" )
-                apt list "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="apt update && apt full-upgrade -y && apt install -y " ;;
 
             "dnf" )
-                dnf search "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="dnf upgrade && dnf install " ;;
 
             "pacman" )
-                pacman -Ss "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="pacman -Syu && pacman -S " ;;
 
             "gentoo" )
-                emerge --search "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="merge -u @world && emerge " ;;
 
             "urpmi" )
-                urpmq "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="urpmi --auto-update && urpmi " ;;
 
             "yum" )
-                yum search "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="yum update && yum install " ;;
 
             "zypper" )
-                zypper se "${1}" ;;
+                _COMMAND_INSTALL_PACKAGE="zypper refresh && zypper in " ;;
 
             * )
                 return 1 ;;
         esac
 
-        SetExitCode
-
-        if [[ "${_LAST_EXIT_CODE}" -ne 0 ]]; then
-            case "${_PACKAGE_MANAGER}" in
-                *" "* )
-                    echo -e "${_PREFIX_ERROR} Packages '${_PACKAGE_MANAGER}' were not found." ;;
-
-                * )
-                    echo -e "${_PREFIX_ERROR} Package '${_PACKAGE_MANAGER}' was not found." ;;
-            esac
-
-            return 1
-        fi
-
-        return "${_LAST_EXIT_CODE}"
+        return 0
     }
 
-    # function GetLinuxDistro
-    # {
-    #     local KERNEL="$( uname -o | tr '[:upper:]' '[:lower:]' )"
+    function GetCommandToListPackage
+    {
+        case "${_PACKAGE_MANAGER}" in
+            "apt" )
+                _COMMAND_LIST_PACKAGE="apt list " ;;
 
-    #     if [[ -z "${KERNEL}" ]]; then
-    #         echo -e "${_PREFIX_ERROR} Failed to parse system kernel."
-    #         return 1
-    #     fi
+            "dnf" )
+                _COMMAND_LIST_PACKAGE="dnf search " ;;
 
-    #     if [[ -z "${_OPERATING_SYSTEM_DISTRIBUTION_NAME}" ]]; then
-    #         echo -e "${_PREFIX_ERROR} Failed to parse operating system."
-    #         return 1
-    #     fi
+            "pacman" )
+                _COMMAND_LIST_PACKAGE="pacman -Ss " ;;
 
-    #     if [[ "${KERNEL}" != *"linux"* ]]; then
-    #         echo -e "${_PREFIX_ERROR} Kernel '$( uname -o )' is not supported."
-    #         return 1
-    #     fi
+            "gentoo" )
+                _COMMAND_LIST_PACKAGE="emerge --search " ;;
 
-    #     if ! GetPackageManager; then
-    #         echo -e "${_PREFIX_ERROR} Distribution '$( lsb_release -is )' is not supported."
-    #         return 1
-    #     fi
+            "urpmi" )
+                _COMMAND_LIST_PACKAGE="urpme " ;;
 
-    #     return 0
-    # }
+            "yum" )
+                _COMMAND_LIST_PACKAGE="yum search " ;;
+
+            "zypper" )
+                _COMMAND_LIST_PACKAGE="zypper se " ;;
+
+            * )
+                return 1 ;;
+        esac
+
+        return 0
+    }
+
+    function GetCommandToUninstallPackage
+    {
+        case "${_PACKAGE_MANAGER}" in
+            "apt" )
+                _COMMAND_UNINSTALL_PACKAGE="apt uninstall " ;;
+
+            "dnf" )
+                _COMMAND_UNINSTALL_PACKAGE="dnf remove " ;;
+
+            "pacman" )
+                _COMMAND_UNINSTALL_PACKAGE="pacman -R " ;;
+
+            "gentoo" )
+                _COMMAND_UNINSTALL_PACKAGE="emerge -Cv " ;;
+
+            "urpmi" )
+                _COMMAND_UNINSTALL_PACKAGE="urpme " ;;
+
+            "yum" )
+                _COMMAND_UNINSTALL_PACKAGE="yum remove " ;;
+
+            "zypper" )
+                _COMMAND_UNINSTALL_PACKAGE="zypper remove " ;;
+
+            * )
+                return 1 ;;
+        esac
+
+        return 0
+    }
 
     function GetPackageManager
     {
@@ -177,60 +173,58 @@
         return 0
     }
 
-    function InstallPackage
+    function IsThisLinuxDistributionSupported
     {
-        if [[ -z "${_PACKAGE_MANAGER}" ]] \
-            || [[ -z "${1}" ]]; then
-            echo -e "${_PREFIX_ERROR} Input values are empty."
+        local KERNEL="$( uname -o | tr '[:upper:]' '[:lower:]' )"
+
+        if [[ -z "${KERNEL}" ]]; then
+            echo -e "${_PREFIX_ERROR} Failed to parse system kernel."
             return 1
         fi
 
-        local DO_REINSTALL=false
-        local OPTION=""
-
-        if [[ "${2}" == true ]]; then
-            DO_REINSTALL=true
+        if [[ -z "${_OPERATING_SYSTEM_DISTRIBUTION_NAME}" ]]; then
+            echo -e "${_PREFIX_ERROR} Failed to parse operating system."
+            return 1
         fi
 
-        # <remarks> Auto-update and auto-install selected packages </remarks>
-        case "${_PACKAGE_MANAGER}" in
-            "apt" )
-                if "${DO_REINSTALL}"; then
-                    OPTION="--reinstall -o Dpkg::Options::=--force-confmiss"
-                fi
+        if [[ "${KERNEL}" != *"linux"* ]]; then
+            echo -e "${_PREFIX_ERROR} Kernel '$( uname -o )' is not supported."
+            return 1
+        fi
 
-                apt update && apt full-upgrade -y && apt install -y "${OPTION}" "${1}" || return 1 ;;
+        if [[ -z "${_PACKAGE_MANAGER}" ]]; then
+            echo -e "${_PREFIX_ERROR} Distribution '$( lsb_release -is )' is not supported."
+            return 1
+        fi
 
-            "dnf" )
-                dnf upgrade && dnf install "${1}" ;;
+        return 0
+    }
 
-            "pacman" )
-                pacman -Syu && pacman -S "${1}" ;;
+    function FindPackage
+    {
+        if [[ -z "${_COMMAND_LIST_PACKAGE}" ]]; then
+            return 1
+        fi
 
-            "gentoo" )
-                emerge -u @world && emerge "${1}" ;;
+        eval "${_COMMAND_LIST_PACKAGE} ${1}"
+        # PrintSuffixPassOrFail "Searching software packages..."
+        return "${?}"
+    }
 
-            "urpmi" )
-                urpmi --auto-update && urpmi "${1}" ;;
+    function InstallPackage
+    {
+        if [[ -z "${_COMMAND_INSTALL_PACKAGE}" ]]; then
+            return 1
+        fi
 
-            "yum" )
-                yum update && yum install "${1}" ;;
-
-            "zypper" )
-                zypper refresh && zypper in "${1}" ;;
-
-            * )
-                false ;;
-        esac
-
-        PrintSuffixPassOrFail "Installing software packages..."
+        eval "${_COMMAND_INSTALL_PACKAGE} ${1}"
+        # PrintSuffixPassOrFail "Installing software packages..."
         return "${?}"
     }
 
     function IsInstalledPackage
     {
-        if [[ -z "${_PACKAGE_MANAGER}" ]] \
-            || [[ -z "${1}" ]]; then
+        if [[ -z "${1}" ]]; then
             echo -e "${_PREFIX_ERROR} Input values are empty."
             return 1
         fi
@@ -260,40 +254,12 @@
 
     function UninstallPackage
     {
-        if [[ -z "${_PACKAGE_MANAGER}" ]] \
-            || [[ -z "${1}" ]]; then
-            echo -e "${_PREFIX_ERROR} Input values are empty."
+        if [[ -z "${_COMMAND_UNINSTALL_PACKAGE}" ]]; then
             return 1
         fi
 
-        # <remarks> Uninstall selected packages </remarks>
-        case "${_PACKAGE_MANAGER}" in
-            "apt" )
-                apt uninstall "${1}" ;;
-
-            "dnf" )
-                dnf remove "${1}" ;;
-
-            "pacman" )
-                pacman -R "${1}" ;;
-
-            "gentoo" )
-                emerge -Cv "${1}" ;;
-
-            "urpmi" )
-                urpme "${1}" ;;
-
-            "yum" )
-                yum remove "${1}" ;;
-
-            "zypper" )
-                zypper remove "${1}" ;;
-
-            * )
-                false ;;
-        esac
-
-        PrintSuffixPassOrFail "Uninstalling software packages..."
+        eval "${_COMMAND_UNINSTALL_PACKAGE} ${1}"
+        # PrintSuffixPassOrFail "Uninstalling software packages..."
         return "${?}"
     }
 

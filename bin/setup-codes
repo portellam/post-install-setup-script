@@ -14,7 +14,7 @@
             return 0
         fi
 
-        _ARE_PARAMS_SET_SETUP_CODES=true
+        declare -gr _ARE_PARAMS_SET_SETUP_CODES=true
 
         declare -ig _LAST_EXIT_CODE=0
 

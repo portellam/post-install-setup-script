@@ -18,23 +18,23 @@
             return 0
         fi
 
-        _ARE_PARAMS_SET_SETUP_PACMAN=true
+        declare -gr _ARE_PARAMS_SET_SETUP_PACMAN=true
 
-        _OPERATING_SYSTEM_PREFERRED_RELEASE_NAME=""
-        _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )
-        _OPERATING_SYSTEM_RELEASE_NUMBER=$( lsb_release -r | awk 'END {print $2}' )
-        _SOURCES_FILE_NAME="/etc/apt/sources.list"
+        declare -g _OPERATING_SYSTEM_PREFERRED_RELEASE_NAME=""
+        declare -gr _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )
+        declare -gr _OPERATING_SYSTEM_RELEASE_NUMBER=$( lsb_release -r | awk 'END {print $2}' )
+        declare -gr _SOURCES_FILE_NAME="/etc/apt/sources.list"
 
         # <summary> Debian </summary>
-        _DEBIAN_LATEST_RELEASE_NAME="bookworm"
-        _DEBIAN_RELEASE_OPTION_BACKPORTS="${_OPERATING_SYSTEM_RELEASE_NAME}-backports"
-        declare -al _DEBIAN_RELEASE_BRANCH_LIST=(
+        declare -gr _DEBIAN_LATEST_RELEASE_NAME="bookworm"
+        declare -gr _DEBIAN_RELEASE_OPTION_BACKPORTS="${_OPERATING_SYSTEM_RELEASE_NAME}-backports"
+        declare -alr _DEBIAN_RELEASE_BRANCH_LIST=(
             "stable"
             "testing"
             "unstable"
         )
 
-        declare -al _DEBIAN_RELEASE_OPTIONS_LIST=(
+        declare -alr _DEBIAN_RELEASE_OPTIONS_LIST=(
             "main"
             "contrib"
             "non-free"

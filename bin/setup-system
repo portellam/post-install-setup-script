@@ -14,7 +14,7 @@
             return 0
         fi
 
-        declare -g _ARE_PARAMS_SET_SETUP_SYSTEM=true
+        declare -gr _ARE_PARAMS_SET_SETUP_SYSTEM=true
 
         declare -gr _OPERATING_SYSTEM_DISTRIBUTION_NAME=$( lsb_release -i | awk 'END {print $2}' )
         declare -g _SYSTEM_IS_ARCH=false
@@ -25,6 +25,8 @@
 
         # <remarks> Functions can go here. </remarks>
         GetLinuxDistribution
+
+        declare -r _SYSTEM_IS_ARCH _SYSTEM_IS_DEBIAN _SYSTEM_IS_FEDORA _SYSTEM_IS_REDHAT _SYSTEM_IS_UBUNTU
     }
 
     function GetLinuxDistribution

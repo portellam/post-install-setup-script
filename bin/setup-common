@@ -14,7 +14,7 @@
             return 0
         fi
 
-        declare -g _ARE_PARAMS_SET_SETUP_COMMON=true
+        declare -gr _ARE_PARAMS_SET_SETUP_COMMON=true
 
         declare -ar _COUNT_LIST=$( seq 0 2 )
 
@@ -36,6 +36,8 @@
         declare -gr _SUFFIX_PASS="${_SET_COLOR_GREEN}[Success]${_RESET_COLOR}"
         declare -gr _SUFFIX_SKIP="${_SET_COLOR_YELLOW}[Skipped]${_RESET_COLOR}"
         declare -gr _SUFFIX_WORK="${_SET_COLOR_YELLOW}[Working]${_RESET_COLOR}"
+
+        # <remarks> Functions can go here. </remarks>
     }
 
     function IsSudoUser
