@@ -1,0 +1,158 @@
+#!/bin/false
+
+#
+# Filename:         setup-prompts
+# Description:      Prompts for user interaction and execution status.
+# Author(s):        Alex Portell <github.com/portellam>
+# Maintainer(s):    Alex Portell <github.com/portellam>
+#
+
+# <sources>
+    source setup-codes
+# </sources>
+
+# <functions>
+    function SetParameters
+    {
+        if "${_ARE_PARAMS_SET_SETUP_PROMPTS}"; then
+            return 0
+        fi
+
+        declare -g _ARE_PARAMS_SET_SETUP_PROMPTS=true
+
+        # <remarks>
+        # Color coding
+        # Reference URL: 'https://www.shellhacks.com/bash-colors'
+        # </remarks>
+        declare -gr _SET_COLOR_GREEN='\033[0;32m'
+        declare -gr _SET_COLOR_RED='\033[0;31m'
+        declare -gr _SET_COLOR_YELLOW='\033[0;33m'
+        declare -gr _RESET_COLOR='\033[0m'
+
+        # <remarks> Append output </remarks>
+        declare -gr _PREFIX_NOTE="${_SET_COLOR_YELLOW}Note:${_RESET_COLOR}"
+        declare -gr _PREFIX_ERROR="${_SET_COLOR_YELLOW}An error occurred:${_RESET_COLOR}"
+        declare -gr _PREFIX_FAIL="${_SET_COLOR_RED}Failure:${_RESET_COLOR}"
+        declare -gr _PREFIX_PASS="${_SET_COLOR_GREEN}Success:${_RESET_COLOR}"
+        declare -gr _SUFFIX_FAIL="${_SET_COLOR_RED}[Failure]${_RESET_COLOR}"
+        declare -gr _SUFFIX_PASS="${_SET_COLOR_GREEN}[Success]${_RESET_COLOR}"
+        declare -gr _SUFFIX_SKIP="${_SET_COLOR_YELLOW}[Skipped]${_RESET_COLOR}"
+        declare -gr _SUFFIX_WORK="${_SET_COLOR_YELLOW}[Working]${_RESET_COLOR}"
+    }
+
+    function AskToExecuteOrSkip
+    {
+        local OUTPUT=""
+
+        if [[ ! -z "${1}" ]]; then
+            OUTPUT="${1} "
+        fi
+
+        for COUNT in $( seq 0 2 ); do
+            echo -en "${OUTPUT}[Y/n]: "
+            read -r -p "" ANSWER
+
+            case "${ANSWER}" in
+                [Yy]* )
+                    return 0 ;;
+
+                [Nn]* )
+                    return 255 ;;
+
+                * )
+                    echo "Please answer 'Y' or 'N'." ;;
+            esac
+        done
+
+        return 1
+    }
+
+    function GetPromptsFromAnswerList
+    {
+        local -n ANSWER_LIST_REFERENCE="${1}"
+        local -n PROMPT_REFERENCE="${2}"
+        local -n WARNING_REFERENCE="${3}"
+        PROMPT_REFERENCE=""
+        WARNING_REFERENCE=""
+        local -i LIST_MAX_INDEX=$( head -n 1 <<< $( sort -r <<< "${!ANSWER_LIST_REFERENCE[*]}" ) )
+
+        for KEY in "${!ANSWER_LIST_REFERENCE[@]}"; do
+            local ANSWER="${ANSWER_LIST_REFERENCE[$KEY]}"
+            local FORMATTED_ANSWER="("$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )")${ANSWER:1}"
+            local FORMATTED_WARNING="'"$( echo ${ANSWER::1} | tr '[:lower:]' '[:upper:]' )'"'
+
+            if [[ "${KEY}" -lt "${#LIST_MAX_INDEX[@]}" ]]; then
+                PROMPT_REFERENCE+="${FORMATTED_ANSWER}/"
+                WARNING_REFERENCE+="${FORMATTED_WARNING}, "
+            else
+                PROMPT_REFERENCE+="${FORMATTED_ANSWER}"
+                WARNING_REFERENCE+="or ${FORMATTED_WARNING}."
+            fi
+        done
+
+        PROMPT_REFERENCE="[${PROMPT_REFERENCE}]: "
+        WARNING_REFERENCE="Please answer ${WARNING_REFERENCE}."
+        return 0
+    }
+
+    function PrintPrefixPassOrFail
+    {
+        SetExitCode
+
+        case "${_LAST_EXIT_CODE}" in
+            0 )
+                echo -en "${_PREFIX_PASS}" ;;
+
+            255 )
+                echo -en "${_PREFIX_SKIP}" ;;
+
+            * )
+                echo -en "${_PREFIX_FAIL}" ;;
+        esac
+
+        if [[ -z "${1}" ]]; then
+            echo
+        else
+            echo -e " ${1}"
+        fi
+
+        return "${_LAST_EXIT_CODE}"
+    }
+
+    function PrintSuffixPassOrFail
+    {
+        SetExitCode
+
+        if [[ ! -z "${1}" ]]; then
+            echo -en "${1}\t"
+        fi
+
+        case "${_LAST_EXIT_CODE}" in
+            0 )
+                echo -e "${_SUFFIX_PASS}" ;;
+
+            255 )
+                echo -e "${_SUFFIX_SKIP}" ;;
+
+            * )
+                echo -e "${_SUFFIX_FAIL}" ;;
+        esac
+
+        return "${_LAST_EXIT_CODE}"
+    }
+
+    function PrintSuffixWait
+    {
+        if [[ ! -z "${1}" ]]; then
+            echo -en "${1}\t"
+        fi
+
+        echo -e "${_SUFFIX_WORK}"
+        return 0
+    }
+# </functions>
+
+# <main>
+    SetParameters
+    unset SetParameters
+# </main>

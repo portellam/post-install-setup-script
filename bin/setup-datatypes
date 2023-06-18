@@ -1,0 +1,52 @@
+#!/bin/false
+
+#
+# Filename:         setup-datatypes
+# Description:      Functions for data-type validation, manipulation, and presentation.
+# Author(s):        Alex Portell <github.com/portellam>
+# Maintainer(s):    Alex Portell <github.com/portellam>
+#
+
+# <functions>
+    function IsEnum
+    {
+        local -n REFERENCE="${1}"
+        [ "${#REFERENCE[@]}" -gt 0 ]
+        return "${?}"
+    }
+
+    function IsEmptyEnum
+    {
+        IsEnum "${1}" || return "${?}"
+        local -n REFERENCE="${1}"
+
+        for VALUE in "${REFERENCE[@]}"; do
+            [ ! -z "${VALUE}" ] || return 1
+        done
+
+        return 0
+    }
+
+    function IsInt
+    {
+        [[ "${1}" =~ ^[0-9]+$ ]] \
+        || [[ "${1}" =~ ^[-][0-9]+$ ]]
+        return "${?}"
+    }
+
+    function SetCommaDelimitedStringFromEnum
+    {
+        local -n ENUM_REFERENCE="${1}"
+        local -n DELIM_REFERENCE="${2}"
+
+        for VALUE in ${ENUM_REFERENCE[@]}; do
+            DELIM_REFERENCE+="${VALUE},"
+        done
+
+        if [[ ${DELIM_REFERENCE: -1} == "," ]]; then
+            DELIM_REFERENCE="${DELIM_REFERENCE::-1}"
+        fi
+
+        return 0
+    }
+# </functions>

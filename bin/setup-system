@@ -1,0 +1,53 @@
+#!/bin/false
+
+# <functions>
+    function SetParameters
+    {
+        if "${_ARE_PARAMS_SET_SYSTEM_SETUP}"; then
+            return 0
+        fi
+
+        declare -g _ARE_PARAMS_SET_SYSTEM_SETUP=true
+
+        declare -gr _OPERATING_SYSTEM_DISTRIBUTION_NAME=$( lsb_release -i | awk 'END {print $2}' )
+        declare -g _SYSTEM_IS_ARCH=false
+        declare -g _SYSTEM_IS_DEBIAN=false
+        declare -g _SYSTEM_IS_FEDORA=false
+        declare -g _SYSTEM_IS_REDHAT=false
+        declare -g _SYSTEM_IS_UBUNTU=false
+
+        # <remarks> Functions can go here. </remarks>
+        GetLinuxDistribution
+    }
+
+    function GetLinuxDistribution
+    {
+        case "${_OPERATING_SYSTEM_DISTRIBUTION_NAME}" in
+            "arch" )
+                _SYSTEM_IS_ARCH=true ;;
+
+            "debian" )
+                _SYSTEM_IS_DEBIAN=true ;;
+
+            "fedora" )
+                _SYSTEM_IS_FEDORA=true ;;
+
+            "redhat" )
+                _SYSTEM_IS_REDHAT=true ;;
+
+            "ubuntu" )
+                _SYSTEM_IS_UBUNTU=true ;;
+
+            * )
+                echo -e "Operating system is not recognized."
+                return 1 ;;
+        esac
+
+        return 0
+    }
+# </functions>
+
+# <main>
+    SetParameters
+    unset SetParameters
+# </main>
