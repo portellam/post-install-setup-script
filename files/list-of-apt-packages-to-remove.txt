@@ -1,0 +1,10 @@
+# NOTE: remove these packages given the target system is a desktop and the end user does not require such software.
+atftpd
+nis
+rsh-redone-server
+rsh-server
+telnetd
+tftpd
+tftpd-hpa
+xinetd
+yp-tools

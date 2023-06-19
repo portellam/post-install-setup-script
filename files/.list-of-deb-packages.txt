@@ -1,0 +1,9 @@
+atftpd
+nis
+rsh-redone-server
+rsh-server
+telnetd
+tftpd
+tftpd-hpa
+xinetd
+yp-tools
