@@ -177,7 +177,6 @@
             echo -e "${WARNING}"
         done
 
-        UpdateSourcesFile
         return 0
     }
 

@@ -12,39 +12,10 @@
 # </sources>
 
 # <functions>
-    function SetParameters
+    function ModifySourcesFile
     {
-        if "${_ARE_PARAMS_SET_SETUP_SYSTEM}"; then
-            return 0
-        fi
-
-        declare -gr _ARE_PARAMS_SET_SETUP_SYSTEM=true
-
-        declare -gr _OPERATING_SYSTEM_DISTRIBUTION_NAME=$( lsb_release -i | awk 'END {print $2}' )
-        declare -g _SYSTEM_IS_ARCH=false
-        declare -g _SYSTEM_IS_DEBIAN=false
-        declare -g _SYSTEM_IS_FEDORA=false
-        declare -g _SYSTEM_IS_REDHAT=false
-        declare -g _SYSTEM_IS_UBUNTU=false
-
-        # <remarks> Functions can go here. </remarks>
-        GetLinuxDistribution
-
-        declare -r _SYSTEM_IS_ARCH _SYSTEM_IS_DEBIAN _SYSTEM_IS_FEDORA _SYSTEM_IS_REDHAT _SYSTEM_IS_UBUNTU
-    }
-
-    function AskToModifySSH
-    {
-        AskToExecuteOrSkip "Modify SSH?" || return "${?}"
-
-        exit
-
-
-
+        AskToExecuteOrSkip "Modify software sources file?" || return "${?}"
+        PromptToChangeSourcesFile && UpdateSourcesFile
+        return "${?}"
     }
 # </functions>
-
-# <main>
-    SetParameters
-    unset SetParameters
-# </main>
