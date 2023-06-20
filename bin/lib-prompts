@@ -1,15 +1,15 @@
 #!/bin/false
 
 #
-# Filename:         setup-prompts
+# Filename:         lib-prompts
 # Description:      Prompts for user interaction and execution status.
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>
 #
 
 # <sources>
-    source setup-codes
-    source setup-common
+    source lib-codes
+    source lib-common
 # </sources>
 
 # <functions>

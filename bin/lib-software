@@ -1,14 +1,14 @@
 #!/bin/false
 
 #
-# Filename:         setup-software
+# Filename:         lib-software
 # Description:      Download software packages and Git repositories.
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>
 #
 
 # <sources>
-    source setup-system
+    source lib-system
 # </sources>
 
 # <functions>

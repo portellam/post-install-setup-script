@@ -1,0 +1,4 @@
+com.valvesoftware.Steam
+com.valvesoftware.SteamLink
+net.lutris.Lutris.Locale
+org.libretro.RetroArch

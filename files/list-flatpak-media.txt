@@ -1,0 +1,5 @@
+com.stremio.Stremio
+org.freedesktop.LinuxAudio.Plugins.TAP
+org.freedesktop.LinuxAudio.Plugins.swh
+org.videolan.VLC
+org.videolan.VLC.Plugin.makemkv

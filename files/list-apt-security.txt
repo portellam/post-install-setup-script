@@ -1,0 +1,7 @@
+apt-listchanges
+bsd-mailx
+fail2ban
+gufw
+ssh
+ufw
+unattended-upgrades

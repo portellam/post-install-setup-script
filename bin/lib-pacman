@@ -1,14 +1,14 @@
 #!/bin/false
 
 #
-# Filename:         setup-pacman
+# Filename:         lib-pacman
 # Description:      Modify package sources.
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>
 #
 
 # <sources>
-    source setup-system
+    source lib-system
 # </sources>
 
 # <functions>

@@ -1,0 +1,7 @@
+bleachbit
+cockpit
+filezilla
+grub-customizer
+synaptic
+virt-manager
+zram-tools

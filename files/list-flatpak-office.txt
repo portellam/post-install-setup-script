@@ -1,0 +1,2 @@
+org.libreoffice.LibreOffice
+org.mozilla.Thunderbird

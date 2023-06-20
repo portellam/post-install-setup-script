@@ -1,7 +1,7 @@
 #!/bin/false
 
 #
-# Filename:         setup-datatypes
+# Filename:         lib-datatypes
 # Description:      Functions for data-type validation, manipulation, and presentation.
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>

@@ -1,0 +1,9 @@
+org.freedesktop.Platform
+org.freedesktop.Platform.Compat.i386
+org.freedesktop.Platform.GL.default
+org.freedesktop.Platform.GL32.default
+org.freedesktop.Platform.GL32.nvidia-460-91-03
+org.freedesktop.Platform.VAAPI.Intel.i386
+org.winehq.Wine.DLLs.dxvk
+org.winehq.Wine.gecko
+org.winehq.Wine.gecko

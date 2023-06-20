@@ -1,0 +1,7 @@
+curl
+flashrom
+lm-sensors
+neofetch
+unzip
+wget
+youtube-dl

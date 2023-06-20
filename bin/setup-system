@@ -1,11 +1,15 @@
 #!/bin/false
 
 #
-# Filename:         setup-system
-# Description:      Get information about the system.
+# Filename:         lib-action
+# Description:      Do something, will you?
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>
 #
+
+# <sources>
+    source lib-all
+# </sources>
 
 # <functions>
     function SetParameters
@@ -29,30 +33,14 @@
         declare -r _SYSTEM_IS_ARCH _SYSTEM_IS_DEBIAN _SYSTEM_IS_FEDORA _SYSTEM_IS_REDHAT _SYSTEM_IS_UBUNTU
     }
 
-    function GetLinuxDistribution
+    function AskToModifySSH
     {
-        case "${_OPERATING_SYSTEM_DISTRIBUTION_NAME}" in
-            "arch" )
-                _SYSTEM_IS_ARCH=true ;;
+        AskToExecuteOrSkip "Modify SSH?" || return "${?}"
 
-            "debian" )
-                _SYSTEM_IS_DEBIAN=true ;;
+        exit
 
-            "fedora" )
-                _SYSTEM_IS_FEDORA=true ;;
 
-            "redhat" )
-                _SYSTEM_IS_REDHAT=true ;;
 
-            "ubuntu" )
-                _SYSTEM_IS_UBUNTU=true ;;
-
-            * )
-                echo -e "Operating system is not recognized."
-                return 1 ;;
-        esac
-
-        return 0
     }
 # </functions>
 

@@ -1,0 +1,14 @@
+com.adobe.Flash-Player-Projector
+com.calibre_ebook.calibre
+com.makemkv.MakeMKV
+com.poweriso.PowerISO
+fr.handbrake.ghb
+io.github.Hexchat
+org.filezillaproject.Filezilla
+org.openshot.OpenShot
+org.kde.digikam
+org.kde.kdenlive
+org.keepassxc.KeePassXC
+org.freedesktop.Platform.openh264
+org.freedesktop.Platform.ffmpeg-full
+org.bunkus.mkvtoolnix-gui

@@ -1,0 +1,3 @@
+apcupsd
+rtl-sdr
+steam-devices

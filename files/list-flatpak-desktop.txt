@@ -1,0 +1,5 @@
+org.freedesktop.Sdk
+org.gnome.Platform
+org.gtk.Gtk3theme.Breeze
+org.kde.KStyle.Adwaita
+org.kde.Platform

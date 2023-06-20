@@ -1,0 +1,3 @@
+com.obsproject.Studio
+io.gitlab.librewolf-community
+nz.mega.MEGAsync
