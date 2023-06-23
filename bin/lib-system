@@ -32,17 +32,17 @@
     function GetLinuxDistribution
     {
         case "${_OPERATING_SYSTEM_DISTRIBUTION_NAME}" in
-            "arch" )
-                _SYSTEM_IS_ARCH=true ;;
+            # "arch" )
+            #     _SYSTEM_IS_ARCH=true ;;
 
             "debian" )
                 _SYSTEM_IS_DEBIAN=true ;;
 
-            "fedora" )
-                _SYSTEM_IS_FEDORA=true ;;
+            # "fedora" )
+            #     _SYSTEM_IS_FEDORA=true ;;
 
-            "redhat" )
-                _SYSTEM_IS_REDHAT=true ;;
+            # "redhat" )
+            #     _SYSTEM_IS_REDHAT=true ;;
 
             "ubuntu" )
                 _SYSTEM_IS_UBUNTU=true ;;

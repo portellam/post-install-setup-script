@@ -44,6 +44,23 @@
                 ["list-apt-to-remove.txt"]="unsorted apps"
             )
 
+        # <summary> Flathub </summary>
+            declare -agr FLATHUB_PACKAGES_TO_INSTALL_LIST_FILES=(
+                ["list-flatpak-desktop.txt"]="desktop apps"
+                ["list-flatpak-dev-tools.txt"]="development apps"
+                ["list-flatpak-gaming.txt"]="gaming apps"
+                ["list-flatpak-gui-tools.txt"]="GUI apps"
+                ["list-flatpak-internet.txt"]="internet apps"
+                ["list-flatpak-libraries.txt"]="software libraries"
+                ["list-flatpak-media.txt"]="multimedia apps"
+                ["list-flatpak-office.txt"]="office apps"
+                ["list-flatpak-prism-break.txt"]="Prism-Break recommended apps"
+            )
+
+            declare -agr APT_PACKAGES_TO_REMOVE_LIST_FILES=(
+                ["list-apt-to-remove.txt"]="unsorted apps"
+            )
+
         # <remarks> Functions can go here. </remarks>
     }
 
@@ -54,7 +71,7 @@
         return "${?}"
     }
 
-    function InstallSoftware
+    function InstallDistributionSoftware
     {
         AskToExecuteOrSkip "Install software?" || return "${?}"
 
@@ -78,7 +95,26 @@
         return "${?}"
     }
 
-    function UninstallSoftware
+    function InstallRepositorySoftware
+    {
+        command -v flathub &> /dev/null && return 0
+        AskToExecuteOrSkip "Install from Flathub?" || return "${?}"
+        local -a PACKAGES_LIST
+        local PACKAGES_DELIM=""
+
+        for KEY in "${!FLATHUB_PACKAGES_TO_INSTALL_LIST_FILES[@]}"; do
+            local VALUE="${FLATHUB_PACKAGES_TO_INSTALL_LIST_FILES[$KEY]}"
+
+            AskToExecuteOrSkip "Add ${VALUE} to list?" || continue
+            ReadPackagesFromFile "PACKAGES_LIST" "${VALUE}" || break
+        done
+
+        SetGivenDelimitedStringFromEnum "PACKAGES_LIST" "PACKAGES_DELIM" " "
+        flatpak update -y && flatpak install -y "${PACKAGES_DELIM}"
+        return "${?}"
+    }
+
+    function UninstallDistributionSoftware
     {
         AskToExecuteOrSkip "Uninstall software?" || return "${?}"
         local -a PACKAGES_TO_REMOVE_LIST_FILES
