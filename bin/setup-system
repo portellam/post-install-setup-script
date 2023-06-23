@@ -1,8 +1,8 @@
 #!/bin/false
 
 #
-# Filename:         lib-action
-# Description:      Do something, will you?
+# Filename:         setup-system
+# Description:      Business facing functions.
 # Author(s):        Alex Portell <github.com/portellam>
 # Maintainer(s):    Alex Portell <github.com/portellam>
 #
@@ -12,10 +12,79 @@
 # </sources>
 
 # <functions>
+    function SetParameters
+    {
+        if [[ ! -z "${_ARE_PARAMS_SET_SETUP_SOFTWARE}" ]] \
+            && "${_ARE_COMMON_PARAMS_SET}"; then
+            return 0
+        fi
+
+        declare -gr _ARE_PARAMS_SET_SETUP_SYSTEM=true
+
+        declare -agr SOFTWARE_TO_INSTALL_LIST_FILES=(
+            ["list-apt-drivers.txt"]="generic drivers"
+            ["list-apt-gaming.txt"]="gaming apps"
+            ["list-apt-gui-tools.txt"]="GUI apps"
+            ["list-apt-internet.txt"]="internet apps"
+            ["list-apt-libraries.txt"]="software libraries"
+            ["list-apt-media.txt"]="multimedia apps"
+            ["list-apt-office.txt"]="office apps"
+            ["list-apt-repos.txt"]="repositories"
+            ["list-apt-required.txt"]="required apps"
+            ["list-apt-security.txt"]="security apps"
+            ["list-apt-suites.txt"]="software suites"
+            ["list-apt-term-tools.txt"]="terminal apps"
+            ["list-apt-vga-drivers.txt"]="video device drivers"
+        )
+
+        declare -agr SOFTWARE_TO_REMOVE_LIST_FILES=(
+            ["list-apt-to-remove.txt"]="unsorted apps"
+        )
+
+        # <remarks> Functions can go here. </remarks>
+    }
+
     function ModifySourcesFile
     {
         AskToExecuteOrSkip "Modify software sources file?" || return "${?}"
         PromptToChangeSourcesFile && UpdateSourcesFile
         return "${?}"
     }
+
+    function InstallSoftware
+    {
+        AskToExecuteOrSkip "Install software?" || return "${?}"
+
+        for KEY in "${!SOFTWARE_TO_INSTALL_LIST_FILES[@]}"; do
+            local -a PACKAGES_LIST
+            local VALUE="${SOFTWARE_TO_INSTALL_LIST_FILES[$KEY]}"
+
+            AskToExecuteOrSkip "Install ${VALUE}?" || continue
+            ReadPackagesFromFile "PACKAGES_LIST" "${VALUE}" \
+            && InstallPackage "PACKAGES_LIST" || break
+        done
+
+        return "${?}"
+    }
+
+    function UninstallSoftware
+    {
+        AskToExecuteOrSkip "Uninstall software?" || return "${?}"
+
+        for KEY in "${!SOFTWARE_TO_REMOVE_LIST_FILES[@]}"; do
+            local -a PACKAGES_LIST
+            local VALUE="${SOFTWARE_TO_REMOVE_LIST_FILES[$KEY]}"
+
+            AskToExecuteOrSkip "Uninstall ${VALUE}?" || continue
+            ReadPackagesFromFile "PACKAGES_LIST" "${VALUE}" \
+            && UninstallPackage "PACKAGES_LIST" || break
+        done
+
+        return "${?}"
+    }
 # </functions>
+
+# <main>
+    SetParameters
+    unset SetParameters
+# </main>

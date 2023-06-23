@@ -10,11 +10,11 @@
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SETUP_COMMON}"; then
+        if "${_ARE_PARAMS_SET_LIB_COMMON}"; then
             return 0
         fi
 
-        declare -gr _ARE_PARAMS_SET_SETUP_COMMON=true
+        declare -gr _ARE_PARAMS_SET_LIB_COMMON=true
 
         declare -ar _COUNT_LIST=$( seq 0 2 )
 

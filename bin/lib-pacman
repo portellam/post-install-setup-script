@@ -14,11 +14,11 @@
 # <functions>
     function SetParameters
     {
-        if "${_ARE_PARAMS_SET_SETUP_PACMAN}"; then
+        if "${_ARE_PARAMS_SET_LIB_PACMAN}"; then
             return 0
         fi
 
-        declare -gr _ARE_PARAMS_SET_SETUP_PACMAN=true
+        declare -gr _ARE_PARAMS_SET_LIB_PACMAN=true
 
         declare -g _OPERATING_SYSTEM_PREFERRED_RELEASE_NAME=""
         declare -gr _OPERATING_SYSTEM_RELEASE_NAME=$( lsb_release -c | awk 'END {print $2}' )
