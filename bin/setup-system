@@ -21,25 +21,28 @@
 
         declare -gr _ARE_PARAMS_SET_SETUP_SYSTEM=true
 
-        declare -agr SOFTWARE_TO_INSTALL_LIST_FILES=(
-            ["list-apt-drivers.txt"]="generic drivers"
-            ["list-apt-gaming.txt"]="gaming apps"
-            ["list-apt-gui-tools.txt"]="GUI apps"
-            ["list-apt-internet.txt"]="internet apps"
-            ["list-apt-libraries.txt"]="software libraries"
-            ["list-apt-media.txt"]="multimedia apps"
-            ["list-apt-office.txt"]="office apps"
-            ["list-apt-repos.txt"]="repositories"
-            ["list-apt-required.txt"]="required apps"
-            ["list-apt-security.txt"]="security apps"
-            ["list-apt-suites.txt"]="software suites"
-            ["list-apt-term-tools.txt"]="terminal apps"
-            ["list-apt-vga-drivers.txt"]="video device drivers"
-        )
+        # <remarks> File lists of apps for given distributions go here. </remarks>
 
-        declare -agr SOFTWARE_TO_REMOVE_LIST_FILES=(
-            ["list-apt-to-remove.txt"]="unsorted apps"
-        )
+        # <summary> Debian/APT </summary>
+            declare -agr APT_PACKAGES_TO_INSTALL_LIST_FILES=(
+                ["list-apt-drivers.txt"]="generic drivers"
+                ["list-apt-gaming.txt"]="gaming apps"
+                ["list-apt-gui-tools.txt"]="GUI apps"
+                ["list-apt-internet.txt"]="internet apps"
+                ["list-apt-libraries.txt"]="software libraries"
+                ["list-apt-media.txt"]="multimedia apps"
+                ["list-apt-office.txt"]="office apps"
+                ["list-apt-repos.txt"]="repositories"
+                ["list-apt-required.txt"]="required apps"
+                ["list-apt-security.txt"]="security apps"
+                ["list-apt-suites.txt"]="software suites"
+                ["list-apt-term-tools.txt"]="terminal apps"
+                ["list-apt-vga-drivers.txt"]="video device drivers"
+            )
+
+            declare -agr APT_PACKAGES_TO_REMOVE_LIST_FILES=(
+                ["list-apt-to-remove.txt"]="unsorted apps"
+            )
 
         # <remarks> Functions can go here. </remarks>
     }
@@ -55,9 +58,17 @@
     {
         AskToExecuteOrSkip "Install software?" || return "${?}"
 
-        for KEY in "${!SOFTWARE_TO_INSTALL_LIST_FILES[@]}"; do
+        case true in
+            "${_PACMAN_IS_APT}" )
+                PACKAGES_TO_INSTALL_LIST_FILES="${APT_PACKAGES_TO_INSTALL_LIST_FILES[@]}" ;;
+
+            "${_PACMAN_IS_UNKNOWN}" )
+                return 0 ;;
+        esac
+
+        for KEY in "${!PACKAGES_TO_INSTALL_LIST_FILES[@]}"; do
             local -a PACKAGES_LIST
-            local VALUE="${SOFTWARE_TO_INSTALL_LIST_FILES[$KEY]}"
+            local VALUE="${PACKAGES_TO_INSTALL_LIST_FILES[$KEY]}"
 
             AskToExecuteOrSkip "Install ${VALUE}?" || continue
             ReadPackagesFromFile "PACKAGES_LIST" "${VALUE}" \
@@ -70,10 +81,19 @@
     function UninstallSoftware
     {
         AskToExecuteOrSkip "Uninstall software?" || return "${?}"
+        local -a PACKAGES_TO_REMOVE_LIST_FILES
 
-        for KEY in "${!SOFTWARE_TO_REMOVE_LIST_FILES[@]}"; do
+        case true in
+            "${_PACMAN_IS_APT}" )
+                PACKAGES_TO_REMOVE_LIST_FILES="${APT_PACKAGES_TO_REMOVE_LIST_FILES[@]}" ;;
+
+            "${_PACMAN_IS_UNKNOWN}" )
+                return 0 ;;
+        esac
+
+        for KEY in "${!PACKAGES_TO_REMOVE_LIST_FILES[@]}"; do
             local -a PACKAGES_LIST
-            local VALUE="${SOFTWARE_TO_REMOVE_LIST_FILES[$KEY]}"
+            local VALUE="${PACKAGES_TO_REMOVE_LIST_FILES[$KEY]}"
 
             AskToExecuteOrSkip "Uninstall ${VALUE}?" || continue
             ReadPackagesFromFile "PACKAGES_LIST" "${VALUE}" \

@@ -26,20 +26,20 @@
         declare -gr _SOURCES_FILE_NAME="/etc/apt/sources.list"
 
         # <summary> Debian </summary>
-        declare -gr _DEBIAN_LATEST_RELEASE_NAME="bookworm"
-        declare -gr _DEBIAN_RELEASE_OPTION_BACKPORTS="${_OPERATING_SYSTEM_RELEASE_NAME}-backports"
-        declare -alr _DEBIAN_RELEASE_BRANCH_LIST=(
-            "stable"
-            "testing"
-            "unstable"
-        )
+            declare -gr _DEBIAN_LATEST_RELEASE_NAME="bookworm"
+            declare -gr _DEBIAN_RELEASE_OPTION_BACKPORTS="${_OPERATING_SYSTEM_RELEASE_NAME}-backports"
+            declare -alr _DEBIAN_RELEASE_BRANCH_LIST=(
+                "stable"
+                "testing"
+                "unstable"
+            )
 
-        declare -alr _DEBIAN_RELEASE_OPTIONS_LIST=(
-            "main"
-            "contrib"
-            "non-free"
-            "non-free-firmware"
-        )
+            declare -alr _DEBIAN_RELEASE_OPTIONS_LIST=(
+                "main"
+                "contrib"
+                "non-free"
+                "non-free-firmware"
+            )
 
         # <remarks> Functions can go here. </remarks>
     }
